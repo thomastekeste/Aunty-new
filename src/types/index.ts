@@ -230,9 +230,8 @@ export type OnboardingStackParamList = {
 
 export type AppTabParamList = {
   Home: undefined;
-  RoutineTab: undefined;
-  Progress: undefined;
-  Products: undefined;
+  Journey: undefined;
+  Chat: undefined;
 };
 
 export type AppStackParamList = {
@@ -264,4 +263,6 @@ export interface OnboardingData {
     closeup?: string;
   };
   hair_analysis?: GeminiVisionAnalysis;
+}
+sis?: GeminiVisionAnalysis;
 }

@@ -5,7 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Platform } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { colors, fonts } from '@/constants/theme';
-import { HomeIcon, RoutineIcon, ProgressIcon, ProductsIcon } from '@/components/Icons';
+import { HomeIcon, RoutineIcon, ChatIcon } from '@/components/Icons';
 
 // Onboarding screens
 import SplashScreen from '@/screens/onboarding/SplashScreen';
@@ -31,9 +31,8 @@ import SendOffScreen from '@/screens/onboarding/SendOffScreen';
 
 // App screens
 import HomeScreen from '@/screens/app/HomeScreen';
-import RoutineDetailScreen from '@/screens/app/RoutineDetailScreen';
-import ProgressScreen from '@/screens/app/ProgressScreen';
-import ProductsScreen from '@/screens/app/ProductsScreen';
+import JourneyScreen from '@/screens/app/JourneyScreen';
+import ProductChatScreen from '@/screens/app/ProductChatScreen';
 import CheckinScreen from '@/screens/app/CheckinScreen';
 import AuntyConversationScreen from '@/screens/app/AuntyConversationScreen';
 import HairJourneyScreen from '@/screens/app/HairJourneyScreen';
@@ -96,9 +95,8 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
         }} />
       )}
       {label === 'Home' && <HomeIcon color={color} size={22} strokeWidth={sw} />}
-      {label === 'RoutineTab' && <RoutineIcon color={color} size={22} strokeWidth={sw} />}
-      {label === 'Progress' && <ProgressIcon color={color} size={22} strokeWidth={sw} />}
-      {label === 'Products' && <ProductsIcon color={color} size={22} strokeWidth={sw} />}
+      {label === 'Journey' && <RoutineIcon color={color} size={22} strokeWidth={sw} />}
+      {label === 'Chat' && <ChatIcon color={color} size={22} strokeWidth={sw} />}
     </View>
   );
 }
@@ -131,9 +129,8 @@ function MainTabs() {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
-      <Tab.Screen name="RoutineTab" component={RoutineDetailScreen} options={{ title: 'Routine' }} />
-      <Tab.Screen name="Progress" component={ProgressScreen} options={{ title: 'Progress' }} />
-      <Tab.Screen name="Products" component={ProductsScreen} options={{ title: 'Products' }} />
+      <Tab.Screen name="Journey" component={JourneyScreen} options={{ title: 'Journey' }} />
+      <Tab.Screen name="Chat" component={ProductChatScreen} options={{ title: 'Chat' }} />
     </Tab.Navigator>
   );
 }
@@ -180,5 +177,44 @@ export default function RootNavigator() {
         )}
       </RootStack.Navigator>
     </NavigationContainer>
+  );
+}
+Container>
+  );
+}
+k.Navigator>
+    </NavigationContainer>
+  );
+}
+Container>
+  );
+}
+Container>
+  );
+}
+Container>
+  );
+}
+k.Navigator>
+    </NavigationContainer>
+  );
+}
+Container>
+  );
+}
+>
+  );
+}
+Container>
+  );
+}
+Container>
+  );
+}
+k.Navigator>
+    </NavigationContainer>
+  );
+}
+Container>
   );
 }
