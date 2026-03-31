@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { BackIcon } from '@/components/Icons';
+import { BackIcon, StrengthIcon, StretchIcon, BreakageIcon } from '@/components/Icons';
 import { OnboardingStackParamList, Elasticity } from '@/types';
 import { useOnboarding } from '@/context/OnboardingContext';
 import AuntyAvatar from '@/components/AuntyAvatar';
@@ -25,7 +25,7 @@ const OPTIONS: Array<{
   {
     key: 'snapped',
     label: 'Snapped quickly',
-    icon: '✂️',
+    icon: <BreakageIcon color="#E0142C" size={26} strokeWidth={2} />,
     color: '#E0142C',
     elasticity: 'low',
     protein_needs: 'high',
@@ -34,7 +34,7 @@ const OPTIONS: Array<{
   {
     key: 'stretched',
     label: 'Stretched well, then snapped',
-    icon: '↔️',
+    icon: <StretchIcon color="#F5C542" size={26} strokeWidth={2} />,
     color: '#F5C542',
     elasticity: 'normal',
     protein_needs: 'normal',
@@ -43,7 +43,7 @@ const OPTIONS: Array<{
   {
     key: 'barely',
     label: 'Barely stretched at all',
-    icon: '📏',
+    icon: <StrengthIcon color="#9B5DE5" size={26} strokeWidth={1.8} />,
     color: '#9B5DE5',
     elasticity: 'low',
     protein_needs: 'high',
@@ -88,7 +88,7 @@ export default function ElasticityTestScreen({ navigation }: Props) {
 
             <View style={styles.fullCard}>
               <View style={styles.cardIconSection}>
-                <Text style={styles.largeIcon}>💪</Text>
+                <View style={styles.largeIcon}><StrengthIcon color={colors.primary} size={64} strokeWidth={1.5} /></View>
                 <View style={styles.geometricDecor} />
               </View>
               <View style={styles.cardContent}>
@@ -120,7 +120,7 @@ export default function ElasticityTestScreen({ navigation }: Props) {
                     ]}
                     onPress={() => setSelection(opt)}
                   >
-                    <Text style={styles.answerIcon}>{opt.icon}</Text>
+                    <View style={styles.answerIcon}>{opt.icon}</View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.answerText, selection?.key === opt.key && { color: opt.color, fontWeight: fontWeight.black }]}>
                         {opt.label}
@@ -144,7 +144,7 @@ export default function ElasticityTestScreen({ navigation }: Props) {
 
             <View style={[styles.fullCard, { borderLeftWidth: 6, borderLeftColor: selection!.color }]}>
               <View style={styles.resultHeader}>
-                <Text style={[styles.resultIcon, { color: selection!.color }]}>{selection!.icon}</Text>
+                <View style={styles.resultIcon}>{selection!.icon}</View>
                 <View>
                   <Text style={styles.resultLabel}>Protein Profile</Text>
                   <Text style={[styles.resultTitle, { color: selection!.color }]}>
@@ -227,7 +227,10 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   largeIcon: {
-    fontSize: 64,
+    width: 64,
+    height: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.sm,
   },
   geometricDecor: {
@@ -298,7 +301,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   answerIcon: {
-    fontSize: 28,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   answerText: {
     fontFamily: fonts.body,
@@ -318,7 +324,10 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   resultIcon: {
-    fontSize: 40,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   resultLabel: {
     fontFamily: fonts.body,

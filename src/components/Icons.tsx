@@ -553,3 +553,165 @@ export function NoDefinitionIcon({ color = '#180800', size = 24, strokeWidth = 2
     </Svg>
   );
 }
+
+/** Crescent moon — rest day */
+export function MoonIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+/** Location pin — city */
+export function LocationPinIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Circle cx="12" cy="9" r="2.5" stroke={color} strokeWidth={strokeWidth} />
+    </Svg>
+  );
+}
+
+/** Ruler / measure — density ponytail test */
+export function RulerIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="2" y="8" width="20" height="8" rx="1.5" stroke={color} strokeWidth={strokeWidth} />
+      <Path d="M6 8v4M9 8v3M12 8v4M15 8v3M18 8v4" stroke={color} strokeWidth={strokeWidth * 0.8} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+/** Balance / medium — neutral state */
+export function BalanceIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 3v18" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path d="M5 8l-3 6h6L5 8z" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M19 8l-3 6h6l-3-6z" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M7 21h10" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+/** Strength / protein — elasticity */
+export function StrengthIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M6 4h2v4H6zM16 4h2v4h-2z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinejoin="round"
+      />
+      <Path d="M4 6h4M16 6h4" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path d="M8 8v8M16 8v8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path d="M8 12h8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path d="M6 14h2v4H6zM16 14h2v4h-2z" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" />
+      <Path d="M4 16h4M16 16h4" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+/** Float up — porosity strand floating */
+export function FloatUpIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 19V7" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path d="M7 12l5-5 5 5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M5 20h14" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" opacity={0.4} />
+      <Path d="M5 4h14" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" opacity={0.4} />
+    </Svg>
+  );
+}
+
+/** Float middle — porosity strand in middle */
+export function FloatMiddleIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M5 4h14M5 20h14" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" opacity={0.35} />
+      <Path d="M5 12h14" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" opacity={0.35} />
+      <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth={strokeWidth} />
+    </Svg>
+  );
+}
+
+/** Sink down — porosity strand sinking */
+export function SinkDownIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 5v12" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path d="M7 12l5 5 5-5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M5 4h14" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" opacity={0.4} />
+      <Path d="M5 20h14" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" opacity={0.4} />
+    </Svg>
+  );
+}
+
+/** Stretch — elasticity good stretch */
+export function StretchIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 12h16" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path d="M4 12l3-3M4 12l3 3" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M20 12l-3-3M20 12l-3 3" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Circle cx="12" cy="12" r="1.5" fill={color} />
+    </Svg>
+  );
+}
+
+/** Water hardness wave */
+export function WaveIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M2 12c2-4 4-4 6 0s4 4 6 0 4-4 6 0" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path d="M2 17c2-3 4-3 6 0s4 3 6 0 4-3 6 0" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" opacity={0.45} />
+    </Svg>
+  );
+}
+
+/** Rock / mineral — very hard water */
+export function MineralIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 3L4 9l2 10h12l2-10L12 3z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path d="M4 9h16M8 9l2 10M16 9l-2 10M12 3l2 6M12 3l-2 6" stroke={color} strokeWidth={strokeWidth * 0.7} strokeLinecap="round" opacity={0.5} />
+    </Svg>
+  );
+}
+
+/** Warning / hard water */
+export function HardWaterIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 9C12 9 7 14 7 17a5 5 0 0010 0c0-3-5-8-5-8z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path d="M12 14v2" stroke={color} strokeWidth={strokeWidth * 1.2} strokeLinecap="round" />
+      <Circle cx="12" cy="18" r="0.8" fill={color} />
+    </Svg>
+  );
+}

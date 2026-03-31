@@ -17,6 +17,7 @@ import AuntyBubble from '@/components/AuntyBubble';
 import Button from '@/components/Button';
 import ProgressBar from '@/components/ProgressBar';
 import { colors, fonts, spacing, fontSize, fontWeight, radius, shadows } from '@/constants/theme';
+import { DropIcon, WaveIcon, HardWaterIcon, MineralIcon, LocationPinIcon } from '@/components/Icons';
 import {
   CityData,
   WaterHardness,
@@ -28,12 +29,12 @@ import {
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'Location'>;
 
-const HARDNESS_ICONS: Record<WaterHardness, string> = {
-  soft: '💧',
-  medium: '🌊',
-  hard: '⚠️',
-  very_hard: '🪨',
-};
+function HardnessIcon({ hardness, color, size = 14 }: { hardness: WaterHardness; color: string; size?: number }) {
+  if (hardness === 'soft') return <DropIcon color={color} size={size} strokeWidth={2} />;
+  if (hardness === 'medium') return <WaveIcon color={color} size={size} strokeWidth={2} />;
+  if (hardness === 'hard') return <HardWaterIcon color={color} size={size} strokeWidth={2} />;
+  return <MineralIcon color={color} size={size} strokeWidth={2} />;
+}
 
 export default function LocationScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
@@ -95,7 +96,7 @@ export default function LocationScreen({ navigation }: Props) {
 
         {/* Search input */}
         <View style={styles.inputWrapper}>
-          <Text style={styles.inputIcon}>📍</Text>
+          <View style={styles.inputIcon}><LocationPinIcon color={colors.muted} size={18} strokeWidth={2} /></View>
           <TextInput
             style={styles.input}
             value={query}
@@ -140,7 +141,7 @@ export default function LocationScreen({ navigation }: Props) {
                     </Text>
                   </View>
                   <View style={[styles.hardnessBadge, { backgroundColor: `${color}18`, borderColor: `${color}40` }]}>
-                    <Text style={styles.hardnessIcon}>{HARDNESS_ICONS[city.hardness]}</Text>
+                    <View style={styles.hardnessIcon}><HardnessIcon hardness={city.hardness} color={color} size={12} /></View>
                     <Text style={[styles.hardnessBadgeText, { color }]}>
                       {city.hardness === 'very_hard' ? 'Very Hard' : WATER_HARDNESS_LABELS[city.hardness].split(' ')[0]}
                     </Text>
@@ -162,7 +163,7 @@ export default function LocationScreen({ navigation }: Props) {
         {selectedCity && (
           <View style={[styles.resultCard, { borderLeftColor: hardnessColor! }]}>
             <View style={styles.resultHeader}>
-              <Text style={styles.resultIcon}>{HARDNESS_ICONS[selectedCity.hardness]}</Text>
+              <View style={styles.resultIcon}><HardnessIcon hardness={selectedCity.hardness} color={hardnessColor!} size={36} /></View>
               <View style={styles.resultHeaderText}>
                 <Text style={styles.resultCityName}>{selectedCity.name}</Text>
                 <Text style={[styles.resultHardnessLabel, { color: hardnessColor! }]}>
@@ -250,8 +251,11 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   inputIcon: {
-    fontSize: 18,
+    width: 18,
+    height: 18,
     marginRight: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   input: {
     flex: 1,
@@ -316,7 +320,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   hardnessIcon: {
-    fontSize: 12,
+    width: 12,
+    height: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   hardnessBadgeText: {
     fontFamily: fonts.body,
@@ -355,7 +362,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   resultIcon: {
-    fontSize: 36,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   resultHeaderText: {
     flex: 1,

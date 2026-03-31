@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { BackIcon } from '@/components/Icons';
+import { BackIcon, ThinningIcon, BalanceIcon, StrengthIcon, RulerIcon } from '@/components/Icons';
 import { OnboardingStackParamList, Density } from '@/types';
 import { useOnboarding } from '@/context/OnboardingContext';
 import AuntyAvatar from '@/components/AuntyAvatar';
@@ -16,7 +16,7 @@ type Props = NativeStackScreenProps<OnboardingStackParamList, 'DensityTest'>;
 const OPTIONS: Array<{
   key: Density;
   label: string;
-  icon: string;
+  icon: React.ReactNode;
   color: string;
   description: string;
   revealMsg: string;
@@ -24,7 +24,7 @@ const OPTIONS: Array<{
   {
     key: 'thin',
     label: 'Thin — less than a pencil',
-    icon: '✨',
+    icon: <ThinningIcon color="#00B4D8" size={26} strokeWidth={2} />,
     color: '#00B4D8',
     description: 'Fine, lightweight products. Heavy creams will weigh you down.',
     revealMsg: "Fine hair — every product choice matters. We go light, strategic, and deliberate. Don't pile it on.",
@@ -32,7 +32,7 @@ const OPTIONS: Array<{
   {
     key: 'medium',
     label: 'Medium — about a pencil',
-    icon: '↔️',
+    icon: <BalanceIcon color="#F5C542" size={26} strokeWidth={2} />,
     color: '#F5C542',
     description: 'Most products work for you. Balance moisture and weight.',
     revealMsg: "Medium density — you have flexibility. We'll balance moisture without overdoing the weight.",
@@ -40,7 +40,7 @@ const OPTIONS: Array<{
   {
     key: 'thick',
     label: 'Thick — thicker than a pencil',
-    icon: '💪',
+    icon: <StrengthIcon color="#FB5607" size={26} strokeWidth={1.8} />,
     color: '#FB5607',
     description: 'Your hair can handle heavier products and longer wash days.',
     revealMsg: "Thick density — your hair is substantial. Richer products, thorough wash days. Nothing lightweight for you.",
@@ -86,7 +86,7 @@ export default function DensityTestScreen({ navigation }: Props) {
 
             <View style={styles.fullCard}>
               <View style={styles.cardIconSection}>
-                <Text style={styles.largeIcon}>📏</Text>
+                <View style={styles.largeIcon}><RulerIcon color={colors.primary} size={64} strokeWidth={1.5} /></View>
                 <View style={styles.geometricDecor} />
               </View>
               <View style={styles.cardContent}>
@@ -118,7 +118,7 @@ export default function DensityTestScreen({ navigation }: Props) {
                     ]}
                     onPress={() => setSelection(opt.key)}
                   >
-                    <Text style={styles.answerIcon}>{opt.icon}</Text>
+                    <View style={styles.answerIcon}>{opt.icon}</View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.answerText, selection === opt.key && { color: opt.color, fontWeight: fontWeight.black }]}>
                         {opt.label}
@@ -148,7 +148,7 @@ export default function DensityTestScreen({ navigation }: Props) {
 
             <View style={[styles.fullCard, { borderLeftWidth: 6, borderLeftColor: selected!.color }]}>
               <View style={styles.resultHeader}>
-                <Text style={[styles.resultIcon, { color: selected!.color }]}>{selected!.icon}</Text>
+                <View style={styles.resultIcon}>{selected!.icon}</View>
                 <View>
                   <Text style={styles.resultLabel}>Density Profile</Text>
                   <Text style={[styles.resultTitle, { color: selected!.color }]}>
@@ -227,7 +227,10 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   largeIcon: {
-    fontSize: 64,
+    width: 64,
+    height: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.sm,
   },
   geometricDecor: {
@@ -298,7 +301,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   answerIcon: {
-    fontSize: 28,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: spacing.xs,
   },
   answerText: {
@@ -326,7 +332,10 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   resultIcon: {
-    fontSize: 40,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   resultLabel: {
     fontFamily: fonts.body,

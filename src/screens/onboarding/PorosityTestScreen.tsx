@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { BackIcon } from '@/components/Icons';
+import { BackIcon, DropIcon, BalanceIcon, SinkDownIcon, FloatUpIcon, FloatMiddleIcon } from '@/components/Icons';
 import { OnboardingStackParamList, Porosity } from '@/types';
 import { useOnboarding } from '@/context/OnboardingContext';
 import AuntyAvatar from '@/components/AuntyAvatar';
@@ -21,13 +21,13 @@ import { colors, spacing, fontSize, fontWeight, radius, fonts, auntyColors } fro
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'PorosityTest'>;
 type SubStep = 'intro' | 'test' | 'result';
 
-const RESULTS: Record<string, { porosity: Porosity; title: string; explanation: string; revealMsg: string; icon: string; color: string }> = {
+const RESULTS: Record<string, { porosity: Porosity; title: string; explanation: string; revealMsg: string; icon: React.ReactNode; color: string }> = {
   float: {
     porosity: 'low',
     title: 'Low Porosity',
     explanation: 'Your hair cuticles are tightly closed. Products sit on top rather than absorbing. You need heat or steam to open the cuticle.',
     revealMsg: "Low porosity, honey. Your cuticles are sealed tight — that's why products just sit there. Warm up your treatments.",
-    icon: '💧',
+    icon: <FloatUpIcon color="#00B4D8" size={36} strokeWidth={2} />,
     color: '#00B4D8',
   },
   middle: {
@@ -35,7 +35,7 @@ const RESULTS: Record<string, { porosity: Porosity; title: string; explanation: 
     title: 'Normal Porosity',
     explanation: 'Your cuticles are balanced — they absorb and retain moisture well. This is the sweet spot.',
     revealMsg: "Normal porosity — you're balanced, baby. Products absorb and stay. We work with what we've got.",
-    icon: '↔️',
+    icon: <FloatMiddleIcon color="#F5C542" size={36} strokeWidth={2} />,
     color: '#F5C542',
   },
   sink: {
@@ -43,7 +43,7 @@ const RESULTS: Record<string, { porosity: Porosity; title: string; explanation: 
     title: 'High Porosity',
     explanation: 'Your cuticles are open and absorb moisture quickly but lose it just as fast. You need heavy sealers.',
     revealMsg: "High porosity. Your cuticles are wide open — drinks fast, loses fast. You need protein and sealers, now.",
-    icon: '💦',
+    icon: <SinkDownIcon color="#FB5607" size={36} strokeWidth={2} />,
     color: '#FB5607',
   },
 };
@@ -116,7 +116,7 @@ export default function PorosityTestScreen({ navigation }: Props) {
 
             <View style={styles.fullCard}>
               <View style={styles.cardIconSection}>
-                <Text style={styles.largeIcon}>💧</Text>
+                <View style={styles.largeIcon}><DropIcon color={colors.primary} size={64} strokeWidth={1.5} /></View>
                 <View style={styles.geometricPattern1} />
               </View>
               <View style={styles.cardContent}>
@@ -149,7 +149,7 @@ export default function PorosityTestScreen({ navigation }: Props) {
               <View style={styles.timerContent}>
                 <Text style={styles.timerLabel}>Time remaining</Text>
                 <Text style={styles.timerDisplay}>{formatTime(timer)}</Text>
-                {timer === 0 && <Text style={styles.timerDone}>⏱️ Time's up!</Text>}
+                {timer === 0 && <Text style={styles.timerDone}>Time's up!</Text>}
               </View>
               <View style={styles.geometricPattern2} />
             </View>
@@ -160,9 +160,9 @@ export default function PorosityTestScreen({ navigation }: Props) {
               <View style={styles.optionsContainer}>
                 {(['float', 'middle', 'sink'] as const).map(opt => {
                   const labels = {
-                    float: { text: 'Floating on top', icon: '⬆️' },
-                    middle: { text: 'Floating in the middle', icon: '↔️' },
-                    sink: { text: 'Sank to the bottom', icon: '⬇️' },
+                    float: { text: 'Floating on top', icon: <FloatUpIcon color={isSelected ? RESULTS.float.color : colors.muted} size={26} strokeWidth={2} /> },
+                    middle: { text: 'Floating in the middle', icon: <FloatMiddleIcon color={isSelected ? RESULTS.middle.color : colors.muted} size={26} strokeWidth={2} /> },
+                    sink: { text: 'Sank to the bottom', icon: <SinkDownIcon color={isSelected ? RESULTS.sink.color : colors.muted} size={26} strokeWidth={2} /> },
                   };
                   const isSelected = selection === opt;
                   return (
@@ -176,7 +176,7 @@ export default function PorosityTestScreen({ navigation }: Props) {
                       ]}
                       onPress={() => handleSelect(opt)}
                     >
-                      <Text style={styles.answerIcon}>{labels[opt].icon}</Text>
+                      <View style={styles.answerIcon}>{labels[opt].icon}</View>
                       <Text style={[styles.answerText, isSelected && { color: RESULTS[opt].color, fontWeight: fontWeight.black }]}>
                         {labels[opt].text}
                       </Text>
@@ -205,7 +205,7 @@ export default function PorosityTestScreen({ navigation }: Props) {
 
             <View style={[styles.fullCard, { borderLeftWidth: 6, borderLeftColor: RESULTS[selection].color }]}>
               <View style={styles.resultHeader}>
-                <Text style={[styles.resultIcon, { color: RESULTS[selection].color }]}>{RESULTS[selection].icon}</Text>
+                <View style={styles.resultIcon}>{RESULTS[selection].icon}</View>
                 <View>
                   <Text style={styles.resultLabel}>Porosity Profile</Text>
                   <Text style={[styles.resultTitle, { color: RESULTS[selection].color }]}>{RESULTS[selection].title}</Text>
@@ -282,7 +282,10 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   largeIcon: {
-    fontSize: 64,
+    width: 64,
+    height: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.sm,
   },
   geometricPattern1: {
@@ -397,7 +400,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   answerIcon: {
-    fontSize: 28,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   answerText: {
     fontFamily: fonts.body,
@@ -418,7 +424,10 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   resultIcon: {
-    fontSize: 40,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   resultLabel: {
     fontFamily: fonts.body,

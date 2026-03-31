@@ -8,6 +8,7 @@ import { DailyRoutine } from '@/types';
 import AuntyAvatar from '@/components/AuntyAvatar';
 import { colors, auntyColors, spacing, fontSize, fontWeight, radius, fonts, shadows } from '@/constants/theme';
 import { AUNTY_COLORS } from '@/constants/aunties';
+import { DropIcon, CurlIcon, LeafIcon, MoonIcon } from '@/components/Icons';
 
 const ROTATING_GREETINGS: Array<{ auntyId: string; text: string }> = [
   { auntyId: '1', text: 'Moisture is not optional, baby.' },
@@ -26,11 +27,11 @@ const DAY_LABELS: Record<string, string> = {
   refresh_day: 'Refresh Day',
   rest_day: 'Rest Day',
 };
-const DAY_ICONS: Record<string, string> = {
-  wash_day: '💧',
-  style_day: '✨',
-  refresh_day: '🌿',
-  rest_day: '🌙',
+const DAY_ICONS: Record<string, React.ReactNode> = {
+  wash_day: <DropIcon color={colors.primary} size={18} strokeWidth={2} />,
+  style_day: <CurlIcon color={colors.primary} size={18} strokeWidth={2} />,
+  refresh_day: <LeafIcon color={colors.primary} size={18} strokeWidth={2} />,
+  rest_day: <MoonIcon color={colors.primary} size={18} strokeWidth={2} />,
 };
 
 const WEEK_AUNTY_IDS = ['1', '3', '5', '7'];
@@ -107,7 +108,7 @@ export default function HomeScreen({ navigation }: any) {
                 <Text style={styles.sectionEyebrow}>Today</Text>
               </View>
               <View style={styles.dayLabelRow}>
-                <Text style={styles.dayIcon}>{DAY_ICONS[todayDayKey]}</Text>
+                <View style={styles.dayIcon}>{DAY_ICONS[todayDayKey]}</View>
                 <Text style={styles.sectionTitle}>{DAY_LABELS[todayDayKey]}</Text>
               </View>
             </View>
@@ -387,7 +388,10 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   dayIcon: {
-    fontSize: 18,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sectionTitle: {
     fontFamily: fonts.display,
