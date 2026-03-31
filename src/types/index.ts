@@ -11,6 +11,43 @@ export interface User {
   expo_push_token?: string;
   created_at: string;
   updated_at: string;
+  // Personalization & memory
+  preferred_aunty_id?: string;
+  preferred_routine_length?: 'quick' | 'standard' | 'thorough';
+  communication_style?: 'casual' | 'nurturing' | 'direct';
+  last_checkin_date?: string;
+}
+
+// ── User Memory ──────────────────────────────────────────────────────
+export type UserMemoryType = 'goal' | 'struggle' | 'preference' | 'win' | 'personal_detail';
+
+export interface UserMemory {
+  id: string;
+  user_id: string;
+  memory_type: UserMemoryType;
+  content: string;
+  aunty_id?: string; // Which aunty should remember this
+  date: string;
+}
+
+// ── User Preferences ─────────────────────────────────────────────────
+export interface UserPreferences {
+  preferred_aunty_id?: string;
+  preferred_routine_length: 'quick' | 'standard' | 'thorough';
+  communication_style: 'casual' | 'nurturing' | 'direct';
+  allow_personalization: boolean;
+  allow_checkin_reminders: boolean;
+  product_sensitivity_notes?: string;
+}
+
+// ── Aunty Relationship ───────────────────────────────────────────────
+export interface AuntyRelationship {
+  user_id: string;
+  aunty_id: string;
+  visits: number;
+  latest_interaction?: string;
+  topics_discussed: string[];
+  trust_level: 'new' | 'building' | 'established' | 'deep';
 }
 
 // ── Hair Profile ─────────────────────────────────────────────────────
@@ -24,6 +61,9 @@ export type RelaxerHistory = 'never_relaxed' | 'currently_relaxed' | 'transition
 export type ProtectiveStyling = 'yes_regularly' | 'sometimes' | 'never';
 export type TimeAvailable = 'under_1h' | '1_2h' | '3plus_h';
 export type CurlType = '2a' | '2b' | '2c' | '3a' | '3b' | '3c' | '4a' | '4b' | '4c';
+
+// ── Onboarding Phases ────────────────────────────────────────────────
+export type OnboardingPhase = 'welcome' | 'know-you' | 'hair' | 'story' | 'reveal';
 
 export interface HairProfile {
   id: string;
@@ -198,6 +238,8 @@ export type AppTabParamList = {
 export type AppStackParamList = {
   Tabs: undefined;
   CheckinModal: { auntyId: string; userInitiated: boolean };
+  AuntyConversation: { auntyId: string; initialQuestion?: string };
+  HairJourney: undefined;
 };
 
 // ── Onboarding State ─────────────────────────────────────────────────

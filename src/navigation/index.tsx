@@ -13,9 +13,7 @@ import MeetCouncilScreen from '@/screens/onboarding/MeetCouncilScreen';
 import NameScreen from '@/screens/onboarding/NameScreen';
 import SignUpScreen from '@/screens/onboarding/SignUpScreen';
 import LocationScreen from '@/screens/onboarding/LocationScreen';
-import PorosityTestScreen from '@/screens/onboarding/PorosityTestScreen';
-import ElasticityTestScreen from '@/screens/onboarding/ElasticityTestScreen';
-import DensityTestScreen from '@/screens/onboarding/DensityTestScreen';
+import HairTestSuite from '@/screens/onboarding/HairTestSuite';
 import PhotoUploadScreen from '@/screens/onboarding/PhotoUploadScreen';
 import CurlTypeRevealScreen from '@/screens/onboarding/CurlTypeRevealScreen';
 import WashFrequencyScreen from '@/screens/onboarding/WashFrequencyScreen';
@@ -37,6 +35,8 @@ import RoutineDetailScreen from '@/screens/app/RoutineDetailScreen';
 import ProgressScreen from '@/screens/app/ProgressScreen';
 import ProductsScreen from '@/screens/app/ProductsScreen';
 import CheckinScreen from '@/screens/app/CheckinScreen';
+import AuntyConversationScreen from '@/screens/app/AuntyConversationScreen';
+import HairJourneyScreen from '@/screens/app/HairJourneyScreen';
 
 import {
   RootStackParamList,
@@ -59,9 +59,7 @@ function OnboardingNavigator() {
       <OnboardingStack.Screen name="Name" component={NameScreen} />
       <OnboardingStack.Screen name="SignUp" component={SignUpScreen} />
       <OnboardingStack.Screen name="Location" component={LocationScreen} />
-      <OnboardingStack.Screen name="PorosityTest" component={PorosityTestScreen} />
-      <OnboardingStack.Screen name="ElasticityTest" component={ElasticityTestScreen} />
-      <OnboardingStack.Screen name="DensityTest" component={DensityTestScreen} />
+      <OnboardingStack.Screen name="PorosityTest" component={HairTestSuite} />
       <OnboardingStack.Screen name="PhotoUpload" component={PhotoUploadScreen} />
       <OnboardingStack.Screen name="CurlTypeReveal" component={CurlTypeRevealScreen} />
       <OnboardingStack.Screen name="WashFrequency" component={WashFrequencyScreen} />
@@ -140,7 +138,7 @@ function MainTabs() {
   );
 }
 
-// ── App stack (tabs + modal) ─────────────────────────────────────────
+// ── App stack (tabs + modals + new screens) ─────────────────────────────────
 function AppNavigator() {
   return (
     <AppStack.Navigator screenOptions={{ headerShown: false }}>
@@ -148,12 +146,17 @@ function AppNavigator() {
       <AppStack.Screen
         name="CheckinModal"
         component={CheckinScreen}
-        options={{
-          presentation: 'modal',
-          headerShown: true,
-          title: 'Check-in',
-          headerTitleStyle: { fontWeight: '700' },
-        }}
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <AppStack.Screen
+        name="AuntyConversation"
+        component={AuntyConversationScreen}
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <AppStack.Screen
+        name="HairJourney"
+        component={HairJourneyScreen}
+        options={{ animation: 'slide_from_right', headerShown: false }}
       />
     </AppStack.Navigator>
   );

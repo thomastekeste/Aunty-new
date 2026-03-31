@@ -30,10 +30,11 @@ export default function PrimaryGoalScreen({ navigation }: Props) {
 
   return (
     <ConsultationShell
-      step={12}
+      step={15}
       totalSteps={18}
-      auntyId="5"
-      auntyMessage="Mija, what do you want most from your hair right now? Be honest."
+      auntyId="1"
+      phaseBadge="Ngozi's Turn · Moisture Authority"
+      auntyMessage="Ahn ahn, now we talk moisture o. Marcia has the roots sorted. What do you want MOST from your hair right now? Tell me the truth."
       question="What's your #1 goal?"
       onBack={() => navigation.goBack()}
       footer={<Button label="Continue" onPress={handleContinue} disabled={!selected} />}

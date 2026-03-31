@@ -8,6 +8,7 @@ import Button from '@/components/Button';
 import { ShieldCheckIcon, DryIcon, ScalpIcon, SnowflakeIcon, ThinningIcon, OilIcon } from '@/components/Icons';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'ScalpConcerns'>;
+
 const OPTIONS = [
   { label: 'No concerns', icon: <ShieldCheckIcon color="#12C064" size={22} strokeWidth={2} />, color: '#12C064' },
   { label: 'Dryness', icon: <DryIcon color="#FB5607" size={22} strokeWidth={1.8} />, color: '#FB5607' },
@@ -36,21 +37,33 @@ export default function ScalpConcernsScreen({ navigation }: Props) {
 
   return (
     <ConsultationShell
-      step={17}
+      step={14}
       totalSteps={18}
-      auntyId="6"
-      auntyMessage="Strong roots start with a healthy scalp. What are you dealing with up there?"
+      auntyId="2"
+      phaseBadge="Marcia's Turn · Root Whisperer"
+      auntyMessage="Last thing from mi — strong roots start with a healthy scalp. What are you dealing with up there? Everything yuh tell mi stays between us."
       question="Any scalp concerns? Select all that apply."
       onBack={() => navigation.goBack()}
       footer={
         <Button
           label="Continue"
-          onPress={() => { setData({ scalp_concerns: selected }); navigation.navigate('TimeAvailable'); }}
+          onPress={() => {
+            setData({ scalp_concerns: selected });
+            navigation.navigate('PrimaryGoal');
+          }}
         />
       }
     >
       {OPTIONS.map(opt => (
-        <OptionCard key={opt.label} label={opt.label} selected={selected.includes(opt.label)} onPress={() => toggle(opt.label)} multiSelect icon={opt.icon} color={opt.color} />
+        <OptionCard
+          key={opt.label}
+          label={opt.label}
+          selected={selected.includes(opt.label)}
+          onPress={() => toggle(opt.label)}
+          multiSelect
+          icon={opt.icon}
+          color={opt.color}
+        />
       ))}
     </ConsultationShell>
   );

@@ -31,15 +31,16 @@ export default function FailuresScreen({ navigation }: Props) {
 
   const handleContinue = () => {
     setData({ failed_attempts: selected });
-    navigation.navigate('HeatUse');
+    navigation.navigate('ProtectiveStyling');
   };
 
   return (
     <ConsultationShell
-      step={13}
+      step={16}
       totalSteps={18}
-      auntyId="3"
-      auntyMessage="Tell me what's been failing. All of it. I need to know what we're working around."
+      auntyId="1"
+      phaseBadge="Ngozi's Turn · Moisture Authority"
+      auntyMessage="Tell me what's been failing — all of it. I need to know so I don't repeat the mistake. Dryness? Frizz? Tell me. That's data, not failure."
       question="What keeps going wrong? Select all that apply."
       onBack={() => navigation.goBack()}
       footer={<Button label="Continue" onPress={handleContinue} />}

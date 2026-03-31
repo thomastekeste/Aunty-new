@@ -1,5 +1,13 @@
 import React, { createContext, useContext, useState } from 'react';
-import { OnboardingData, GeminiVisionAnalysis, CouncilResponse, DailyRoutine } from '@/types';
+import { OnboardingData, GeminiVisionAnalysis, CouncilResponse, DailyRoutine, OnboardingPhase, UserPreferences } from '@/types';
+
+const PREFERENCE_DEFAULTS: UserPreferences = {
+  preferred_aunty_id: undefined,
+  preferred_routine_length: 'standard',
+  communication_style: 'nurturing',
+  allow_personalization: true,
+  allow_checkin_reminders: true,
+};
 
 interface OnboardingContextType {
   data: Partial<OnboardingData>;
@@ -10,12 +18,18 @@ interface OnboardingContextType {
   setCouncilResponse: (r: CouncilResponse) => void;
   routine: DailyRoutine | null;
   setRoutine: (r: DailyRoutine) => void;
+  currentPhase: OnboardingPhase;
+  setCurrentPhase: (phase: OnboardingPhase) => void;
+  completionPercentage: number;
+  setCompletionPercentage: (percentage: number) => void;
+  preferences: UserPreferences;
+  setPreferences: (updates: Partial<UserPreferences>) => void;
   reset: () => void;
 }
 
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined);
 
-const DEFAULTS: Partial<OnboardingData> = {
+const DATA_DEFAULTS: Partial<OnboardingData> = {
   name: '',
   city: '',
   water_hardness: 'medium',
@@ -34,20 +48,30 @@ const DEFAULTS: Partial<OnboardingData> = {
 };
 
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
-  const [data, setDataState] = useState<Partial<OnboardingData>>(DEFAULTS);
+  const [data, setDataState] = useState<Partial<OnboardingData>>(DATA_DEFAULTS);
   const [hairAnalysis, setHairAnalysis] = useState<GeminiVisionAnalysis | null>(null);
   const [councilResponse, setCouncilResponse] = useState<CouncilResponse | null>(null);
   const [routine, setRoutine] = useState<DailyRoutine | null>(null);
+  const [currentPhase, setCurrentPhase] = useState<OnboardingPhase>('welcome');
+  const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [preferences, setPreferencesState] = useState<UserPreferences>(PREFERENCE_DEFAULTS);
 
   const setData = (updates: Partial<OnboardingData>) => {
     setDataState(prev => ({ ...prev, ...updates }));
   };
 
+  const setPreferences = (updates: Partial<UserPreferences>) => {
+    setPreferencesState(prev => ({ ...prev, ...updates }));
+  };
+
   const reset = () => {
-    setDataState(DEFAULTS);
+    setDataState(DATA_DEFAULTS);
     setHairAnalysis(null);
     setCouncilResponse(null);
     setRoutine(null);
+    setCurrentPhase('welcome');
+    setCompletionPercentage(0);
+    setPreferencesState(PREFERENCE_DEFAULTS);
   };
 
   return (
@@ -61,6 +85,12 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         setCouncilResponse,
         routine,
         setRoutine,
+        currentPhase,
+        setCurrentPhase,
+        completionPercentage,
+        setCompletionPercentage,
+        preferences,
+        setPreferences,
         reset,
       }}
     >

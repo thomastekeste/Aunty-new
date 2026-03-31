@@ -24,10 +24,25 @@ import { colors, spacing, fontSize, fontWeight, radius, fonts } from '@/constant
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'PhotoUpload'>;
 type PhotoKey = 'front' | 'back' | 'closeup';
 
-const SLOTS: Array<{ key: PhotoKey; label: string; hint: string }> = [
-  { key: 'front', label: 'Front', hint: 'Face forward, natural light' },
-  { key: 'back', label: 'Back', hint: 'Show your length' },
-  { key: 'closeup', label: 'Close-up', hint: 'Curl pattern detail' },
+const SLOTS: Array<{ key: PhotoKey; label: string; hint: string; guidance: string }> = [
+  {
+    key: 'front',
+    label: 'Front',
+    hint: 'Face forward, natural light',
+    guidance: 'Stand facing a window. Hold phone at eye level. Let your hair fall naturally.',
+  },
+  {
+    key: 'back',
+    label: 'Back',
+    hint: 'Show your length',
+    guidance: 'Use a mirror or ask someone. Pull hair to one side to show full length.',
+  },
+  {
+    key: 'closeup',
+    label: 'Close-up',
+    hint: 'Curl pattern detail',
+    guidance: 'Pick a defined section. Get within 15cm. Good lighting — this is the most important shot.',
+  },
 ];
 
 const MOCK_ANALYSIS = {
@@ -56,6 +71,7 @@ export default function PhotoUploadScreen({ navigation }: Props) {
   const { data, setData, setHairAnalysis } = useOnboarding();
   const [photos, setPhotos] = useState<Partial<Record<PhotoKey, string>>>(data.intake_photos ?? {});
   const [analyzing, setAnalyzing] = useState(false);
+  const [expandedGuidance, setExpandedGuidance] = useState<PhotoKey | null>(null);
   const [auntyMsg, setAuntyMsg] = useState(
     "Now I need to see it with my own eyes. Natural light, no filter. Show me the real thing."
   );
@@ -96,6 +112,41 @@ export default function PhotoUploadScreen({ navigation }: Props) {
     }
   };
 
+  const retakePhoto = async (key: PhotoKey) => {
+    // Show options: retake from camera or pick from library
+    Alert.alert(
+      'Replace photo',
+      'Choose how to get a new photo',
+      [
+        {
+          text: 'Camera',
+          onPress: async () => {
+            try {
+              const cam = await ImagePicker.requestCameraPermissionsAsync();
+              if (!cam.granted) {
+                Alert.alert('Permission needed', 'Allow camera access.');
+                return;
+              }
+              const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                quality: 0.7,
+              });
+              if (!result.canceled && result.assets[0]) {
+                const updated = { ...photos, [key]: result.assets[0].uri };
+                setPhotos(updated);
+                setData({ intake_photos: updated });
+              }
+            } catch {
+              Alert.alert('Error', 'Could not open camera.');
+            }
+          },
+        },
+        { text: 'Photo Library', onPress: () => pickPhoto(key) },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
   const handleContinue = async () => {
     if (!canContinue) return;
     setAnalyzing(true);
@@ -107,7 +158,6 @@ export default function PhotoUploadScreen({ navigation }: Props) {
       setHairAnalysis(analysis);
       navigation.navigate('CurlTypeReveal');
     } catch (e) {
-      // If Gemini fails, use defaults and continue — don't block the user
       console.warn('Gemini analysis failed, using defaults:', e);
       setHairAnalysis(MOCK_ANALYSIS);
       navigation.navigate('CurlTypeReveal');
@@ -141,28 +191,83 @@ export default function PhotoUploadScreen({ navigation }: Props) {
         <Text style={styles.heading}>Your Hair, Right Now</Text>
         <Text style={styles.body}>
           No filter. No blowout. Your hair exactly as it is — that's what we need.
+          {'\n'}Tap a slot for tips on getting the right shot.
         </Text>
 
         <View style={styles.uploadGrid}>
-          {SLOTS.map(slot => (
-            <TouchableOpacity
-              key={slot.key}
-              style={styles.uploadSlot}
-              onPress={() => pickPhoto(slot.key)}
-              activeOpacity={0.7}
-            >
-              {photos[slot.key] ? (
-                <Image source={{ uri: photos[slot.key] }} style={styles.preview} />
-              ) : (
-                <View style={styles.slotEmpty}>
-                  <CameraIcon color={colors.muted} size={28} strokeWidth={1.6} />
-                </View>
-              )}
-              <Text style={styles.slotLabel}>{slot.label}</Text>
-              <Text style={styles.slotHint}>{slot.hint}</Text>
-            </TouchableOpacity>
-          ))}
+          {SLOTS.map(slot => {
+            const hasPhoto = !!photos[slot.key];
+            const isExpanded = expandedGuidance === slot.key;
+
+            return (
+              <View key={slot.key} style={styles.slotWrap}>
+                <TouchableOpacity
+                  style={styles.uploadSlot}
+                  onPress={() => hasPhoto ? undefined : pickPhoto(slot.key)}
+                  onLongPress={() => setExpandedGuidance(isExpanded ? null : slot.key)}
+                  activeOpacity={hasPhoto ? 1 : 0.7}
+                >
+                  {hasPhoto ? (
+                    <Image source={{ uri: photos[slot.key] }} style={styles.preview} />
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.slotEmpty}
+                      onPress={() => pickPhoto(slot.key)}
+                      activeOpacity={0.7}
+                    >
+                      <CameraIcon color={colors.muted} size={28} strokeWidth={1.6} />
+                      <Text style={styles.slotAddText}>Tap to add</Text>
+                    </TouchableOpacity>
+                  )}
+                </TouchableOpacity>
+
+                <Text style={styles.slotLabel}>{slot.label}</Text>
+                <Text style={styles.slotHint}>{slot.hint}</Text>
+
+                {hasPhoto && (
+                  <TouchableOpacity
+                    style={styles.retakeBtn}
+                    onPress={() => retakePhoto(slot.key)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.retakeBtnText}>Retake</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })}
         </View>
+
+        {/* Expanded guidance card */}
+        {expandedGuidance && (
+          <View style={styles.guidanceCard}>
+            <Text style={styles.guidanceTitle}>
+              {SLOTS.find(s => s.key === expandedGuidance)?.label} photo tips
+            </Text>
+            <Text style={styles.guidanceText}>
+              {SLOTS.find(s => s.key === expandedGuidance)?.guidance}
+            </Text>
+            <TouchableOpacity onPress={() => setExpandedGuidance(null)}>
+              <Text style={styles.guidanceClose}>Got it</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Guidance pill prompts */}
+        {!expandedGuidance && (
+          <View style={styles.guidancePills}>
+            {SLOTS.filter(s => !photos[s.key]).map(slot => (
+              <TouchableOpacity
+                key={slot.key}
+                style={styles.guidancePill}
+                onPress={() => setExpandedGuidance(slot.key)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.guidancePillText}>Tips for {slot.label.toLowerCase()} photo</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
           <Text style={styles.skipText}>Skip photos for now</Text>
@@ -171,7 +276,13 @@ export default function PhotoUploadScreen({ navigation }: Props) {
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
         <Button
-          label={analyzing ? 'Analyzing your hair...' : canContinue ? "Ngozi has seen enough." : `Add ${2 - uploadedCount} more photo${2 - uploadedCount !== 1 ? 's' : ''}`}
+          label={
+            analyzing
+              ? 'Analyzing your hair...'
+              : canContinue
+              ? "Ngozi has seen enough."
+              : `Add ${2 - uploadedCount} more photo${2 - uploadedCount !== 1 ? 's' : ''}`
+          }
           onPress={handleContinue}
           disabled={!canContinue || analyzing}
           loading={analyzing}
@@ -188,26 +299,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingBottom: spacing.sm,
     borderBottomWidth: 1, borderBottomColor: colors.border, gap: spacing.sm,
   },
-  back: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   progressWrap: { flex: 1 },
-  content: { padding: spacing.md },
+  content: { padding: spacing.md, gap: spacing.md },
   heading: {
     fontFamily: fonts.display,
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.black,
     color: colors.ink,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
+    marginTop: spacing.xs,
+    letterSpacing: -0.5,
   },
   body: {
     fontFamily: fonts.body,
-    fontSize: fontSize.md,
+    fontSize: fontSize.sm,
     color: colors.textSecondary,
-    marginBottom: spacing.lg,
-    lineHeight: 24,
+    lineHeight: 22,
   },
-  uploadGrid: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
-  uploadSlot: { flex: 1, alignItems: 'center' },
+  uploadGrid: { flexDirection: 'row', gap: spacing.sm },
+  slotWrap: { flex: 1, alignItems: 'center', gap: 4 },
+  uploadSlot: { width: '100%' },
   slotEmpty: {
     width: '100%',
     aspectRatio: 3 / 4,
@@ -218,6 +328,12 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  slotAddText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
   },
   preview: { width: '100%', aspectRatio: 3 / 4, borderRadius: radius.md },
   slotLabel: {
@@ -225,7 +341,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
     color: colors.text,
-    marginTop: spacing.xs,
   },
   slotHint: {
     fontFamily: fonts.body,
@@ -233,6 +348,72 @@ const styles = StyleSheet.create({
     color: colors.muted,
     textAlign: 'center',
   },
+  retakeBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginTop: 2,
+  },
+  retakeBtnText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    fontWeight: fontWeight.bold,
+  },
+
+  // Guidance card
+  guidanceCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  guidanceTitle: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.black,
+    color: colors.ink,
+    textTransform: 'capitalize',
+  },
+  guidanceText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 22,
+  },
+  guidanceClose: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+    alignSelf: 'flex-end',
+  },
+
+  // Guidance pills
+  guidancePills: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  guidancePill: {
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.offWhite,
+  },
+  guidancePillText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    fontWeight: fontWeight.medium,
+  },
+
   skipBtn: { alignItems: 'center', paddingVertical: spacing.md },
   skipText: {
     fontFamily: fonts.body,

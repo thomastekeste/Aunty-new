@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { OnboardingStackParamList } from '@/types';
 import { useOnboarding } from '@/context/OnboardingContext';
@@ -36,6 +37,51 @@ export default function RoutineScreen({ navigation }: Props) {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
+        {/* Journey Summary — what each aunty found */}
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.journeySummary}>
+          <Text style={styles.journeyEyebrow}>What the aunties found</Text>
+          <View style={styles.journeyRow}>
+            {[
+              {
+                id: '2',
+                label: 'Marcia',
+                note: data.scalp_concerns?.includes('No concerns')
+                  ? 'Scalp healthy'
+                  : data.scalp_concerns && data.scalp_concerns.length > 0
+                  ? data.scalp_concerns[0]
+                  : 'Roots assessed',
+              },
+              {
+                id: '1',
+                label: 'Ngozi',
+                note: data.primary_goal
+                  ? `Goal: ${data.primary_goal}`
+                  : 'Moisture mapped',
+              },
+              {
+                id: '4',
+                label: 'Fatou',
+                note: data.time_available === 'under_1h'
+                  ? 'Quick routine'
+                  : data.time_available === '3plus_h'
+                  ? 'Full routine'
+                  : 'Balanced routine',
+              },
+            ].map(({ id, label, note }) => {
+              const ac = auntyColors[id];
+              return (
+                <View key={id} style={[styles.journeyChip, { borderColor: `${ac.accent}40`, backgroundColor: `${ac.accent}10` }]}>
+                  <AuntyAvatar auntyId={id} size={28} />
+                  <View style={styles.journeyChipText}>
+                    <Text style={[styles.journeyChipName, { color: ac.text }]}>{label}</Text>
+                    <Text style={styles.journeyChipNote} numberOfLines={1}>{note}</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </Animated.View>
+
         {/* Hair Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.profileLeft}>
@@ -166,6 +212,53 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   content: { padding: spacing.md, gap: spacing.md },
+
+  // Journey Summary
+  journeySummary: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  journeyEyebrow: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    fontWeight: fontWeight.black,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    marginBottom: spacing.sm,
+  },
+  journeyRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  journeyChip: {
+    flex: 1,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    padding: spacing.xs + 2,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  journeyChipText: {
+    alignItems: 'center',
+  },
+  journeyChipName: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.black,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  journeyChipNote: {
+    fontFamily: fonts.body,
+    fontSize: 9,
+    color: colors.muted,
+    textAlign: 'center',
+    marginTop: 1,
+  },
 
   // Profile Card
   profileCard: {

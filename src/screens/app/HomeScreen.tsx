@@ -1,53 +1,107 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Animated,
+  TextInput,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 import { routineService } from '@/services/supabase';
-import { AUNTIES } from '@/constants/aunties';
+import { AUNTIES, getAunty } from '@/constants/aunties';
 import { DailyRoutine } from '@/types';
+import AuntyPortrait from '@/components/AuntyPortrait';
 import AuntyAvatar from '@/components/AuntyAvatar';
 import { colors, auntyColors, spacing, fontSize, fontWeight, radius, fonts, shadows } from '@/constants/theme';
-import { AUNTY_COLORS } from '@/constants/aunties';
-import { DropIcon, CurlIcon, LeafIcon, MoonIcon, ArrowRightIcon } from '@/components/Icons';
 
-const ROTATING_GREETINGS: Array<{ auntyId: string; text: string }> = [
-  { auntyId: '1', text: 'Moisture is not optional, baby.' },
-  { auntyId: '2', text: 'How are those roots feeling today?' },
-  { auntyId: '3', text: "Your retention matters. Don't sleep on it." },
-  { auntyId: '4', text: 'Technique is everything. Stay consistent.' },
-  { auntyId: '5', text: 'Mija, your curls are a gift. Treat them right.' },
-  { auntyId: '6', text: 'Strong roots, strong hair. Keep going, love.' },
-  { auntyId: '7', text: 'Nature gave us everything we need.' },
+// Day-based primary aunty — each day of week maps to an aunty
+const DAY_AUNTY: Record<number, string> = {
+  0: '7', // Sunday — Salma
+  1: '1', // Monday — Ngozi
+  2: '2', // Tuesday — Marcia
+  3: '3', // Wednesday — Denise
+  4: '4', // Thursday — Fatou
+  5: '5', // Friday — Carmen
+  6: '6', // Saturday — Amara
+};
+
+// Warm, personal greetings per aunty — feels like she's speaking to the user directly
+const PERSONAL_GREETINGS: Record<string, string[]> = {
+  '1': [
+    "I've been thinking about your curls.",
+    "Moisture check — let's see how you're doing.",
+    "I know you've been busy. I'm still here.",
+  ],
+  '2': [
+    "Your roots have been on my mind.",
+    "How are we feeling from the roots today?",
+    "I haven't forgotten about you.",
+  ],
+  '3': [
+    "Chile, I was just thinking about you.",
+    "You showed up. That's everything.",
+    "We're going to figure this out together.",
+  ],
+  '4': [
+    "I've been waiting to check on your technique.",
+    "Patience and presence. That's all we need today.",
+    "Come, let's talk about where you are.",
+  ],
+  '5': [
+    "Mija, I've missed you!",
+    "Your curls are always on my mind, corazón.",
+    "Ready to celebrate those curls today?",
+  ],
+  '6': [
+    "Konjo, your hair has been in my thoughts.",
+    "I see the strength you've been building.",
+    "Come, let's nurture those roots together.",
+  ],
+  '7': [
+    "Habibti, I've been thinking of you.",
+    "Nature's wisdom is ready when you are.",
+    "You deserve this time for yourself.",
+  ],
+};
+
+const MOOD_OPTIONS = [
+  { id: 'thriving', label: 'Thriving', color: colors.marcia },
+  { id: 'good', label: 'Good', color: colors.ngozi },
+  { id: 'okay', label: 'Just okay', color: colors.salma },
+  { id: 'tired', label: 'Tired', color: colors.fatou },
+  { id: 'frustrated', label: 'Frustrated', color: colors.carmen },
 ];
 
 const DAY_KEYS = ['wash_day', 'style_day', 'refresh_day', 'rest_day'] as const;
-const DAY_LABELS: Record<string, string> = {
-  wash_day: 'Wash Day',
-  style_day: 'Style Day',
-  refresh_day: 'Refresh Day',
-  rest_day: 'Rest Day',
-};
-const DAY_ICONS: Record<string, React.ReactNode> = {
-  wash_day: <DropIcon color={colors.primary} size={18} strokeWidth={2} />,
-  style_day: <CurlIcon color={colors.primary} size={18} strokeWidth={2} />,
-  refresh_day: <LeafIcon color={colors.primary} size={18} strokeWidth={2} />,
-  rest_day: <MoonIcon color={colors.primary} size={18} strokeWidth={2} />,
-};
-
-const WEEK_AUNTY_IDS = ['1', '3', '5', '7'];
 
 export default function HomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [routine, setRoutine] = useState<{ routine_json: DailyRoutine } | null>(null);
-  const greeting = ROTATING_GREETINGS[new Date().getDay() % ROTATING_GREETINGS.length];
-  const acColor = auntyColors[greeting.auntyId];
+  const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [question, setQuestion] = useState('');
+
+  const todayAuntyId = DAY_AUNTY[new Date().getDay()];
+  const aunty = getAunty(todayAuntyId);
+  const ac = auntyColors[todayAuntyId];
+  const firstName = user?.name?.split(' ')[0] ?? 'friend';
+
+  // Pick a greeting that changes by time of day (morning/afternoon/evening)
+  const greetingIndex = Math.floor(new Date().getHours() / 8); // 0, 1, or 2
+  const personalGreeting = PERSONAL_GREETINGS[todayAuntyId]?.[greetingIndex] ?? PERSONAL_GREETINGS[todayAuntyId]?.[0];
+
+  const todayDayKey = DAY_KEYS[new Date().getDay() % 4];
+  const todayRoutine = routine?.routine_json?.[todayDayKey];
 
   // Entrance animations
+  const heroAnim = useRef(new Animated.Value(0)).current;
   const greetingAnim = useRef(new Animated.Value(0)).current;
+  const moodAnim = useRef(new Animated.Value(0)).current;
   const routineAnim = useRef(new Animated.Value(0)).current;
-  const journeyAnim = useRef(new Animated.Value(0)).current;
-  const checkinAnim = useRef(new Animated.Value(0)).current;
+  const askAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (user?.id && !user.id.startsWith('demo-')) {
@@ -56,571 +110,712 @@ export default function HomeScreen({ navigation }: any) {
   }, [user?.id]);
 
   useEffect(() => {
-    Animated.stagger(100, [
-      Animated.spring(greetingAnim, { toValue: 1, friction: 8, tension: 60, useNativeDriver: true }),
-      Animated.spring(routineAnim, { toValue: 1, friction: 8, tension: 60, useNativeDriver: true }),
-      Animated.spring(journeyAnim, { toValue: 1, friction: 8, tension: 60, useNativeDriver: true }),
-      Animated.spring(checkinAnim, { toValue: 1, friction: 8, tension: 60, useNativeDriver: true }),
+    Animated.stagger(80, [
+      Animated.spring(heroAnim, { toValue: 1, friction: 9, tension: 50, useNativeDriver: true }),
+      Animated.spring(greetingAnim, { toValue: 1, friction: 9, tension: 50, useNativeDriver: true }),
+      Animated.spring(moodAnim, { toValue: 1, friction: 9, tension: 50, useNativeDriver: true }),
+      Animated.spring(routineAnim, { toValue: 1, friction: 9, tension: 50, useNativeDriver: true }),
+      Animated.spring(askAnim, { toValue: 1, friction: 9, tension: 50, useNativeDriver: true }),
     ]).start();
   }, []);
 
-  const makeSlideStyle = (anim: Animated.Value) => ({
+  const fadeSlide = (anim: Animated.Value) => ({
     opacity: anim,
-    transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }],
+    transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
   });
 
-  const todayDayKey = DAY_KEYS[new Date().getDay() % 4];
-  const todayRoutine = routine?.routine_json?.[todayDayKey];
-  const firstName = user?.name?.split(' ')[0] ?? 'friend';
+  const handleAskQuestion = () => {
+    if (question.trim()) {
+      navigation.navigate('AuntyConversation', { auntyId: todayAuntyId, initialQuestion: question.trim() });
+      setQuestion('');
+    } else {
+      navigation.navigate('AuntyConversation', { auntyId: todayAuntyId });
+    }
+  };
 
   return (
     <View style={styles.root}>
-      {/* Editorial hero — deep cosmic with decorative elements */}
-      <View style={[styles.hero, { paddingTop: insets.top + spacing.md }]}>
-        {/* Subtle decorative glow */}
-        <View style={[styles.heroGlow, { backgroundColor: acColor.accent }]} />
-
-        <View style={styles.heroContent}>
-          <Text style={styles.heroEyebrow}>{getTimeOfDay()}</Text>
-          <Text style={styles.heroName}>{firstName}.</Text>
-          <View style={styles.heroRuleRow}>
-            <View style={[styles.heroRule, { backgroundColor: acColor.accent }]} />
-            <View style={[styles.heroRuleDot, { backgroundColor: acColor.accent }]} />
-            <View style={[styles.heroRuleFade, { backgroundColor: acColor.accent }]} />
-          </View>
-        </View>
-      </View>
-
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Aunty greeting — bold color card */}
-        <Animated.View style={makeSlideStyle(greetingAnim)}>
-          <TouchableOpacity
-            activeOpacity={0.9}
-            style={[styles.greetingCard, { backgroundColor: acColor.accent }]}
-          >
-            <View style={styles.greetingInner}>
-              <View style={[styles.greetingAvatarRing, { borderColor: 'rgba(255,255,255,0.4)' }]}>
-                <AuntyAvatar auntyId={greeting.auntyId} size={52} />
-              </View>
-              <View style={styles.greetingRight}>
-                <Text style={styles.greetingAuntyName}>
-                  {AUNTIES[greeting.auntyId].name}
-                </Text>
-                <Text style={styles.greetingAuntyRole}>
-                  {AUNTIES[greeting.auntyId].title}
-                </Text>
+        {/* ── Hero: Aunty Portrait + Personal Greeting ── */}
+        <Animated.View style={[styles.heroWrap, fadeSlide(heroAnim)]}>
+          <View style={[styles.hero, { backgroundColor: ac.bgDark }]}>
+            {/* Soft ambient glow behind portrait */}
+            <View style={[styles.heroGlow, { backgroundColor: ac.accent }]} />
+
+            <View style={styles.heroLeft}>
+              <Text style={styles.timeGreeting}>{getTimeGreeting()}</Text>
+              <Text style={[styles.heroName, { color: colors.ink }]}>{firstName}.</Text>
+              <View style={[styles.heroRule, { backgroundColor: ac.accent }]} />
+              <Text style={[styles.heroAuntyName, { color: ac.text }]}>
+                {aunty.name} is with you today
+              </Text>
+            </View>
+
+            <View style={styles.heroPortrait}>
+              <View style={[styles.portraitRing, { borderColor: `${ac.accent}50` }]}>
+                <AuntyPortrait auntyId={todayAuntyId} size={110} />
               </View>
             </View>
-            <View style={styles.greetingQuoteWrap}>
-              <Text style={styles.greetingQuoteMark}>"</Text>
-              <Text style={styles.greetingText}>{greeting.text}</Text>
-            </View>
-          </TouchableOpacity>
+          </View>
         </Animated.View>
 
-        {/* Today's Routine */}
-        <Animated.View style={makeSlideStyle(routineAnim)}>
-        <View style={styles.section}>
-          <View style={styles.sectionTop}>
-            <View style={styles.sectionTitleGroup}>
-              <View style={styles.sectionEyebrowRow}>
-                <View style={[styles.sectionAccentBar, { backgroundColor: colors.primary }]} />
-                <Text style={styles.sectionEyebrow}>Today</Text>
+        {/* ── Personal Greeting Card ── */}
+        <Animated.View style={fadeSlide(greetingAnim)}>
+          <View style={[styles.greetingCard, { borderLeftColor: ac.accent }]}>
+            <Text style={[styles.greetingAuntyName, { color: ac.text }]}>
+              {aunty.name.toUpperCase()} · {aunty.title}
+            </Text>
+            <Text style={styles.greetingText}>"{personalGreeting}"</Text>
+            {aunty.greeting && (
+              <Text style={[styles.greetingDialect, { color: ac.text }]}>
+                {aunty.greeting}
+              </Text>
+            )}
+          </View>
+        </Animated.View>
+
+        {/* ── Mood Check ── */}
+        <Animated.View style={fadeSlide(moodAnim)}>
+          <View style={styles.moodSection}>
+            <Text style={styles.moodLabel}>How are you feeling today?</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.moodScroll}>
+              <View style={styles.moodRow}>
+                {MOOD_OPTIONS.map(mood => {
+                  const isSelected = selectedMood === mood.id;
+                  return (
+                    <TouchableOpacity
+                      key={mood.id}
+                      style={[
+                        styles.moodChip,
+                        isSelected && { backgroundColor: mood.color, borderColor: mood.color },
+                      ]}
+                      onPress={() => setSelectedMood(isSelected ? null : mood.id)}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[styles.moodChipText, isSelected && styles.moodChipTextSelected]}>
+                        {mood.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
-              <View style={styles.dayLabelRow}>
-                <View style={styles.dayIcon}>{DAY_ICONS[todayDayKey]}</View>
-                <Text style={styles.sectionTitle}>{DAY_LABELS[todayDayKey]}</Text>
+            </ScrollView>
+            {selectedMood && (
+              <MoodResponse auntyId={todayAuntyId} mood={selectedMood} auntyName={aunty.name} acText={ac.text} />
+            )}
+          </View>
+        </Animated.View>
+
+        {/* ── Today's Routine — warm, not clinical ── */}
+        <Animated.View style={fadeSlide(routineAnim)}>
+          <View style={styles.routineSection}>
+            <View style={styles.routineSectionTop}>
+              <View>
+                <Text style={styles.sectionEyebrow}>Ready when you are</Text>
+                <Text style={styles.routineTitle}>Today's Routine</Text>
               </View>
+              {todayRoutine && (
+                <View style={[styles.timePill, { backgroundColor: `${ac.accent}15`, borderColor: `${ac.accent}30` }]}>
+                  <Text style={[styles.timePillText, { color: ac.text }]}>
+                    {todayRoutine.estimated_time_minutes} min
+                  </Text>
+                </View>
+              )}
             </View>
-            {todayRoutine && (
-              <View style={styles.timeBadge}>
-                <Text style={styles.timeBadgeText}>{todayRoutine.estimated_time_minutes} min</Text>
+
+            {todayRoutine ? (
+              <>
+                <Text style={styles.routineInvite}>
+                  {aunty.name} has your {todayRoutine.day_name?.toLowerCase() ?? 'routine'} ready.
+                  {todayRoutine.purpose ? ` Today we're focused on ${todayRoutine.purpose?.toLowerCase()}.` : ''}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.routineStartBtn, { backgroundColor: ac.accent }]}
+                  onPress={() => navigation.navigate('RoutineTab')}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.routineStartText}>Let's do this together</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View style={styles.routineEmpty}>
+                <Text style={styles.routineEmptyText}>
+                  Complete your intake so {aunty.name} can build your routine.
+                </Text>
               </View>
             )}
           </View>
-          <View style={styles.sectionDivider} />
+        </Animated.View>
 
-          {todayRoutine ? (
-            <>
-              {todayRoutine.steps.slice(0, 3).map((step, idx) => (
-                <View key={step.step_number} style={styles.stepRow}>
-                  <View style={[styles.stepNumBadge, idx === 0 && { backgroundColor: colors.primary }]}>
-                    <Text style={[styles.stepNumText, idx === 0 && { color: 'rgba(0,0,0,0.65)' }]}>
-                      {step.step_number}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.stepName}>{step.name}</Text>
-                    <Text style={styles.stepDesc} numberOfLines={2}>{step.description}</Text>
-                  </View>
+        {/* ── Ask an Aunty ── */}
+        <Animated.View style={fadeSlide(askAnim)}>
+          <View style={styles.askSection}>
+            <View style={styles.askHeader}>
+              <View style={styles.askAuntyRow}>
+                <AuntyAvatar auntyId={todayAuntyId} size={36} />
+                <View>
+                  <Text style={styles.askLabel}>Ask {aunty.name} anything</Text>
+                  <Text style={styles.askSub}>She's here to help</Text>
                 </View>
-              ))}
-              {todayRoutine.steps.length > 3 && (
+              </View>
+            </View>
+
+            <View style={styles.askInputWrap}>
+              <TextInput
+                style={styles.askInput}
+                placeholder={`What's on your mind about your hair?`}
+                placeholderTextColor={colors.mutedLight}
+                value={question}
+                onChangeText={setQuestion}
+                multiline
+                numberOfLines={2}
+                returnKeyType="send"
+                onSubmitEditing={handleAskQuestion}
+              />
+              <TouchableOpacity
+                style={[styles.askSendBtn, { backgroundColor: ac.accent }]}
+                onPress={handleAskQuestion}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.askSendText}>Ask</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Quick questions */}
+            <View style={styles.quickQRow}>
+              {getQuickQuestions(aunty.specialty).map((q, i) => (
                 <TouchableOpacity
-                  style={styles.moreStepsRow}
-                  onPress={() => navigation.navigate('Routine')}
+                  key={i}
+                  style={[styles.quickQChip, { borderColor: `${ac.accent}40` }]}
+                  onPress={() => navigation.navigate('AuntyConversation', { auntyId: todayAuntyId, initialQuestion: q })}
                   activeOpacity={0.7}
                 >
-                  <View style={styles.moreStepsDot} />
-                  <Text style={styles.moreSteps}>{todayRoutine.steps.length - 3} more steps — see full routine</Text>
+                  <Text style={[styles.quickQText, { color: ac.text }]} numberOfLines={2}>{q}</Text>
                 </TouchableOpacity>
-              )}
-            </>
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>
-                Complete your onboarding to unlock your personalized routine.
-              </Text>
-            </View>
-          )}
-        </View>
-        </Animated.View>
-
-        {/* Journey tracker */}
-        <Animated.View style={makeSlideStyle(journeyAnim)}>
-        <View style={styles.section}>
-          <View style={styles.sectionEyebrowRow}>
-            <View style={[styles.sectionAccentBar, { backgroundColor: colors.accent }]} />
-            <Text style={styles.sectionEyebrow}>Your Journey</Text>
-          </View>
-          <Text style={styles.sectionTitle}>4-Week Cycle</Text>
-          <View style={styles.sectionDivider} />
-          <View style={styles.weekStrip}>
-            {(['1', '2', '3', '4'] as const).map((w, i) => {
-              const weekAuntyId = WEEK_AUNTY_IDS[i];
-              const weekAccent = auntyColors[weekAuntyId]?.accent ?? colors.primary;
-              const isActive = i === 0;
-              return (
-                <View
-                  key={i}
-                  style={[
-                    styles.weekBlock,
-                    isActive
-                      ? { backgroundColor: weekAccent, borderColor: weekAccent }
-                      : { borderColor: colors.borderLight },
-                  ]}
-                >
-                  {isActive && <View style={styles.weekActiveDot} />}
-                  <Text style={[styles.weekLabel, isActive && styles.weekLabelActive]}>WK</Text>
-                  <Text style={[styles.weekNum, isActive && { color: 'rgba(0,0,0,0.6)' }]}>{w}</Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-        </Animated.View>
-
-        {/* Check-in CTA — bold cosmic card */}
-        <Animated.View style={makeSlideStyle(checkinAnim)}>
-          <TouchableOpacity
-            style={styles.checkinBtn}
-            onPress={() => navigation.navigate('CheckinModal', { auntyId: '1', userInitiated: true })}
-            activeOpacity={0.82}
-          >
-            {/* Decorative orb layers */}
-            <View style={styles.checkinOrb1} />
-            <View style={styles.checkinOrb2} />
-
-            <View style={styles.checkinLeft}>
-              <View style={styles.checkinPill}>
-                <Text style={styles.checkinPillText}>The council is ready</Text>
-              </View>
-              <Text style={styles.checkinTitle}>Check in now</Text>
-              <Text style={styles.checkinSub}>Track your progress with the aunties</Text>
-            </View>
-            <View style={styles.checkinAvatars}>
-              {['1', '2', '3'].map((id, i) => (
-                <View
-                  key={id}
-                  style={[
-                    styles.checkinAvatar,
-                    { marginLeft: i === 0 ? 0 : -14, borderColor: auntyColors[id].accent },
-                  ]}
-                >
-                  <AuntyAvatar auntyId={id} size={38} />
-                </View>
               ))}
             </View>
-          </TouchableOpacity>
+          </View>
         </Animated.View>
+
+        {/* ── Check In with the Council ── */}
+        <TouchableOpacity
+          style={styles.checkinCard}
+          onPress={() => navigation.navigate('CheckinModal', { auntyId: todayAuntyId, userInitiated: true })}
+          activeOpacity={0.85}
+        >
+          <View style={styles.checkinAvatarRow}>
+            {['1', '2', '3', '4', '5'].map((id, i) => (
+              <View
+                key={id}
+                style={[styles.checkinAvatar, { marginLeft: i === 0 ? 0 : -10, borderColor: auntyColors[id].accent }]}
+              >
+                <AuntyAvatar auntyId={id} size={34} />
+              </View>
+            ))}
+          </View>
+          <Text style={styles.checkinTitle}>Time for a hair check-in?</Text>
+          <Text style={styles.checkinSub}>The aunties want to see where you are. Share a photo or just talk to them.</Text>
+          <View style={styles.checkinArrowRow}>
+            <Text style={[styles.checkinCTA, { color: ac.accent }]}>Start your check-in</Text>
+            <Text style={[styles.checkinArrow, { color: ac.accent }]}> →</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* ── Your Journey ── */}
+        <TouchableOpacity
+          style={styles.journeyCard}
+          onPress={() => navigation.navigate('HairJourney')}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.journeyEyebrow}>Your story</Text>
+          <Text style={styles.journeyTitle}>Hair Journey</Text>
+          <Text style={styles.journeySub}>See how far you've come — the aunties remember everything.</Text>
+          <Text style={[styles.journeyCTA, { color: ac.accent }]}>View your journey →</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
 }
 
-function getTimeOfDay() {
+// ── Mood Response Component ──────────────────────────────────────────────────
+function MoodResponse({
+  auntyId,
+  mood,
+  auntyName,
+  acText,
+}: {
+  auntyId: string;
+  mood: string;
+  auntyName: string;
+  acText: string;
+}) {
+  const responses: Record<string, Record<string, string>> = {
+    thriving: {
+      '1': "Ahn ahn! That's the energy I like o. Let's build on it.",
+      '2': "Yes! When you thrive, your hair thrives. This is the day.",
+      '3': "That's what I'm talking about. Let's do something with this energy.",
+      '4': "Parfait. When the spirit is high, the technique is sharp.",
+      '5': "Mija YES! I feel it too! Your curls are going to be everything today.",
+      '6': "Konjo, I knew it. Strong spirit, strong hair. Let's go.",
+      '7': "Mashallah, habibti. This energy is a blessing. Let's use it well.",
+    },
+    good: {
+      '1': "Good is enough, baby. Good is where we work. Let's go.",
+      '2': "Good roots, good day. We build from here.",
+      '3': "Good is good. Consistent and good? That's the dream.",
+      '4': "Good is the foundation of great, ma chérie.",
+      '5': "Good is beautiful, corazón. Let's make it even better.",
+      '6': "Good. Steady. That's how strength is built.",
+      '7': "Good is its own kind of grace. We work with what we have.",
+    },
+    okay: {
+      '1': "Okay is honest. I respect that. Let's focus on what you can control — your hair.",
+      '2': "It's okay to be okay. Your roots don't need you to be perfect.",
+      '3': "Okay is real. I don't need you to pretend.",
+      '4': "Okay days require patience. Let's be gentle today.",
+      '5': "Okay is okay, mija. Your curls love you anyway.",
+      '6': "Okay. I hear you. Let's take it slow and be kind to ourselves.",
+      '7': "Okay is honest. There's wisdom in knowing where you are.",
+    },
+    tired: {
+      '1': "Tired? Then we're doing the 10-minute routine today. No shame.",
+      '2': "Rest is part of the process. Your roots understand tired.",
+      '3': "Tired is real. You still showed up. That's what matters.",
+      '4': "Fatigue is not failure, ma chérie. We adapt.",
+      '5': "Ay corazón, tired is okay. Let's do what we can and rest.",
+      '6': "Tired means you've been giving a lot. Let's restore today.",
+      '7': "Habibti, rest is sacred. Even the simplest care counts today.",
+    },
+    frustrated: {
+      '1': "I hear the frustration. Hair is complicated. Let's trace what's happening.",
+      '2': "Frustrated? Then we go back to the roots — literally. Tell me everything.",
+      '3': "Uh uh, don't let frustration win. We figure this out together, hear me?",
+      '4': "Frustration means we haven't found the right technique yet. We will.",
+      '5': "Ay mija, I know this feeling. But your curls aren't against you, I promise.",
+      '6': "Frustrated is information, konjo. Tell me what's happening.",
+      '7': "Sabr, habibti. Patience. Let's understand what the hair is telling us.",
+    },
+  };
+
+  const response = responses[mood]?.[auntyId] ?? "I hear you. Let's take it one step at a time.";
+
+  return (
+    <View style={moodStyles.responseWrap}>
+      <Text style={[moodStyles.responseText, { color: acText }]}>{response}</Text>
+    </View>
+  );
+}
+
+const moodStyles = StyleSheet.create({
+  responseWrap: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  responseText: {
+    fontFamily: fonts.display,
+    fontSize: fontSize.sm,
+    fontStyle: 'italic',
+    lineHeight: 22,
+  },
+});
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function getTimeGreeting() {
   const h = new Date().getHours();
   if (h < 12) return 'Good morning';
   if (h < 17) return 'Good afternoon';
   return 'Good evening';
 }
 
+function getQuickQuestions(specialty: string): string[] {
+  const base = [
+    'Why is my hair so dry?',
+    'How do I retain more length?',
+    'What should I do on rest days?',
+  ];
+  if (specialty.toLowerCase().includes('moisture')) {
+    return ['Why does my hair feel dry after washing?', 'How often should I deep condition?', 'What is the LOC method?'];
+  }
+  if (specialty.toLowerCase().includes('scalp')) {
+    return ['How do I care for my scalp?', 'What causes scalp itch?', 'How often should I wash?'];
+  }
+  if (specialty.toLowerCase().includes('curl')) {
+    return ['How do I define my curls?', 'Why is my curl pattern uneven?', 'Wash-and-go tips?'];
+  }
+  if (specialty.toLowerCase().includes('length') || specialty.toLowerCase().includes('retention')) {
+    return ['Why am I not retaining length?', 'Best protective styles for growth?', 'How to reduce breakage?'];
+  }
+  return base;
+}
+
+// ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.canvas },
+  scroll: { padding: spacing.md, gap: spacing.md },
 
-  // Hero — warm dark
+  // Hero
+  heroWrap: { borderRadius: radius.lg, overflow: 'hidden', ...shadows.md },
   hero: {
-    backgroundColor: colors.ink,
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.xl,
-    overflow: 'hidden',
-  },
-  heroGlow: {
-    position: 'absolute',
-    top: -40,
-    right: -30,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    opacity: 0.08,
-  },
-  heroContent: { position: 'relative' },
-  heroEyebrow: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: 'rgba(254,248,236,0.5)',
-    fontWeight: fontWeight.bold,
-    textTransform: 'uppercase',
-    letterSpacing: 3.5,
-    marginBottom: spacing.xs,
-  },
-  heroName: {
-    fontFamily: fonts.display,
-    fontSize: 64,
-    fontWeight: fontWeight.black,
-    color: colors.canvas,
-    letterSpacing: -3,
-    lineHeight: 64,
-  },
-  heroRuleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: spacing.md,
-  },
-  heroRule: {
-    width: 48,
-    height: 3,
-    borderRadius: 2,
-  },
-  heroRuleDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-  },
-  heroRuleFade: {
-    width: 20,
-    height: 3,
-    borderRadius: 2,
-    opacity: 0.3,
-  },
-
-  content: { padding: spacing.md, gap: spacing.md },
-
-  // Greeting card — full aunty color background
-  greetingCard: {
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    overflow: 'hidden',
-    ...shadows.md,
-  },
-  greetingInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  greetingAvatarRing: {
-    borderRadius: 30,
-    borderWidth: 2,
-    padding: 2,
-  },
-  greetingRight: { flex: 1 },
-  greetingAuntyName: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.black,
-    color: 'rgba(0,0,0,0.75)',
-    letterSpacing: -0.2,
-  },
-  greetingAuntyRole: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    color: 'rgba(0,0,0,0.45)',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginTop: 2,
-  },
-  greetingQuoteWrap: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 4,
-  },
-  greetingQuoteMark: {
-    fontFamily: fonts.display,
-    fontSize: 28,
-    lineHeight: 24,
-    fontWeight: fontWeight.black,
-    color: 'rgba(0,0,0,0.4)',
-    marginTop: -2,
-  },
-  greetingText: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.md,
-    color: 'rgba(0,0,0,0.72)',
-    lineHeight: 24,
-    flex: 1,
-  },
-
-  // Sections
-  section: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    ...shadows.sm,
-  },
-  sectionTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  sectionTitleGroup: { flex: 1 },
-  sectionEyebrowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: 4,
-  },
-  sectionAccentBar: {
-    width: 3,
-    height: 14,
-    borderRadius: 2,
-  },
-  sectionEyebrow: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.muted,
-    fontWeight: fontWeight.black,
-    textTransform: 'uppercase',
-    letterSpacing: 2.5,
-  },
-  dayLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  dayIcon: {
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sectionTitle: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.black,
-    color: colors.ink,
-    letterSpacing: -0.3,
-  },
-  timeBadge: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 5,
-  },
-  timeBadgeText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: 'rgba(0,0,0,0.65)',
-    fontWeight: fontWeight.black,
-  },
-  sectionDivider: {
-    height: 1,
-    backgroundColor: colors.borderLight,
-    marginVertical: spacing.md,
-  },
-
-  // Steps
-  stepRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.sm + 2,
-    alignItems: 'flex-start',
-  },
-  stepNumBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: colors.offWhite,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 1,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  stepNumText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
-    color: colors.muted,
-  },
-  stepName: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.ink,
-    marginBottom: 2,
-  },
-  stepDesc: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.muted,
-    lineHeight: 18,
-  },
-  moreStepsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-    paddingVertical: 2,
-  },
-  moreStepsDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: colors.accent,
-  },
-  moreSteps: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.accent,
-    fontWeight: fontWeight.bold,
-  },
-  emptyState: {
-    paddingVertical: spacing.md,
-  },
-  emptyText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.muted,
-    lineHeight: 22,
-  },
-
-  // Week strip
-  weekStrip: { flexDirection: 'row', gap: spacing.sm },
-  weekBlock: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: colors.offWhite,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  weekActiveDot: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
-  weekLabel: {
-    fontFamily: fonts.body,
-    fontSize: 8,
-    fontWeight: fontWeight.black,
-    color: colors.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-  },
-  weekLabelActive: { color: 'rgba(0,0,0,0.45)' },
-  weekNum: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.black,
-    color: colors.muted,
-    letterSpacing: -0.5,
-  },
-
-  // Check-in CTA — deep cosmic card
-  checkinBtn: {
-    backgroundColor: colors.wine,
     borderRadius: radius.lg,
     padding: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(155,93,229,0.2)',
-    ...shadows.lg,
+    minHeight: 160,
   },
-  checkinOrb1: {
+  heroGlow: {
     position: 'absolute',
-    top: -40,
-    right: -20,
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: colors.purple,
-    opacity: 0.25,
+    top: -30,
+    right: -30,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    opacity: 0.18,
   },
-  checkinOrb2: {
-    position: 'absolute',
-    bottom: -30,
-    left: 20,
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: colors.carmen,
-    opacity: 0.12,
-  },
-  checkinLeft: { flex: 1 },
-  checkinPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    marginBottom: spacing.xs,
-  },
-  checkinPillText: {
+  heroLeft: { flex: 1, paddingRight: spacing.sm },
+  timeGreeting: {
     fontFamily: fonts.body,
     fontSize: fontSize.xs,
-    color: 'rgba(254,248,236,0.6)',
+    color: colors.muted,
     fontWeight: fontWeight.bold,
     textTransform: 'uppercase',
-    letterSpacing: 1.5,
+    letterSpacing: 2.5,
+    marginBottom: spacing.xs,
+  },
+  heroName: {
+    fontFamily: fonts.display,
+    fontSize: 44,
+    fontWeight: fontWeight.black,
+    letterSpacing: -2,
+    lineHeight: 46,
+  },
+  heroRule: {
+    width: 36,
+    height: 3,
+    borderRadius: 2,
+    marginVertical: spacing.sm,
+  },
+  heroAuntyName: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+  },
+  heroPortrait: { alignItems: 'flex-end' },
+  portraitRing: {
+    borderWidth: 2,
+    borderRadius: 60,
+    overflow: 'hidden',
+  },
+
+  // Greeting card
+  greetingCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderLeftWidth: 4,
+    padding: spacing.md,
+    ...shadows.sm,
+  },
+  greetingAuntyName: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.black,
+    letterSpacing: 1.2,
+    marginBottom: spacing.xs,
+  },
+  greetingText: {
+    fontFamily: fonts.display,
+    fontSize: fontSize.md,
+    fontStyle: 'italic',
+    color: colors.ink,
+    lineHeight: 26,
+  },
+  greetingDialect: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    marginTop: spacing.sm,
+    opacity: 0.7,
+  },
+
+  // Mood
+  moodSection: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    padding: spacing.md,
+    ...shadows.sm,
+  },
+  moodLabel: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.ink,
+    marginBottom: spacing.sm,
+  },
+  moodScroll: { marginHorizontal: -spacing.md },
+  moodRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
+  moodChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1.5,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.offWhite,
+  },
+  moodChipText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.ink,
+  },
+  moodChipTextSelected: {
+    color: '#fff',
+  },
+
+  // Routine
+  routineSection: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    padding: spacing.md,
+    ...shadows.sm,
+  },
+  routineSectionTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.sm,
+  },
+  sectionEyebrow: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    fontWeight: fontWeight.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    marginBottom: 2,
+  },
+  routineTitle: {
+    fontFamily: fonts.display,
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.black,
+    color: colors.ink,
+    letterSpacing: -0.3,
+  },
+  timePill: {
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+    borderWidth: 1,
+  },
+  timePillText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.black,
+  },
+  routineInvite: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 22,
+    marginBottom: spacing.md,
+  },
+  routineStartBtn: {
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  routineStartText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.black,
+    color: '#fff',
+    letterSpacing: 0.2,
+  },
+  routineEmpty: { paddingVertical: spacing.sm },
+  routineEmptyText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.muted,
+    lineHeight: 22,
+  },
+
+  // Ask an Aunty
+  askSection: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    padding: spacing.md,
+    ...shadows.sm,
+  },
+  askHeader: { marginBottom: spacing.sm },
+  askAuntyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  askLabel: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.ink,
+  },
+  askSub: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    marginTop: 1,
+  },
+  askInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  askInput: {
+    flex: 1,
+    backgroundColor: colors.offWhite,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    padding: spacing.sm,
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    lineHeight: 22,
+    minHeight: 56,
+    textAlignVertical: 'top',
+  },
+  askSendBtn: {
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    alignSelf: 'flex-end',
+  },
+  askSendText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.black,
+    color: '#fff',
+  },
+  quickQRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  quickQChip: {
+    borderRadius: radius.full,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    backgroundColor: colors.offWhite,
+    maxWidth: '70%',
+  },
+  quickQText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    lineHeight: 18,
+  },
+
+  // Check-in
+  checkinCard: {
+    backgroundColor: colors.ink,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    ...shadows.lg,
+  },
+  checkinAvatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  checkinAvatar: {
+    borderWidth: 2,
+    borderRadius: 20,
   },
   checkinTitle: {
     fontFamily: fonts.display,
-    fontSize: fontSize.xxl,
+    fontSize: fontSize.xl,
     fontWeight: fontWeight.black,
     color: colors.canvas,
-    letterSpacing: -0.8,
+    letterSpacing: -0.3,
+    marginBottom: spacing.xs,
   },
   checkinSub: {
     fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: 'rgba(254,248,236,0.4)',
-    marginTop: 4,
+    fontSize: fontSize.sm,
+    color: 'rgba(254,248,236,0.55)',
+    lineHeight: 22,
+    marginBottom: spacing.md,
   },
-  checkinAvatars: { flexDirection: 'row', alignItems: 'center' },
-  checkinAvatar: {
-    borderWidth: 2.5,
-    borderRadius: 22,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
+  checkinArrowRow: { flexDirection: 'row', alignItems: 'center' },
+  checkinCTA: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.black,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  checkinArrow: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.black,
+  },
+
+  // Journey
+  journeyCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    padding: spacing.lg,
+    ...shadows.sm,
+  },
+  journeyEyebrow: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    fontWeight: fontWeight.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  journeyTitle: {
+    fontFamily: fonts.display,
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.black,
+    color: colors.ink,
+    letterSpacing: -0.3,
+    marginBottom: spacing.xs,
+  },
+  journeySub: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.muted,
+    lineHeight: 22,
+    marginBottom: spacing.sm,
+  },
+  journeyCTA: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.black,
   },
 });

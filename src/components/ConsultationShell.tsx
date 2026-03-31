@@ -32,6 +32,7 @@ interface ConsultationShellProps {
   onBack?: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  phaseBadge?: string; // e.g. "Marcia's Turn · Root Whisperer"
 }
 
 export default function ConsultationShell({
@@ -43,6 +44,7 @@ export default function ConsultationShell({
   onBack,
   children,
   footer,
+  phaseBadge,
 }: ConsultationShellProps) {
   const insets = useSafeAreaInsets();
   const ac = auntyColors[auntyId];
@@ -77,6 +79,14 @@ export default function ConsultationShell({
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Phase badge */}
+        {phaseBadge && (
+          <View style={[styles.phaseBadgeWrap, { borderColor: `${ac.accent}40`, backgroundColor: `${ac.accent}12` }]}>
+            <View style={[styles.phaseBadgeDot, { backgroundColor: ac.accent }]} />
+            <Text style={[styles.phaseBadgeText, { color: ac.accent }]}>{phaseBadge}</Text>
+          </View>
+        )}
+
         {/* Aunty + speech bubble row — Duolingo style */}
         <View style={styles.bubbleRow}>
           {/* Avatar with accent ring */}
@@ -184,6 +194,32 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.9)',
     lineHeight: 22,
     fontWeight: fontWeight.medium,
+  },
+
+  // Phase badge
+  phaseBadgeWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderRadius: 99,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    gap: 6,
+  },
+  phaseBadgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  phaseBadgeText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.black,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
   },
 
   // Question

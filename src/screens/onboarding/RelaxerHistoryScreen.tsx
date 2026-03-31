@@ -8,6 +8,7 @@ import Button from '@/components/Button';
 import { NaturalIcon, ChemicalIcon, TransitionIcon, ScissorsIcon } from '@/components/Icons';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'RelaxerHistory'>;
+
 const OPTIONS = [
   { label: 'Never relaxed', value: 'never_relaxed' as RelaxerHistory, icon: <NaturalIcon color="#12C064" size={22} strokeWidth={2} />, color: '#12C064' },
   { label: 'Currently relaxed', value: 'currently_relaxed' as RelaxerHistory, icon: <ChemicalIcon color="#9B5DE5" size={22} strokeWidth={2} />, color: '#9B5DE5' },
@@ -21,22 +22,35 @@ export default function RelaxerHistoryScreen({ navigation }: Props) {
 
   return (
     <ConsultationShell
-      step={15}
+      step={13}
       totalSteps={18}
-      auntyId="3"
-      auntyMessage="I need to know what your hair has been through. No judgment — just the truth."
+      auntyId="2"
+      phaseBadge="Marcia's Turn · Root Whisperer"
+      auntyMessage="I need to know what your hair has been through. Chemicals live in di roots longer than people think. No judgment — just the truth."
       question="What's your chemical history?"
       onBack={() => navigation.goBack()}
       footer={
         <Button
           label="Continue"
-          onPress={() => { if (selected) { setData({ relaxer_history: selected }); navigation.navigate('ProtectiveStyling'); } }}
+          onPress={() => {
+            if (selected) {
+              setData({ relaxer_history: selected });
+              navigation.navigate('ScalpConcerns');
+            }
+          }}
           disabled={!selected}
         />
       }
     >
       {OPTIONS.map(opt => (
-        <OptionCard key={opt.value} label={opt.label} selected={selected === opt.value} onPress={() => setSelected(opt.value)} icon={opt.icon} color={opt.color} />
+        <OptionCard
+          key={opt.value}
+          label={opt.label}
+          selected={selected === opt.value}
+          onPress={() => setSelected(opt.value)}
+          icon={opt.icon}
+          color={opt.color}
+        />
       ))}
     </ConsultationShell>
   );

@@ -192,6 +192,42 @@ Rules:
 }
 
 // ── 4. Checkin progress analysis ─────────────────────────────────────
+// ── 4. Aunty conversation response ──────────────────────────────────────
+export async function generateAuntyResponse({
+  auntyId,
+  userQuestion,
+  conversationHistory,
+  userName,
+  hairProfile,
+}: {
+  auntyId: string;
+  userQuestion: string;
+  conversationHistory: string;
+  userName: string;
+  hairProfile: any;
+}): Promise<string> {
+  const aunty = AUNTIES[auntyId];
+  if (!aunty) throw new Error('Unknown aunty');
+
+  const hairContext = hairProfile
+    ? `The user's hair profile: curl type ${hairProfile.curl_type ?? 'unknown'}, porosity ${hairProfile.porosity ?? 'unknown'}, primary goal: ${hairProfile.primary_goal ?? 'unknown'}.`
+    : 'No hair profile yet — give general textured hair advice.';
+
+  const system = `You are ${aunty.name}, a ${aunty.region} hair care expert. Your specialty is ${aunty.specialty}. Your personality is: ${aunty.personality}. You speak in ${aunty.dialect} — use light dialect touches, not heavy exaggeration. You are warm, direct, and deeply knowledgeable about textured hair. You address the user as "${userName}". Never break character. Keep your response to 2-4 sentences — warm, specific, and actionable. Do not use bullet points. Speak as if talking directly to a friend.`;
+
+  const prompt = `${hairContext}
+
+Recent conversation:
+${conversationHistory}
+
+${userName}'s question: ${userQuestion}
+
+Respond as ${aunty.name} — warm, specific, helpful, in your dialect.`;
+
+  return await callGemini(prompt, system);
+}
+
+// ── 5. Check-in progress analysis ────────────────────────────────────────
 export async function analyzeCheckinProgress(
   checkinImageBase64: string,
   intakeAnalysis: GeminiVisionAnalysis,

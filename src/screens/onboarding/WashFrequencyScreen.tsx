@@ -23,7 +23,7 @@ export default function WashFrequencyScreen({ navigation }: Props) {
   const handleContinue = () => {
     if (!selected) return;
     setData({ wash_frequency: selected });
-    navigation.navigate('PrimaryGoal');
+    navigation.navigate('HeatUse');
   };
 
   return (
@@ -31,7 +31,8 @@ export default function WashFrequencyScreen({ navigation }: Props) {
       step={11}
       totalSteps={18}
       auntyId="2"
-      auntyMessage="How often are you actually washing? I need the truth, not the ideal."
+      phaseBadge="Marcia's Turn · Root Whisperer"
+      auntyMessage="How often are you actually washing? I need the truth, not the ideal. Di roots can't breathe if you're overwashing — or starving them."
       question="How often do you wash your hair?"
       onBack={() => navigation.goBack()}
       footer={<Button label="Continue" onPress={handleContinue} disabled={!selected} />}

@@ -8,6 +8,7 @@ import Button from '@/components/Button';
 import { NoHeatIcon, SnowflakeIcon, FlameIcon } from '@/components/Icons';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'HeatUse'>;
+
 const OPTIONS = [
   { label: 'Never', value: 'never' as HeatUse, icon: <NoHeatIcon color="#12C064" size={22} strokeWidth={2} />, color: '#12C064' },
   { label: 'Rarely — a few times a year', value: 'rarely' as HeatUse, icon: <SnowflakeIcon color="#00B4D8" size={22} strokeWidth={1.6} />, color: '#00B4D8' },
@@ -21,22 +22,35 @@ export default function HeatUseScreen({ navigation }: Props) {
 
   return (
     <ConsultationShell
-      step={14}
+      step={12}
       totalSteps={18}
-      auntyId="4"
-      auntyMessage="Heat changes everything about how I build your routine. How often are you using it?"
+      auntyId="2"
+      phaseBadge="Marcia's Turn · Root Whisperer"
+      auntyMessage="Heat goes straight to di roots — damages what we're trying to grow. You said you wash {washFreq}. Now tell mi about the heat."
       question="How often do you use direct heat?"
       onBack={() => navigation.goBack()}
       footer={
         <Button
           label="Continue"
-          onPress={() => { if (selected) { setData({ heat_use: selected }); navigation.navigate('RelaxerHistory'); } }}
+          onPress={() => {
+            if (selected) {
+              setData({ heat_use: selected });
+              navigation.navigate('RelaxerHistory');
+            }
+          }}
           disabled={!selected}
         />
       }
     >
       {OPTIONS.map(opt => (
-        <OptionCard key={opt.value} label={opt.label} selected={selected === opt.value} onPress={() => setSelected(opt.value)} icon={opt.icon} color={opt.color} />
+        <OptionCard
+          key={opt.value}
+          label={opt.label}
+          selected={selected === opt.value}
+          onPress={() => setSelected(opt.value)}
+          icon={opt.icon}
+          color={opt.color}
+        />
       ))}
     </ConsultationShell>
   );
