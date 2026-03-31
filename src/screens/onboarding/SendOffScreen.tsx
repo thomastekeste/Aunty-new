@@ -87,9 +87,7 @@ export default function SendOffScreen({ navigation }: Props) {
   };
 
   const handleContinue = () => {
-    // Navigate to home — RootNavigator will switch because onboarding_complete = true
-    // Force re-render by updating user context
-    navigation.reset({ index: 0, routes: [{ name: 'Splash' }] });
+    // RootNavigator automatically switches to App screens when onboarding_complete = true
   };
 
   const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
