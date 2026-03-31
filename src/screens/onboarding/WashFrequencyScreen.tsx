@@ -5,14 +5,15 @@ import { useOnboarding } from '@/context/OnboardingContext';
 import ConsultationShell from '@/components/ConsultationShell';
 import OptionCard from '@/components/OptionCard';
 import Button from '@/components/Button';
+import { CalWeekIcon, CalMonthIcon, HourglassIcon, LooseIcon } from '@/components/Icons';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'WashFrequency'>;
 
-const OPTIONS: Array<{ label: string; value: WashFrequency; icon: string; color: string }> = [
-  { label: 'Weekly', value: 'weekly', icon: '📅', color: '#12C064' },
-  { label: 'Every 2 weeks', value: 'bi_weekly', icon: '🗓️', color: '#F5C542' },
-  { label: 'Monthly', value: 'monthly', icon: '🌙', color: '#9B5DE5' },
-  { label: 'Less than that', value: 'less_frequent', icon: '🤷', color: '#FB5607' },
+const OPTIONS = [
+  { label: 'Weekly', value: 'weekly' as WashFrequency, icon: <CalWeekIcon color="#12C064" size={22} strokeWidth={2} />, color: '#12C064' },
+  { label: 'Every 2 weeks', value: 'bi_weekly' as WashFrequency, icon: <CalMonthIcon color="#F5C542" size={22} strokeWidth={2} />, color: '#F5C542' },
+  { label: 'Monthly', value: 'monthly' as WashFrequency, icon: <HourglassIcon color="#9B5DE5" size={22} strokeWidth={2} />, color: '#9B5DE5' },
+  { label: 'Less than that', value: 'less_frequent' as WashFrequency, icon: <LooseIcon color="#FB5607" size={22} strokeWidth={2} />, color: '#FB5607' },
 ];
 
 export default function WashFrequencyScreen({ navigation }: Props) {

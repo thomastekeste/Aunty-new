@@ -5,12 +5,13 @@ import { useOnboarding } from '@/context/OnboardingContext';
 import ConsultationShell from '@/components/ConsultationShell';
 import OptionCard from '@/components/OptionCard';
 import Button from '@/components/Button';
+import { BraidIcon, TransitionIcon, LeafIcon } from '@/components/Icons';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'ProtectiveStyling'>;
-const OPTIONS: Array<{ label: string; value: ProtectiveStyling; icon: string; color: string }> = [
-  { label: 'Yes, regularly — braids, twists, wigs', value: 'yes_regularly', icon: '👑', color: '#F72585' },
-  { label: 'Sometimes', value: 'sometimes', icon: '🔄', color: '#F5C542' },
-  { label: 'Never', value: 'never', icon: '💆', color: '#9B5DE5' },
+const OPTIONS = [
+  { label: 'Yes, regularly — braids, twists, wigs', value: 'yes_regularly' as ProtectiveStyling, icon: <BraidIcon color="#F72585" size={22} strokeWidth={2} />, color: '#F72585' },
+  { label: 'Sometimes', value: 'sometimes' as ProtectiveStyling, icon: <TransitionIcon color="#F5C542" size={22} strokeWidth={2} />, color: '#F5C542' },
+  { label: 'Never', value: 'never' as ProtectiveStyling, icon: <LeafIcon color="#9B5DE5" size={22} strokeWidth={2} />, color: '#9B5DE5' },
 ];
 
 export default function ProtectiveStylingScreen({ navigation }: Props) {

@@ -5,17 +5,18 @@ import { useOnboarding } from '@/context/OnboardingContext';
 import ConsultationShell from '@/components/ConsultationShell';
 import OptionCard from '@/components/OptionCard';
 import Button from '@/components/Button';
+import { FrizzIcon, DryIcon, BreakageIcon, NoDefinitionIcon, ShrinkageIcon, BuildupIcon, ScalpIcon } from '@/components/Icons';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'Failures'>;
 
-const OPTIONS: Array<{ label: string; icon: string; color: string }> = [
-  { label: 'Frizz', icon: '☁️', color: '#9B5DE5' },
-  { label: 'Dryness', icon: '🌵', color: '#FB5607' },
-  { label: 'Breakage', icon: '💔', color: '#E0142C' },
-  { label: 'No definition', icon: '🌊', color: '#00B4D8' },
-  { label: 'Shrinkage', icon: '📉', color: '#F5C542' },
-  { label: 'Buildup', icon: '🧱', color: '#8B6914' },
-  { label: 'Scalp issues', icon: '⚡', color: '#F72585' },
+const OPTIONS = [
+  { label: 'Frizz', icon: <FrizzIcon color="#9B5DE5" size={22} strokeWidth={1.8} />, color: '#9B5DE5' },
+  { label: 'Dryness', icon: <DryIcon color="#FB5607" size={22} strokeWidth={1.8} />, color: '#FB5607' },
+  { label: 'Breakage', icon: <BreakageIcon color="#E0142C" size={22} strokeWidth={2} />, color: '#E0142C' },
+  { label: 'No definition', icon: <NoDefinitionIcon color="#00B4D8" size={22} strokeWidth={2} />, color: '#00B4D8' },
+  { label: 'Shrinkage', icon: <ShrinkageIcon color="#F5C542" size={22} strokeWidth={2} />, color: '#F5C542' },
+  { label: 'Buildup', icon: <BuildupIcon color="#8B6914" size={22} strokeWidth={2} />, color: '#8B6914' },
+  { label: 'Scalp issues', icon: <ScalpIcon color="#F72585" size={22} strokeWidth={1.8} />, color: '#F72585' },
 ];
 
 export default function FailuresScreen({ navigation }: Props) {

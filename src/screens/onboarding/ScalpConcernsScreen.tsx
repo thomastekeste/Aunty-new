@@ -5,15 +5,16 @@ import { useOnboarding } from '@/context/OnboardingContext';
 import ConsultationShell from '@/components/ConsultationShell';
 import OptionCard from '@/components/OptionCard';
 import Button from '@/components/Button';
+import { ShieldCheckIcon, DryIcon, ScalpIcon, SnowflakeIcon, ThinningIcon, OilIcon } from '@/components/Icons';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'ScalpConcerns'>;
-const OPTIONS: Array<{ label: string; icon: string; color: string }> = [
-  { label: 'No concerns', icon: '✅', color: '#12C064' },
-  { label: 'Dryness', icon: '🌵', color: '#FB5607' },
-  { label: 'Itchiness', icon: '⚡', color: '#F5C542' },
-  { label: 'Dandruff', icon: '❄️', color: '#00B4D8' },
-  { label: 'Thinning', icon: '🍂', color: '#9B5DE5' },
-  { label: 'Oiliness', icon: '💧', color: '#0BBFAA' },
+const OPTIONS = [
+  { label: 'No concerns', icon: <ShieldCheckIcon color="#12C064" size={22} strokeWidth={2} />, color: '#12C064' },
+  { label: 'Dryness', icon: <DryIcon color="#FB5607" size={22} strokeWidth={1.8} />, color: '#FB5607' },
+  { label: 'Itchiness', icon: <ScalpIcon color="#F5C542" size={22} strokeWidth={1.8} />, color: '#F5C542' },
+  { label: 'Dandruff', icon: <SnowflakeIcon color="#00B4D8" size={22} strokeWidth={1.6} />, color: '#00B4D8' },
+  { label: 'Thinning', icon: <ThinningIcon color="#9B5DE5" size={22} strokeWidth={2} />, color: '#9B5DE5' },
+  { label: 'Oiliness', icon: <OilIcon color="#0BBFAA" size={22} strokeWidth={2} />, color: '#0BBFAA' },
 ];
 
 export default function ScalpConcernsScreen({ navigation }: Props) {

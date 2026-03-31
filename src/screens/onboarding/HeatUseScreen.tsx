@@ -5,13 +5,14 @@ import { useOnboarding } from '@/context/OnboardingContext';
 import ConsultationShell from '@/components/ConsultationShell';
 import OptionCard from '@/components/OptionCard';
 import Button from '@/components/Button';
+import { NoHeatIcon, SnowflakeIcon, FlameIcon } from '@/components/Icons';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'HeatUse'>;
-const OPTIONS: Array<{ label: string; value: HeatUse; icon: string; color: string }> = [
-  { label: 'Never', value: 'never', icon: '🚫', color: '#12C064' },
-  { label: 'Rarely — a few times a year', value: 'rarely', icon: '❄️', color: '#00B4D8' },
-  { label: 'Sometimes — once a month or so', value: 'sometimes', icon: '🌡️', color: '#F5C542' },
-  { label: 'Often — weekly or more', value: 'often', icon: '🔥', color: '#E0142C' },
+const OPTIONS = [
+  { label: 'Never', value: 'never' as HeatUse, icon: <NoHeatIcon color="#12C064" size={22} strokeWidth={2} />, color: '#12C064' },
+  { label: 'Rarely — a few times a year', value: 'rarely' as HeatUse, icon: <SnowflakeIcon color="#00B4D8" size={22} strokeWidth={1.6} />, color: '#00B4D8' },
+  { label: 'Sometimes — once a month or so', value: 'sometimes' as HeatUse, icon: <FlameIcon color="#F5C542" size={22} strokeWidth={2} />, color: '#F5C542' },
+  { label: 'Often — weekly or more', value: 'often' as HeatUse, icon: <FlameIcon color="#E0142C" size={22} strokeWidth={2.5} />, color: '#E0142C' },
 ];
 
 export default function HeatUseScreen({ navigation }: Props) {

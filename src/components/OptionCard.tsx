@@ -7,8 +7,8 @@ interface OptionCardProps {
   selected: boolean;
   onPress: () => void;
   multiSelect?: boolean;
-  icon?: string;        // emoji icon
-  color?: string;       // icon background color
+  icon?: React.ReactNode;  // SVG icon component
+  color?: string;          // icon background color
 }
 
 export default function OptionCard({
@@ -30,9 +30,7 @@ export default function OptionCard({
     >
       {/* Icon square */}
       <View style={[styles.iconBox, { backgroundColor: selected ? color : `${color}25` }]}>
-        <Text style={styles.iconText}>
-          {icon ?? label.charAt(0).toUpperCase()}
-        </Text>
+        {icon ?? null}
       </View>
 
       {/* Label */}
@@ -73,9 +71,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-  },
-  iconText: {
-    fontSize: 22,
   },
   label: {
     fontFamily: fonts.body,

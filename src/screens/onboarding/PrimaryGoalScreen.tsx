@@ -5,15 +5,17 @@ import { useOnboarding } from '@/context/OnboardingContext';
 import ConsultationShell from '@/components/ConsultationShell';
 import OptionCard from '@/components/OptionCard';
 import Button from '@/components/Button';
+import { GrowthIcon, DropIcon, CurlIcon, VolumeIcon, LeafIcon } from '@/components/Icons';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'PrimaryGoal'>;
 
-const OPTIONS: Array<{ label: string; value: PrimaryGoal; icon: string; color: string }> = [
-  { label: 'Length — I want it to grow', value: 'length', icon: '📏', color: '#12C064' },
-  { label: 'Moisture — it\'s always dry', value: 'moisture', icon: '💧', color: '#00B4D8' },
-  { label: 'Definition — I want real curls', value: 'definition', icon: '🌀', color: '#9B5DE5' },
-  { label: 'Volume — more is more', value: 'volume', icon: '✨', color: '#F5C542' },
-  { label: 'Health — fix what\'s broken', value: 'health', icon: '🌿', color: '#FB5607' },
+const C = { length: '#12C064', moisture: '#00B4D8', definition: '#9B5DE5', volume: '#F5C542', health: '#FB5607' };
+const OPTIONS: Array<{ label: string; value: PrimaryGoal; icon: React.ReactNode; color: string }> = [
+  { label: 'Length — I want it to grow', value: 'length', icon: <GrowthIcon color={C.length} size={22} strokeWidth={2} />, color: C.length },
+  { label: 'Moisture — it\'s always dry', value: 'moisture', icon: <DropIcon color={C.moisture} size={22} strokeWidth={2} />, color: C.moisture },
+  { label: 'Definition — I want real curls', value: 'definition', icon: <CurlIcon color={C.definition} size={22} strokeWidth={2} />, color: C.definition },
+  { label: 'Volume — more is more', value: 'volume', icon: <VolumeIcon color={C.volume} size={22} strokeWidth={2} />, color: C.volume },
+  { label: 'Health — fix what\'s broken', value: 'health', icon: <LeafIcon color={C.health} size={22} strokeWidth={2} />, color: C.health },
 ];
 
 export default function PrimaryGoalScreen({ navigation }: Props) {

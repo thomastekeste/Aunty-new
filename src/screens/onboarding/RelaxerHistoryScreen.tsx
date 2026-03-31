@@ -5,13 +5,14 @@ import { useOnboarding } from '@/context/OnboardingContext';
 import ConsultationShell from '@/components/ConsultationShell';
 import OptionCard from '@/components/OptionCard';
 import Button from '@/components/Button';
+import { NaturalIcon, ChemicalIcon, TransitionIcon, ScissorsIcon } from '@/components/Icons';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'RelaxerHistory'>;
-const OPTIONS: Array<{ label: string; value: RelaxerHistory; icon: string; color: string }> = [
-  { label: 'Never relaxed', value: 'never_relaxed', icon: '🌱', color: '#12C064' },
-  { label: 'Currently relaxed', value: 'currently_relaxed', icon: '💆', color: '#9B5DE5' },
-  { label: 'Transitioning — growing out a relaxer', value: 'transitioning', icon: '🔄', color: '#F5C542' },
-  { label: 'Big chopped', value: 'big_chopped', icon: '✂️', color: '#F72585' },
+const OPTIONS = [
+  { label: 'Never relaxed', value: 'never_relaxed' as RelaxerHistory, icon: <NaturalIcon color="#12C064" size={22} strokeWidth={2} />, color: '#12C064' },
+  { label: 'Currently relaxed', value: 'currently_relaxed' as RelaxerHistory, icon: <ChemicalIcon color="#9B5DE5" size={22} strokeWidth={2} />, color: '#9B5DE5' },
+  { label: 'Transitioning — growing out a relaxer', value: 'transitioning' as RelaxerHistory, icon: <TransitionIcon color="#F5C542" size={22} strokeWidth={2} />, color: '#F5C542' },
+  { label: 'Big chopped', value: 'big_chopped' as RelaxerHistory, icon: <ScissorsIcon color="#F72585" size={22} strokeWidth={2} />, color: '#F72585' },
 ];
 
 export default function RelaxerHistoryScreen({ navigation }: Props) {
