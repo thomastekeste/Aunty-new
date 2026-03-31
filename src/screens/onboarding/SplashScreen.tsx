@@ -13,6 +13,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { OnboardingStackParamList } from '@/types';
 import { AUNTIES, AUNTY_IDS } from '@/constants/aunties';
 import { colors, spacing, fontSize, fontWeight, fonts, radius, auntyColors, shadows } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import AuntyAvatar from '@/components/AuntyAvatar';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'Splash'>;
@@ -25,12 +26,24 @@ const AUNTY_ORDER = ['1', '2', '3', '4', '5', '6', '7'] as const;
 
 export default function SplashScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { updateUser } = useAuth();
   const scrollRef = useRef<ScrollView>(null);
   const [activeIdx, setActiveIdx] = useState(0);
   const dotScale = useRef(AUNTY_ORDER.map(() => new Animated.Value(1))).current;
   const dotOpacity = useRef(AUNTY_ORDER.map(() => new Animated.Value(0.3))).current;
   const glowScale = useRef(new Animated.Value(1)).current;
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const handleSkipOnboarding = () => {
+    const demoUserId = `demo-${Date.now()}`;
+    updateUser({
+      id: demoUserId,
+      name: 'Test User',
+      email: `test-${demoUserId}@test.local`,
+      onboarding_complete: true,
+      onboarding_step_completed: 22,
+    } as any);
+  };
 
   const animateDots = useCallback((idx: number) => {
     AUNTY_ORDER.forEach((_, i) => {
@@ -214,6 +227,13 @@ export default function SplashScreen({ navigation }: Props) {
           activeOpacity={0.82}
         >
           <Text style={styles.primaryCtaText}>Begin your consultation</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.skipBtn}
+          onPress={handleSkipOnboarding}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.skipBtnText}>Skip for testing</Text>
         </TouchableOpacity>
         <Text style={styles.ctaCaption}>Personalized care. Cultural wisdom.</Text>
       </View>
@@ -450,6 +470,18 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.black,
     textTransform: 'uppercase',
     letterSpacing: 2,
+  },
+  skipBtn: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  skipBtnText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: 'rgba(61,47,31,0.5)',
+    fontWeight: fontWeight.semibold,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   ctaCaption: {
     fontFamily: fonts.body,
