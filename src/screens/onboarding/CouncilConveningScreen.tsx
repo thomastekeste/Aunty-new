@@ -6,6 +6,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { OnboardingStackParamList } from '@/types';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { generateCouncilResponses, generateRoutine } from '@/services/gemini';
+import { DEFAULT_ROUTINE, DEFAULT_COUNCIL_RESPONSE } from '@/constants/routines';
 import AuntyAvatar from '@/components/AuntyAvatar';
 import { colors, spacing, fontSize, fontWeight, fonts, auntyColors } from '@/constants/theme';
 
@@ -24,7 +25,6 @@ export default function CouncilConveningScreen({ navigation }: Props) {
   const { data, hairAnalysis, setCouncilResponse, setRoutine } = useOnboarding();
   const [statusIndex, setStatusIndex] = useState(0);
   const [activeAuntyIndex, setActiveAuntyIndex] = useState(0);
-  const [error, setError] = useState<string | null>(null);
 
   // Dot animation
   const dot1 = useRef(new Animated.Value(0)).current;
@@ -71,10 +71,10 @@ export default function CouncilConveningScreen({ navigation }: Props) {
   // Fire AI calls on mount
   useEffect(() => {
     const run = async () => {
-      try {
-        const analysis = hairAnalysis ?? { curl_type: '3b', texture_description: '', visible_concerns: [], condition_assessment: '' };
-        const fullData = data as any;
+      const analysis = hairAnalysis ?? { curl_type: '3b', texture_description: '', visible_concerns: [], condition_assessment: '' };
+      const fullData = data as any;
 
+      try {
         const [council, routine] = await Promise.all([
           generateCouncilResponses(fullData, analysis),
           generateRoutine(fullData, analysis),
@@ -82,22 +82,16 @@ export default function CouncilConveningScreen({ navigation }: Props) {
 
         setCouncilResponse(council);
         setRoutine(routine);
-        navigation.replace('CouncilSpeaks');
-      } catch (e: any) {
-        setError(e.message ?? 'Connection issue. Try again.');
+      } catch {
+        // Silently fall back to defaults if Gemini fails
+        setCouncilResponse(DEFAULT_COUNCIL_RESPONSE);
+        setRoutine(DEFAULT_ROUTINE);
       }
+
+      navigation.replace('CouncilSpeaks');
     };
     run();
   }, []);
-
-  if (error) {
-    return (
-      <View style={[styles.root, { paddingTop: insets.top }]}>
-        <Text style={styles.errorText}>{error}</Text>
-        <Text style={styles.errorSub}>Check your connection and go back to retry.</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
@@ -190,19 +184,5 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
     color: colors.muted,
-  },
-  errorText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.error,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  errorSub: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
-    color: colors.muted,
-    textAlign: 'center',
   },
 });

@@ -3,9 +3,9 @@ import { HairProfile, GeminiVisionAnalysis, CouncilResponse, DailyRoutine, Onboa
 import { AUNTIES } from '@/constants/aunties';
 
 const API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY!;
-const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
-async function callGemini(prompt: string, systemInstruction?: string, images?: string[]): Promise<string> {
+async function callGemini(prompt: string, systemInstruction?: string, images?: string[], jsonMode = false): Promise<string> {
   const parts: any[] = [];
 
   if (images?.length) {
@@ -18,7 +18,11 @@ async function callGemini(prompt: string, systemInstruction?: string, images?: s
 
   const body: any = {
     contents: [{ parts }],
-    generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: jsonMode ? 2048 : 800,
+      ...(jsonMode ? { response_mime_type: 'application/json' } : {}),
+    },
   };
 
   if (systemInstruction) {
@@ -31,9 +35,12 @@ async function callGemini(prompt: string, systemInstruction?: string, images?: s
 
 function safeJSON<T>(text: string): T | null {
   try {
-    // Strip possible markdown code fences
     const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    return JSON.parse(clean) as T;
+    // Extract outermost JSON object or array to handle any extra prose
+    const objMatch = clean.match(/\{[\s\S]*\}/);
+    const arrMatch = clean.match(/\[[\s\S]*\]/);
+    const extracted = objMatch ? objMatch[0] : arrMatch ? arrMatch[0] : clean;
+    return JSON.parse(extracted) as T;
   } catch {
     return null;
   }
@@ -61,7 +68,7 @@ Analyze these ${base64Images.length} hair photo(s) and return ONLY valid JSON (n
 
 Curl types: 2a, 2b, 2c, 3a, 3b, 3c, 4a, 4b, 4c`;
 
-  const text = await callGemini(prompt, undefined, base64Images);
+  const text = await callGemini(prompt, undefined, base64Images, true);
   return safeJSON<GeminiVisionAnalysis>(text) ?? {
     curl_type: '3b',
     texture_description: 'Unable to fully analyze. Please retake in natural light.',
@@ -177,7 +184,7 @@ Rules:
 - Respect time_available constraint
 - Warn about protein if elasticity is low`;
 
-  const text = await callGemini(prompt);
+  const text = await callGemini(prompt, undefined, undefined, true);
   const parsed = safeJSON<DailyRoutine>(text);
 
   if (!parsed) throw new Error('Failed to parse routine JSON from Gemini');
@@ -208,7 +215,7 @@ Compare the current photo to the intake description. Return ONLY valid JSON:
   "next_steps": ["..."]
 }`;
 
-  const text = await callGemini(prompt, undefined, [checkinImageBase64]);
+  const text = await callGemini(prompt, undefined, [checkinImageBase64], true);
   return safeJSON(text) ?? {
     progress_detected: false,
     comparison_notes: 'Keep going — changes take 4–8 weeks to show.',
