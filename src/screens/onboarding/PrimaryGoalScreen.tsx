@@ -8,12 +8,12 @@ import Button from '@/components/Button';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'PrimaryGoal'>;
 
-const OPTIONS: Array<{ label: string; value: PrimaryGoal }> = [
-  { label: 'Length — I want it to grow', value: 'length' },
-  { label: 'Moisture — it\'s always dry', value: 'moisture' },
-  { label: 'Definition — I want real curls', value: 'definition' },
-  { label: 'Volume — more is more', value: 'volume' },
-  { label: 'Health — fix what\'s broken', value: 'health' },
+const OPTIONS: Array<{ label: string; value: PrimaryGoal; icon: string; color: string }> = [
+  { label: 'Length — I want it to grow', value: 'length', icon: '📏', color: '#12C064' },
+  { label: 'Moisture — it\'s always dry', value: 'moisture', icon: '💧', color: '#00B4D8' },
+  { label: 'Definition — I want real curls', value: 'definition', icon: '🌀', color: '#9B5DE5' },
+  { label: 'Volume — more is more', value: 'volume', icon: '✨', color: '#F5C542' },
+  { label: 'Health — fix what\'s broken', value: 'health', icon: '🌿', color: '#FB5607' },
 ];
 
 export default function PrimaryGoalScreen({ navigation }: Props) {
@@ -42,6 +42,8 @@ export default function PrimaryGoalScreen({ navigation }: Props) {
           label={opt.label}
           selected={selected === opt.value}
           onPress={() => setSelected(opt.value)}
+          icon={opt.icon}
+          color={opt.color}
         />
       ))}
     </ConsultationShell>

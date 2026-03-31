@@ -1,6 +1,6 @@
 /**
- * Shell used for all consultation screens (5-18).
- * Renders: safe area, back arrow, progress bar, aunty bubble, question, options.
+ * Duolingo-style shell for all consultation screens (5–18).
+ * Dark background · aunty avatar + speech bubble · full-width option rows · locked Continue button.
  */
 import React from 'react';
 import {
@@ -13,14 +13,19 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import ProgressBar from './ProgressBar';
-import AuntyBubble from './AuntyBubble';
+import AuntyAvatar from './AuntyAvatar';
 import { BackIcon } from './Icons';
-import { colors, spacing, fontSize, fontWeight, fonts } from '@/constants/theme';
+import { colors, auntyColors, spacing, fontSize, fontWeight, fonts, radius } from '@/constants/theme';
+
+// Dark warm charcoal — the consultation "focus mode" background
+const SHELL_BG = '#171210';
+const SHELL_SURFACE = 'rgba(255,255,255,0.06)';
 
 interface ConsultationShellProps {
-  step: number;        // Current step (e.g. 5)
-  totalSteps: number;  // Total steps in consultation (e.g. 18)
+  step: number;
+  totalSteps: number;
   auntyId: string;
   auntyMessage: string;
   question: string;
@@ -40,39 +45,62 @@ export default function ConsultationShell({
   footer,
 }: ConsultationShellProps) {
   const insets = useSafeAreaInsets();
+  const ac = auntyColors[auntyId];
+  const consultationStep = step - 4;
+  const consultationTotal = totalSteps - 4;
 
   return (
     <KeyboardAvoidingView
-      style={styles.root}
+      style={[styles.root, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+      <StatusBar style="light" />
+
+      {/* Top bar — back + progress */}
+      <View style={styles.topBar}>
         {onBack ? (
-          <TouchableOpacity onPress={onBack} style={styles.back} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <BackIcon color={colors.ink} size={22} strokeWidth={1.8} />
+          <TouchableOpacity onPress={onBack} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <BackIcon color="rgba(255,255,255,0.7)" size={22} strokeWidth={2} />
           </TouchableOpacity>
         ) : (
-          <View style={styles.back} />
+          <View style={styles.backBtn} />
         )}
         <View style={styles.progressWrap}>
-          <ProgressBar current={step - 4} total={totalSteps - 4} />
+          <ProgressBar current={consultationStep} total={consultationTotal} dark />
         </View>
-        <Text style={styles.stepCount}>{step - 4}/{totalSteps - 4}</Text>
+        <Text style={styles.stepCount}>{consultationStep}/{consultationTotal}</Text>
       </View>
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <AuntyBubble auntyId={auntyId} message={auntyMessage} />
+        {/* Aunty + speech bubble row — Duolingo style */}
+        <View style={styles.bubbleRow}>
+          {/* Avatar with accent ring */}
+          <View style={[styles.avatarRing, { borderColor: ac.accent }]}>
+            <AuntyAvatar auntyId={auntyId} size={72} />
+          </View>
 
+          {/* Speech bubble with left tail */}
+          <View style={styles.bubbleWrap}>
+            <View style={styles.bubbleTail} />
+            <View style={[styles.bubble, { borderColor: `${ac.accent}30` }]}>
+              <Text style={styles.bubbleText}>{auntyMessage}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Question */}
         <Text style={styles.question}>{question}</Text>
 
+        {/* Options */}
         <View style={styles.options}>{children}</View>
       </ScrollView>
 
+      {/* Footer — locked Continue button */}
       {footer && (
         <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
           {footer}
@@ -83,36 +111,107 @@ export default function ConsultationShell({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.canvas },
-  header: {
+  root: {
+    flex: 1,
+    backgroundColor: SHELL_BG,
+  },
+
+  // Top bar
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
     gap: spacing.sm,
   },
-  back: { width: 44, height: 44, justifyContent: 'center' },
+  backBtn: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   progressWrap: { flex: 1 },
-  stepCount: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.muted, fontWeight: fontWeight.medium, width: 36, textAlign: 'right' },
-  scroll: { flex: 1 },
-  content: { padding: spacing.md },
+  stepCount: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: 'rgba(255,255,255,0.35)',
+    fontWeight: fontWeight.bold,
+    width: 30,
+    textAlign: 'right',
+  },
+
+  // Aunty + bubble
+  bubbleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
+  },
+  avatarRing: {
+    borderWidth: 2.5,
+    borderRadius: 40,
+    padding: 2,
+    flexShrink: 0,
+  },
+  bubbleWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  bubbleTail: {
+    width: 0,
+    height: 0,
+    borderTopWidth: 8,
+    borderBottomWidth: 8,
+    borderRightWidth: 12,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderRightColor: 'rgba(255,255,255,0.1)',
+  },
+  bubble: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  bubbleText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    color: 'rgba(255,255,255,0.9)',
+    lineHeight: 22,
+    fontWeight: fontWeight.medium,
+  },
+
+  // Question
   question: {
     fontFamily: fonts.display,
-    fontSize: fontSize.xl,
+    fontSize: fontSize.xxl,
     fontWeight: fontWeight.black,
-    color: colors.ink,
-    marginTop: spacing.md,
+    color: '#ffffff',
     marginBottom: spacing.lg,
-    lineHeight: 30,
+    paddingHorizontal: spacing.md,
+    letterSpacing: -0.5,
+    lineHeight: 34,
   },
-  options: { gap: spacing.xs },
+
+  // Options
+  scroll: { flex: 1 },
+  content: { paddingTop: spacing.sm },
+  options: {
+    paddingHorizontal: spacing.md,
+    gap: spacing.xs,
+  },
+
+  // Footer
   footer: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
+    backgroundColor: SHELL_BG,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.canvas,
+    borderTopColor: 'rgba(255,255,255,0.08)',
   },
 });

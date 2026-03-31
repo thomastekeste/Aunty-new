@@ -7,10 +7,10 @@ import OptionCard from '@/components/OptionCard';
 import Button from '@/components/Button';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'ProtectiveStyling'>;
-const OPTIONS: Array<{ label: string; value: ProtectiveStyling }> = [
-  { label: 'Yes, regularly — braids, twists, wigs', value: 'yes_regularly' },
-  { label: 'Sometimes', value: 'sometimes' },
-  { label: 'Never', value: 'never' },
+const OPTIONS: Array<{ label: string; value: ProtectiveStyling; icon: string; color: string }> = [
+  { label: 'Yes, regularly — braids, twists, wigs', value: 'yes_regularly', icon: '👑', color: '#F72585' },
+  { label: 'Sometimes', value: 'sometimes', icon: '🔄', color: '#F5C542' },
+  { label: 'Never', value: 'never', icon: '💆', color: '#9B5DE5' },
 ];
 
 export default function ProtectiveStylingScreen({ navigation }: Props) {
@@ -34,7 +34,7 @@ export default function ProtectiveStylingScreen({ navigation }: Props) {
       }
     >
       {OPTIONS.map(opt => (
-        <OptionCard key={opt.value} label={opt.label} selected={selected === opt.value} onPress={() => setSelected(opt.value)} />
+        <OptionCard key={opt.value} label={opt.label} selected={selected === opt.value} onPress={() => setSelected(opt.value)} icon={opt.icon} color={opt.color} />
       ))}
     </ConsultationShell>
   );

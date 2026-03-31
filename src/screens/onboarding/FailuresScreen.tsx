@@ -8,14 +8,14 @@ import Button from '@/components/Button';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'Failures'>;
 
-const OPTIONS = [
-  'Frizz',
-  'Dryness',
-  'Breakage',
-  'No definition',
-  'Shrinkage',
-  'Buildup',
-  'Scalp issues',
+const OPTIONS: Array<{ label: string; icon: string; color: string }> = [
+  { label: 'Frizz', icon: '☁️', color: '#9B5DE5' },
+  { label: 'Dryness', icon: '🌵', color: '#FB5607' },
+  { label: 'Breakage', icon: '💔', color: '#E0142C' },
+  { label: 'No definition', icon: '🌊', color: '#00B4D8' },
+  { label: 'Shrinkage', icon: '📉', color: '#F5C542' },
+  { label: 'Buildup', icon: '🧱', color: '#8B6914' },
+  { label: 'Scalp issues', icon: '⚡', color: '#F72585' },
 ];
 
 export default function FailuresScreen({ navigation }: Props) {
@@ -45,11 +45,13 @@ export default function FailuresScreen({ navigation }: Props) {
     >
       {OPTIONS.map(opt => (
         <OptionCard
-          key={opt}
-          label={opt}
-          selected={selected.includes(opt)}
-          onPress={() => toggle(opt)}
+          key={opt.label}
+          label={opt.label}
+          selected={selected.includes(opt.label)}
+          onPress={() => toggle(opt.label)}
           multiSelect
+          icon={opt.icon}
+          color={opt.color}
         />
       ))}
     </ConsultationShell>

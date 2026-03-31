@@ -7,7 +7,14 @@ import OptionCard from '@/components/OptionCard';
 import Button from '@/components/Button';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'ScalpConcerns'>;
-const OPTIONS = ['No concerns', 'Dryness', 'Itchiness', 'Dandruff', 'Thinning', 'Oiliness'];
+const OPTIONS: Array<{ label: string; icon: string; color: string }> = [
+  { label: 'No concerns', icon: '✅', color: '#12C064' },
+  { label: 'Dryness', icon: '🌵', color: '#FB5607' },
+  { label: 'Itchiness', icon: '⚡', color: '#F5C542' },
+  { label: 'Dandruff', icon: '❄️', color: '#00B4D8' },
+  { label: 'Thinning', icon: '🍂', color: '#9B5DE5' },
+  { label: 'Oiliness', icon: '💧', color: '#0BBFAA' },
+];
 
 export default function ScalpConcernsScreen({ navigation }: Props) {
   const { data, setData } = useOnboarding();
@@ -42,7 +49,7 @@ export default function ScalpConcernsScreen({ navigation }: Props) {
       }
     >
       {OPTIONS.map(opt => (
-        <OptionCard key={opt} label={opt} selected={selected.includes(opt)} onPress={() => toggle(opt)} multiSelect />
+        <OptionCard key={opt.label} label={opt.label} selected={selected.includes(opt.label)} onPress={() => toggle(opt.label)} multiSelect icon={opt.icon} color={opt.color} />
       ))}
     </ConsultationShell>
   );

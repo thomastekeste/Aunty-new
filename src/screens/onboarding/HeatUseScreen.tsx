@@ -7,11 +7,11 @@ import OptionCard from '@/components/OptionCard';
 import Button from '@/components/Button';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'HeatUse'>;
-const OPTIONS: Array<{ label: string; value: HeatUse }> = [
-  { label: 'Never', value: 'never' },
-  { label: 'Rarely — a few times a year', value: 'rarely' },
-  { label: 'Sometimes — once a month or so', value: 'sometimes' },
-  { label: 'Often — weekly or more', value: 'often' },
+const OPTIONS: Array<{ label: string; value: HeatUse; icon: string; color: string }> = [
+  { label: 'Never', value: 'never', icon: '🚫', color: '#12C064' },
+  { label: 'Rarely — a few times a year', value: 'rarely', icon: '❄️', color: '#00B4D8' },
+  { label: 'Sometimes — once a month or so', value: 'sometimes', icon: '🌡️', color: '#F5C542' },
+  { label: 'Often — weekly or more', value: 'often', icon: '🔥', color: '#E0142C' },
 ];
 
 export default function HeatUseScreen({ navigation }: Props) {
@@ -35,7 +35,7 @@ export default function HeatUseScreen({ navigation }: Props) {
       }
     >
       {OPTIONS.map(opt => (
-        <OptionCard key={opt.value} label={opt.label} selected={selected === opt.value} onPress={() => setSelected(opt.value)} />
+        <OptionCard key={opt.value} label={opt.label} selected={selected === opt.value} onPress={() => setSelected(opt.value)} icon={opt.icon} color={opt.color} />
       ))}
     </ConsultationShell>
   );

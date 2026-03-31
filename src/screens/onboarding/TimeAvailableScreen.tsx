@@ -7,10 +7,10 @@ import OptionCard from '@/components/OptionCard';
 import Button from '@/components/Button';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'TimeAvailable'>;
-const OPTIONS: Array<{ label: string; value: TimeAvailable }> = [
-  { label: 'Under 1 hour', value: 'under_1h' },
-  { label: '1–2 hours', value: '1_2h' },
-  { label: '3+ hours', value: '3plus_h' },
+const OPTIONS: Array<{ label: string; value: TimeAvailable; icon: string; color: string }> = [
+  { label: 'Under 1 hour', value: 'under_1h', icon: '⚡', color: '#F72585' },
+  { label: '1–2 hours', value: '1_2h', icon: '⏳', color: '#F5C542' },
+  { label: '3+ hours', value: '3plus_h', icon: '👑', color: '#12C064' },
 ];
 
 export default function TimeAvailableScreen({ navigation }: Props) {
@@ -34,7 +34,7 @@ export default function TimeAvailableScreen({ navigation }: Props) {
       }
     >
       {OPTIONS.map(opt => (
-        <OptionCard key={opt.value} label={opt.label} selected={selected === opt.value} onPress={() => setSelected(opt.value)} />
+        <OptionCard key={opt.value} label={opt.label} selected={selected === opt.value} onPress={() => setSelected(opt.value)} icon={opt.icon} color={opt.color} />
       ))}
     </ConsultationShell>
   );

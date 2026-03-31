@@ -8,11 +8,11 @@ import Button from '@/components/Button';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'WashFrequency'>;
 
-const OPTIONS: Array<{ label: string; value: WashFrequency }> = [
-  { label: 'Weekly', value: 'weekly' },
-  { label: 'Every 2 weeks', value: 'bi_weekly' },
-  { label: 'Monthly', value: 'monthly' },
-  { label: 'Less than that', value: 'less_frequent' },
+const OPTIONS: Array<{ label: string; value: WashFrequency; icon: string; color: string }> = [
+  { label: 'Weekly', value: 'weekly', icon: '📅', color: '#12C064' },
+  { label: 'Every 2 weeks', value: 'bi_weekly', icon: '🗓️', color: '#F5C542' },
+  { label: 'Monthly', value: 'monthly', icon: '🌙', color: '#9B5DE5' },
+  { label: 'Less than that', value: 'less_frequent', icon: '🤷', color: '#FB5607' },
 ];
 
 export default function WashFrequencyScreen({ navigation }: Props) {
@@ -41,6 +41,8 @@ export default function WashFrequencyScreen({ navigation }: Props) {
           label={opt.label}
           selected={selected === opt.value}
           onPress={() => setSelected(opt.value)}
+          icon={opt.icon}
+          color={opt.color}
         />
       ))}
     </ConsultationShell>

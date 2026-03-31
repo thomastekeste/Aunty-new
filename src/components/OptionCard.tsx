@@ -7,21 +7,47 @@ interface OptionCardProps {
   selected: boolean;
   onPress: () => void;
   multiSelect?: boolean;
+  icon?: string;        // emoji icon
+  color?: string;       // icon background color
 }
 
-export default function OptionCard({ label, selected, onPress, multiSelect = false }: OptionCardProps) {
+export default function OptionCard({
+  label,
+  selected,
+  onPress,
+  multiSelect = false,
+  icon,
+  color = colors.primary,
+}: OptionCardProps) {
   return (
     <TouchableOpacity
-      style={[styles.card, selected && styles.selected]}
+      style={[
+        styles.card,
+        selected && { borderColor: color, backgroundColor: `${color}18` },
+      ]}
       onPress={onPress}
-      activeOpacity={0.7}
+      activeOpacity={0.75}
     >
-      <Text style={[styles.label, selected && styles.labelSelected]}>{label}</Text>
-      {multiSelect && (
-        <View style={[styles.check, selected && styles.checkSelected]}>
+      {/* Icon square */}
+      <View style={[styles.iconBox, { backgroundColor: selected ? color : `${color}25` }]}>
+        <Text style={styles.iconText}>
+          {icon ?? label.charAt(0).toUpperCase()}
+        </Text>
+      </View>
+
+      {/* Label */}
+      <Text style={[styles.label, selected && { color: '#fff', fontWeight: fontWeight.bold }]}>
+        {label}
+      </Text>
+
+      {/* Checkmark for multi-select / selection indicator */}
+      {multiSelect ? (
+        <View style={[styles.check, selected && { backgroundColor: color, borderColor: color }]}>
           {selected && <Text style={styles.checkMark}>✓</Text>}
         </View>
-      )}
+      ) : selected ? (
+        <View style={[styles.selectedDot, { backgroundColor: color }]} />
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -30,51 +56,54 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md + 2,
+    paddingVertical: spacing.sm + 2,
     borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.12)',
     marginBottom: spacing.sm,
-    backgroundColor: colors.canvas,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    gap: spacing.md,
+    minHeight: 68,
   },
-  selected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.secondary,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
+  iconBox: {
+    width: 46,
+    height: 46,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  iconText: {
+    fontSize: 22,
   },
   label: {
     fontFamily: fonts.body,
     fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
-    color: colors.text,
+    fontWeight: fontWeight.semibold,
+    color: 'rgba(255,255,255,0.75)',
     flex: 1,
-  },
-  labelSelected: {
-    fontWeight: fontWeight.bold,
-    color: colors.text,
+    lineHeight: 22,
   },
   check: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1.5,
-    borderColor: colors.border,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  checkSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    flexShrink: 0,
   },
   checkMark: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: fontWeight.bold,
+    color: '#000',
+    fontSize: 13,
+    fontWeight: fontWeight.black,
+  },
+  selectedDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    flexShrink: 0,
   },
 });

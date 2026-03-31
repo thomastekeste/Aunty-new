@@ -7,11 +7,11 @@ import OptionCard from '@/components/OptionCard';
 import Button from '@/components/Button';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'RelaxerHistory'>;
-const OPTIONS: Array<{ label: string; value: RelaxerHistory }> = [
-  { label: 'Never relaxed', value: 'never_relaxed' },
-  { label: 'Currently relaxed', value: 'currently_relaxed' },
-  { label: 'Transitioning — growing out a relaxer', value: 'transitioning' },
-  { label: 'Big chopped', value: 'big_chopped' },
+const OPTIONS: Array<{ label: string; value: RelaxerHistory; icon: string; color: string }> = [
+  { label: 'Never relaxed', value: 'never_relaxed', icon: '🌱', color: '#12C064' },
+  { label: 'Currently relaxed', value: 'currently_relaxed', icon: '💆', color: '#9B5DE5' },
+  { label: 'Transitioning — growing out a relaxer', value: 'transitioning', icon: '🔄', color: '#F5C542' },
+  { label: 'Big chopped', value: 'big_chopped', icon: '✂️', color: '#F72585' },
 ];
 
 export default function RelaxerHistoryScreen({ navigation }: Props) {
@@ -35,7 +35,7 @@ export default function RelaxerHistoryScreen({ navigation }: Props) {
       }
     >
       {OPTIONS.map(opt => (
-        <OptionCard key={opt.value} label={opt.label} selected={selected === opt.value} onPress={() => setSelected(opt.value)} />
+        <OptionCard key={opt.value} label={opt.label} selected={selected === opt.value} onPress={() => setSelected(opt.value)} icon={opt.icon} color={opt.color} />
       ))}
     </ConsultationShell>
   );
