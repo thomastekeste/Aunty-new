@@ -8,6 +8,7 @@ import { Checkin } from '@/types';
 import { getAunty } from '@/constants/aunties';
 import AuntyAvatar from '@/components/AuntyAvatar';
 import Button from '@/components/Button';
+import { PhotoCompareIcon, AIIcon, PenIcon, ChatIcon } from '@/components/Icons';
 import { colors, fonts, spacing, fontSize, fontWeight, radius, auntyColors, shadows } from '@/constants/theme';
 import { format } from 'date-fns';
 
@@ -48,13 +49,13 @@ export default function ProgressScreen({ navigation }: any) {
 
           <View style={styles.gateFeatures}>
             {[
-              { icon: '📸', text: 'Photo progress comparisons' },
-              { icon: '🤖', text: 'AI hair health analysis' },
-              { icon: '✍️', text: 'Personalized routine adjustments' },
-              { icon: '💬', text: 'Direct aunty feedback each week' },
+              { icon: <PhotoCompareIcon color={colors.primary} size={18} strokeWidth={1.8} />, text: 'Photo progress comparisons' },
+              { icon: <AIIcon color={colors.primary} size={18} strokeWidth={1.8} />, text: 'AI hair health analysis' },
+              { icon: <PenIcon color={colors.primary} size={18} strokeWidth={1.8} />, text: 'Personalized routine adjustments' },
+              { icon: <ChatIcon color={colors.primary} size={18} strokeWidth={1.8} />, text: 'Direct aunty feedback each week' },
             ].map((f, i) => (
               <View key={i} style={styles.gateFeatureRow}>
-                <Text style={styles.gateFeatureIcon}>{f.icon}</Text>
+                <View style={styles.gateFeatureIconWrap}>{f.icon}</View>
                 <Text style={styles.gateFeatureText}>{f.text}</Text>
               </View>
             ))}
@@ -243,8 +244,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  gateFeatureIcon: {
-    fontSize: 18,
+  gateFeatureIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.sm,
+    backgroundColor: 'rgba(245,197,66,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   gateFeatureText: {
     fontFamily: fonts.body,

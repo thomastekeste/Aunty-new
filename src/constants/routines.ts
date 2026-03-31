@@ -157,7 +157,7 @@ export const DEFAULT_COUNCIL_RESPONSE: CouncilResponse = {
   '3': {
     aunty_id: '3',
     aunty_name: 'Denise',
-    message: 'I've seen what patience and technique can do. Your routine respects both.',
+    message: "I've seen what patience and technique can do. Your routine respects both.",
     timestamp: new Date().toISOString(),
   },
   '4': {

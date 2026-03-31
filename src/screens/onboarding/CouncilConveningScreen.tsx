@@ -141,7 +141,7 @@ export default function CouncilConveningScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.inkDeep,
+    backgroundColor: colors.ink,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,

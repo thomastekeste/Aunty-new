@@ -715,3 +715,79 @@ export function HardWaterIcon({ color = '#180800', size = 24, strokeWidth = 2 }:
     </Svg>
   );
 }
+
+/** AI / sparkle brain icon */
+export function AIIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 2l1.5 3.5L17 7l-3.5 1.5L12 12l-1.5-3.5L7 7l3.5-1.5L12 2z" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" />
+      <Path d="M19 14l0.8 1.8L21.6 16.6l-1.8 0.8L19 19.2l-0.8-1.8L16.4 16.6l1.8-0.8L19 14z" stroke={color} strokeWidth={strokeWidth * 0.8} strokeLinejoin="round" />
+      <Path d="M5.5 16l0.6 1.4 1.4 0.6-1.4 0.6L5.5 20l-0.6-1.4L3.5 18l1.4-0.6L5.5 16z" stroke={color} strokeWidth={strokeWidth * 0.7} strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+/** Photo compare / progress photo */
+export function PhotoCompareIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="2" y="4" width="9" height="11" rx="2" stroke={color} strokeWidth={strokeWidth} />
+      <Rect x="13" y="4" width="9" height="11" rx="2" stroke={color} strokeWidth={strokeWidth} />
+      <Circle cx="6.5" cy="8" r="1.5" stroke={color} strokeWidth={strokeWidth * 0.8} />
+      <Circle cx="17.5" cy="8" r="1.5" stroke={color} strokeWidth={strokeWidth * 0.8} />
+      <Path d="M2 11.5l3-2.5 2 1.5 2-2.5" stroke={color} strokeWidth={strokeWidth * 0.8} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M13 11.5l3-2.5 2 1.5 3-3" stroke={color} strokeWidth={strokeWidth * 0.8} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M7 19h10" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path d="M12 15v4" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+/** Pen / edit / personalized adjustments */
+export function PenIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M14 6l4 4" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+/** Chat / speech bubble / aunty feedback */
+export function ChatIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M8 10h8M8 13h5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+/** Star / unlock premium */
+export function StarIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+/** Arrow right */
+export function ArrowRightIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M5 12h14M12 5l7 7-7 7" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+/** Lock icon */
+export function LockIcon({ color = '#180800', size = 24, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="5" y="11" width="14" height="10" rx="2" stroke={color} strokeWidth={strokeWidth} />
+      <Path d="M8 11V7a4 4 0 018 0v4" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Circle cx="12" cy="16" r="1" fill={color} />
+    </Svg>
+  );
+}

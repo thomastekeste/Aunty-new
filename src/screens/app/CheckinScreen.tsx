@@ -19,8 +19,8 @@ import { getAunty } from '@/constants/aunties';
 import AuntyAvatar from '@/components/AuntyAvatar';
 import AuntyBubble from '@/components/AuntyBubble';
 import Button from '@/components/Button';
-import { CameraIcon } from '@/components/Icons';
-import { colors, fonts, spacing, fontSize, fontWeight, radius } from '@/constants/theme';
+import { CameraIcon, CheckIcon, ArrowRightIcon } from '@/components/Icons';
+import { colors, fonts, spacing, fontSize, fontWeight, radius, auntyColors, shadows } from '@/constants/theme';
 
 const AUNTY_GREETINGS: Record<string, string> = {
   '1': "Show me what that moisture routine has done. I need to see the results.",
@@ -112,7 +112,12 @@ export default function CheckinScreen({ navigation, route }: any) {
       >
         {/* Aunty portrait + greeting */}
         <View style={styles.portraitWrap}>
-          <AuntyAvatar auntyId={auntyId} size={96} />
+          <View style={[styles.avatarRing, { borderColor: `${auntyColors[auntyId]?.accent ?? colors.primary}50`, shadowColor: auntyColors[auntyId]?.accent ?? colors.primary }]}>
+            <AuntyAvatar auntyId={auntyId} size={96} />
+          </View>
+          <View style={[styles.auntyNameBadge, { backgroundColor: auntyColors[auntyId]?.accent ?? colors.primary }]}>
+            <Text style={styles.auntyNameText}>{getAunty(auntyId).name.split(' ')[0]}</Text>
+          </View>
         </View>
 
         <AuntyBubble
@@ -123,13 +128,28 @@ export default function CheckinScreen({ navigation, route }: any) {
         {!result ? (
           <>
             {/* Photo upload */}
-            <TouchableOpacity style={styles.uploadZone} onPress={pickPhoto}>
+            <TouchableOpacity
+              style={[styles.uploadZone, photo && styles.uploadZoneFilled]}
+              onPress={pickPhoto}
+              activeOpacity={0.8}
+            >
               {photo ? (
-                <Image source={{ uri: photo }} style={styles.photoPreview} />
+                <>
+                  <Image source={{ uri: photo }} style={styles.photoPreview} />
+                  <View style={styles.photoOverlay}>
+                    <View style={styles.photoOverlayPill}>
+                      <CameraIcon color="#fff" size={14} strokeWidth={2} />
+                      <Text style={styles.photoOverlayText}>Change photo</Text>
+                    </View>
+                  </View>
+                </>
               ) : (
                 <View style={styles.uploadEmpty}>
-                  <CameraIcon color={colors.muted} size={40} strokeWidth={1.4} />
-                  <Text style={styles.uploadLabel}>Upload progress photo</Text>
+                  <View style={styles.uploadIconCircle}>
+                    <CameraIcon color={colors.primary} size={32} strokeWidth={1.6} />
+                  </View>
+                  <Text style={styles.uploadLabel}>Tap to add progress photo</Text>
+                  <Text style={styles.uploadSub}>The aunties need to see your curls</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -152,28 +172,43 @@ export default function CheckinScreen({ navigation, route }: any) {
         ) : (
           <>
             {/* Result */}
-            <View style={styles.resultCard}>
-              <Text style={styles.resultLabel}>
-                {result.progress_detected ? '✓ Progress detected' : 'Keep going'}
-              </Text>
+            <View style={[styles.resultCard, { borderTopColor: auntyColors[auntyId]?.accent ?? colors.primary }]}>
+              <View style={styles.resultHeader}>
+                {result.progress_detected ? (
+                  <View style={styles.resultBadgeSuccess}>
+                    <CheckIcon color="#fff" size={14} strokeWidth={2.5} />
+                    <Text style={styles.resultBadgeText}>Progress detected</Text>
+                  </View>
+                ) : (
+                  <View style={styles.resultBadgeNeutral}>
+                    <Text style={styles.resultBadgeNeutralText}>Keep going</Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.resultNotes}>{result.comparison_notes}</Text>
 
               {(result.suggested_adjustments ?? []).length > 0 && (
-                <>
-                  <Text style={styles.adjustLabel}>Adjustments:</Text>
+                <View style={styles.adjustSection}>
+                  <Text style={styles.adjustLabel}>Adjustments from {getAunty(auntyId).name.split(' ')[0]}</Text>
                   {result.suggested_adjustments.map((a: string, i: number) => (
-                    <Text key={i} style={styles.adjustItem}>• {a}</Text>
+                    <View key={i} style={styles.adjustRow}>
+                      <View style={[styles.adjustDot, { backgroundColor: auntyColors[auntyId]?.accent ?? colors.primary }]} />
+                      <Text style={styles.adjustItem}>{a}</Text>
+                    </View>
                   ))}
-                </>
+                </View>
               )}
 
               {(result.next_steps ?? []).length > 0 && (
-                <>
-                  <Text style={styles.adjustLabel}>Next steps:</Text>
+                <View style={styles.adjustSection}>
+                  <Text style={styles.adjustLabel}>Next steps</Text>
                   {result.next_steps.map((s: string, i: number) => (
-                    <Text key={i} style={styles.adjustItem}>• {s}</Text>
+                    <View key={i} style={styles.adjustRow}>
+                      <View style={[styles.adjustDot, { backgroundColor: colors.accent }]} />
+                      <Text style={styles.adjustItem}>{s}</Text>
+                    </View>
                   ))}
-                </>
+                </View>
               )}
             </View>
 
@@ -190,21 +225,177 @@ const styles = StyleSheet.create({
   centered: { alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   gateTitle: { fontFamily: fonts.display, fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.ink, textAlign: 'center', marginBottom: spacing.sm },
   gateSub: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.muted, textAlign: 'center' },
-  content: { padding: spacing.md },
-  portraitWrap: { alignItems: 'center', marginBottom: spacing.md },
-  uploadZone: {
-    borderWidth: 1.5, borderColor: colors.border, borderStyle: 'dashed',
-    borderRadius: radius.lg, overflow: 'hidden', marginTop: spacing.md,
-    minHeight: 240,
+  content: { padding: spacing.md, gap: spacing.md },
+  portraitWrap: { alignItems: 'center', marginBottom: spacing.sm, paddingTop: spacing.sm },
+  avatarRing: {
+    borderRadius: 54,
+    borderWidth: 3,
+    padding: 3,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 6,
   },
-  uploadEmpty: { flex: 1, minHeight: 240, alignItems: 'center', justifyContent: 'center' },
-  uploadLabel: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.muted, marginTop: spacing.sm },
+  auntyNameBadge: {
+    marginTop: -14,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    alignSelf: 'center',
+  },
+  auntyNameText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.black,
+    color: 'rgba(255,255,255,0.9)',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  uploadZone: {
+    borderWidth: 2,
+    borderColor: colors.borderLight,
+    borderStyle: 'dashed',
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    minHeight: 240,
+    backgroundColor: colors.surface,
+  },
+  uploadZoneFilled: {
+    borderStyle: 'solid',
+    borderColor: colors.border,
+  },
+  uploadEmpty: {
+    flex: 1,
+    minHeight: 240,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    padding: spacing.lg,
+  },
+  uploadIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(245,197,66,0.1)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(245,197,66,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  uploadLabel: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.ink,
+    textAlign: 'center',
+  },
+  uploadSub: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.muted,
+    textAlign: 'center',
+  },
   photoPreview: { width: '100%', aspectRatio: 3 / 4 },
+  photoOverlay: {
+    position: 'absolute',
+    bottom: spacing.md,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  photoOverlayPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  photoOverlayText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: '#fff',
+  },
   skipBtn: { alignItems: 'center', paddingVertical: spacing.md },
   skipText: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.muted },
-  resultCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, marginTop: spacing.md },
-  resultLabel: { fontFamily: fonts.display, fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.ink, marginBottom: spacing.sm },
-  resultNotes: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.text, lineHeight: 22 },
-  adjustLabel: { fontFamily: fonts.body, fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.muted, textTransform: 'uppercase', marginTop: spacing.md, marginBottom: 4 },
-  adjustItem: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  resultCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderTopWidth: 4,
+    padding: spacing.lg,
+    gap: spacing.md,
+    ...shadows.sm,
+  },
+  resultHeader: { flexDirection: 'row' },
+  resultBadgeSuccess: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.success,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
+  },
+  resultBadgeText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.black,
+    color: '#fff',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  resultBadgeNeutral: {
+    backgroundColor: colors.borderLight,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
+  },
+  resultBadgeNeutralText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.black,
+    color: colors.ink,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  resultNotes: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    color: colors.text,
+    lineHeight: 24,
+  },
+  adjustSection: { gap: spacing.xs },
+  adjustLabel: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.black,
+    color: colors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: spacing.xs,
+  },
+  adjustRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  adjustDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 7,
+    flexShrink: 0,
+  },
+  adjustItem: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 22,
+    flex: 1,
+  },
 });

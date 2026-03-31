@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { authService, userService } from '@/services/supabase';
+import { authService, userService, IS_DEMO_MODE } from '@/services/supabase';
 import { User } from '@/types';
 
 interface AuthContextType {
@@ -20,6 +20,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (IS_DEMO_MODE) {
+      // No backend configured — show onboarding as a guest
+      setIsLoading(false);
+      return;
+    }
+
     // Restore session on mount
     authService.getSession().then(async session => {
       if (session?.user) {

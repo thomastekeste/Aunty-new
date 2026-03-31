@@ -43,7 +43,8 @@
         }
       ],
       "expo-image-picker",
-      "expo-camera"
+      "expo-camera",
+      "expo-font"
     ],
     "extra": {
       "eas": {

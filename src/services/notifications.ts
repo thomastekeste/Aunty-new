@@ -1,14 +1,17 @@
 import * as ExpoNotifications from 'expo-notifications';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import { getRandomNotifCopy } from '@/constants/aunties';
 
-ExpoNotifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+if (Platform.OS !== 'web') {
+  ExpoNotifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+}
 
 export const notificationService = {
   requestPermissions: async (): Promise<boolean> => {

@@ -13,7 +13,7 @@ interface AuntyBubbleProps {
   animated?: boolean;
 }
 
-export default function AuntyBubble({ auntyId, message, delay = 0, animated = false }: AuntyBubbleProps) {
+export default function AuntyBubble({ auntyId, message, delay = 0, animated = true }: AuntyBubbleProps) {
   const aunty = getAunty(auntyId);
   const accentColor = AUNTY_COLORS[auntyId] ?? colors.amber;   // deep jewel for border/name
   const bubbleBg = AUNTY_BUBBLE_BG[auntyId] ?? 'rgba(139,79,28,0.06)';

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 import { routineService } from '@/services/supabase';
@@ -8,7 +8,7 @@ import { DailyRoutine } from '@/types';
 import AuntyAvatar from '@/components/AuntyAvatar';
 import { colors, auntyColors, spacing, fontSize, fontWeight, radius, fonts, shadows } from '@/constants/theme';
 import { AUNTY_COLORS } from '@/constants/aunties';
-import { DropIcon, CurlIcon, LeafIcon, MoonIcon } from '@/components/Icons';
+import { DropIcon, CurlIcon, LeafIcon, MoonIcon, ArrowRightIcon } from '@/components/Icons';
 
 const ROTATING_GREETINGS: Array<{ auntyId: string; text: string }> = [
   { auntyId: '1', text: 'Moisture is not optional, baby.' },
@@ -43,11 +43,31 @@ export default function HomeScreen({ navigation }: any) {
   const greeting = ROTATING_GREETINGS[new Date().getDay() % ROTATING_GREETINGS.length];
   const acColor = auntyColors[greeting.auntyId];
 
+  // Entrance animations
+  const greetingAnim = useRef(new Animated.Value(0)).current;
+  const routineAnim = useRef(new Animated.Value(0)).current;
+  const journeyAnim = useRef(new Animated.Value(0)).current;
+  const checkinAnim = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     if (user?.id && !user.id.startsWith('demo-')) {
       routineService.get(user.id).then(setRoutine).catch(console.error);
     }
   }, [user?.id]);
+
+  useEffect(() => {
+    Animated.stagger(100, [
+      Animated.spring(greetingAnim, { toValue: 1, friction: 8, tension: 60, useNativeDriver: true }),
+      Animated.spring(routineAnim, { toValue: 1, friction: 8, tension: 60, useNativeDriver: true }),
+      Animated.spring(journeyAnim, { toValue: 1, friction: 8, tension: 60, useNativeDriver: true }),
+      Animated.spring(checkinAnim, { toValue: 1, friction: 8, tension: 60, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  const makeSlideStyle = (anim: Animated.Value) => ({
+    opacity: anim,
+    transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }],
+  });
 
   const todayDayKey = DAY_KEYS[new Date().getDay() % 4];
   const todayRoutine = routine?.routine_json?.[todayDayKey];
@@ -76,30 +96,33 @@ export default function HomeScreen({ navigation }: any) {
         showsVerticalScrollIndicator={false}
       >
         {/* Aunty greeting — bold color card */}
-        <TouchableOpacity
-          activeOpacity={0.9}
-          style={[styles.greetingCard, { backgroundColor: acColor.accent }]}
-        >
-          <View style={styles.greetingInner}>
-            <View style={[styles.greetingAvatarRing, { borderColor: 'rgba(255,255,255,0.4)' }]}>
-              <AuntyAvatar auntyId={greeting.auntyId} size={52} />
+        <Animated.View style={makeSlideStyle(greetingAnim)}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={[styles.greetingCard, { backgroundColor: acColor.accent }]}
+          >
+            <View style={styles.greetingInner}>
+              <View style={[styles.greetingAvatarRing, { borderColor: 'rgba(255,255,255,0.4)' }]}>
+                <AuntyAvatar auntyId={greeting.auntyId} size={52} />
+              </View>
+              <View style={styles.greetingRight}>
+                <Text style={styles.greetingAuntyName}>
+                  {AUNTIES[greeting.auntyId].name}
+                </Text>
+                <Text style={styles.greetingAuntyRole}>
+                  {AUNTIES[greeting.auntyId].title}
+                </Text>
+              </View>
             </View>
-            <View style={styles.greetingRight}>
-              <Text style={styles.greetingAuntyName}>
-                {AUNTIES[greeting.auntyId].name}
-              </Text>
-              <Text style={styles.greetingAuntyRole}>
-                {AUNTIES[greeting.auntyId].title}
-              </Text>
+            <View style={styles.greetingQuoteWrap}>
+              <Text style={styles.greetingQuoteMark}>"</Text>
+              <Text style={styles.greetingText}>{greeting.text}</Text>
             </View>
-          </View>
-          <View style={styles.greetingQuoteWrap}>
-            <Text style={styles.greetingQuoteMark}>"</Text>
-            <Text style={styles.greetingText}>{greeting.text}</Text>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* Today's Routine */}
+        <Animated.View style={makeSlideStyle(routineAnim)}>
         <View style={styles.section}>
           <View style={styles.sectionTop}>
             <View style={styles.sectionTitleGroup}>
@@ -154,8 +177,10 @@ export default function HomeScreen({ navigation }: any) {
             </View>
           )}
         </View>
+        </Animated.View>
 
         {/* Journey tracker */}
+        <Animated.View style={makeSlideStyle(journeyAnim)}>
         <View style={styles.section}>
           <View style={styles.sectionEyebrowRow}>
             <View style={[styles.sectionAccentBar, { backgroundColor: colors.accent }]} />
@@ -186,38 +211,41 @@ export default function HomeScreen({ navigation }: any) {
             })}
           </View>
         </View>
+        </Animated.View>
 
         {/* Check-in CTA — bold cosmic card */}
-        <TouchableOpacity
-          style={styles.checkinBtn}
-          onPress={() => navigation.navigate('CheckinModal', { auntyId: '1', userInitiated: true })}
-          activeOpacity={0.82}
-        >
-          {/* Decorative orb layers */}
-          <View style={styles.checkinOrb1} />
-          <View style={styles.checkinOrb2} />
+        <Animated.View style={makeSlideStyle(checkinAnim)}>
+          <TouchableOpacity
+            style={styles.checkinBtn}
+            onPress={() => navigation.navigate('CheckinModal', { auntyId: '1', userInitiated: true })}
+            activeOpacity={0.82}
+          >
+            {/* Decorative orb layers */}
+            <View style={styles.checkinOrb1} />
+            <View style={styles.checkinOrb2} />
 
-          <View style={styles.checkinLeft}>
-            <View style={styles.checkinPill}>
-              <Text style={styles.checkinPillText}>The council is ready</Text>
-            </View>
-            <Text style={styles.checkinTitle}>Check in now</Text>
-            <Text style={styles.checkinSub}>Track your progress with the aunties</Text>
-          </View>
-          <View style={styles.checkinAvatars}>
-            {['1', '2', '3'].map((id, i) => (
-              <View
-                key={id}
-                style={[
-                  styles.checkinAvatar,
-                  { marginLeft: i === 0 ? 0 : -14, borderColor: auntyColors[id].accent },
-                ]}
-              >
-                <AuntyAvatar auntyId={id} size={38} />
+            <View style={styles.checkinLeft}>
+              <View style={styles.checkinPill}>
+                <Text style={styles.checkinPillText}>The council is ready</Text>
               </View>
-            ))}
-          </View>
-        </TouchableOpacity>
+              <Text style={styles.checkinTitle}>Check in now</Text>
+              <Text style={styles.checkinSub}>Track your progress with the aunties</Text>
+            </View>
+            <View style={styles.checkinAvatars}>
+              {['1', '2', '3'].map((id, i) => (
+                <View
+                  key={id}
+                  style={[
+                    styles.checkinAvatar,
+                    { marginLeft: i === 0 ? 0 : -14, borderColor: auntyColors[id].accent },
+                  ]}
+                >
+                  <AuntyAvatar auntyId={id} size={38} />
+                </View>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
       </ScrollView>
     </View>
   );

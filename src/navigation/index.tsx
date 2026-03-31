@@ -2,7 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { colors, fonts } from '@/constants/theme';
 import { HomeIcon, RoutineIcon, ProgressIcon, ProductsIcon } from '@/components/Icons';
@@ -84,11 +84,25 @@ function OnboardingNavigator() {
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   const color = focused ? colors.ink : colors.mutedLight;
   const sw = focused ? 2.4 : 1.5;
-  if (label === 'Home') return <HomeIcon color={color} size={22} strokeWidth={sw} />;
-  if (label === 'RoutineTab') return <RoutineIcon color={color} size={22} strokeWidth={sw} />;
-  if (label === 'Progress') return <ProgressIcon color={color} size={22} strokeWidth={sw} />;
-  if (label === 'Products') return <ProductsIcon color={color} size={22} strokeWidth={sw} />;
-  return null;
+
+  return (
+    <View style={{ alignItems: 'center' }}>
+      {focused && (
+        <View style={{
+          position: 'absolute',
+          top: -10,
+          width: 28,
+          height: 3,
+          borderRadius: 2,
+          backgroundColor: colors.primary,
+        }} />
+      )}
+      {label === 'Home' && <HomeIcon color={color} size={22} strokeWidth={sw} />}
+      {label === 'RoutineTab' && <RoutineIcon color={color} size={22} strokeWidth={sw} />}
+      {label === 'Progress' && <ProgressIcon color={color} size={22} strokeWidth={sw} />}
+      {label === 'Products' && <ProductsIcon color={color} size={22} strokeWidth={sw} />}
+    </View>
+  );
 }
 
 // ── Main tabs ────────────────────────────────────────────────────────
@@ -111,8 +125,9 @@ function MainTabs() {
           borderTopWidth: 1,
           borderTopColor: colors.borderLight,
           backgroundColor: colors.surface,
-          paddingTop: 8,
+          paddingTop: 12,
           paddingBottom: 6,
+          height: 64,
         },
         tabBarIcon: ({ focused }) => <TabIcon label={route.name} focused={focused} />,
       })}

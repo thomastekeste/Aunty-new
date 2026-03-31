@@ -6,6 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -15,6 +18,10 @@ import { ChevronUpIcon, ChevronDownIcon } from '@/components/Icons';
 import AuntyAvatar from '@/components/AuntyAvatar';
 import Button from '@/components/Button';
 import { colors, spacing, fontSize, fontWeight, radius, fonts, auntyColors, shadows } from '@/constants/theme';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'MeetCouncil'>;
 
@@ -52,7 +59,15 @@ export default function MeetCouncilScreen({ navigation }: Props) {
                 styles.card,
                 isExpanded && styles.cardExpanded,
               ]}
-              onPress={() => setExpanded(isExpanded ? null : id)}
+              onPress={() => {
+                LayoutAnimation.configureNext({
+                  duration: 280,
+                  create: { type: 'easeInEaseOut', property: 'opacity' },
+                  update: { type: 'spring', springDamping: 0.7 },
+                  delete: { type: 'easeInEaseOut', property: 'opacity' },
+                });
+                setExpanded(isExpanded ? null : id);
+              }}
               activeOpacity={0.85}
             >
               <View style={styles.cardMain}>
