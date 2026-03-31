@@ -159,12 +159,12 @@ export default function PorosityTestScreen({ navigation }: Props) {
               <Text style={styles.cardDescription}>Select what you observe:</Text>
               <View style={styles.optionsContainer}>
                 {(['float', 'middle', 'sink'] as const).map(opt => {
+                  const isSelected = selection === opt;
                   const labels = {
                     float: { text: 'Floating on top', icon: <FloatUpIcon color={isSelected ? RESULTS.float.color : colors.muted} size={26} strokeWidth={2} /> },
                     middle: { text: 'Floating in the middle', icon: <FloatMiddleIcon color={isSelected ? RESULTS.middle.color : colors.muted} size={26} strokeWidth={2} /> },
                     sink: { text: 'Sank to the bottom', icon: <SinkDownIcon color={isSelected ? RESULTS.sink.color : colors.muted} size={26} strokeWidth={2} /> },
                   };
-                  const isSelected = selection === opt;
                   return (
                     <TouchableOpacity
                       key={opt}
