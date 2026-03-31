@@ -3,19 +3,15 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 import { checkinService } from '@/services/supabase';
-import { useSubscription } from '@/context/SubscriptionContext';
 import { Checkin } from '@/types';
 import { getAunty } from '@/constants/aunties';
 import AuntyAvatar from '@/components/AuntyAvatar';
-import Button from '@/components/Button';
-import { PhotoCompareIcon, AIIcon, PenIcon, ChatIcon } from '@/components/Icons';
 import { colors, fonts, spacing, fontSize, fontWeight, radius, auntyColors, shadows } from '@/constants/theme';
 import { format } from 'date-fns';
 
 export default function ProgressScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { isActive } = useSubscription();
   const [checkins, setCheckins] = useState<Checkin[]>([]);
 
   useEffect(() => {
@@ -23,50 +19,6 @@ export default function ProgressScreen({ navigation }: any) {
       checkinService.list(user.id).then(setCheckins).catch(console.error);
     }
   }, [user?.id]);
-
-  if (!isActive) {
-    return (
-      <View style={[styles.root, { paddingTop: insets.top }]}>
-        <View style={styles.header}>
-          <Text style={styles.eyebrow}>Your journey</Text>
-          <Text style={styles.title}>Progress</Text>
-        </View>
-
-        <View style={styles.gateState}>
-          {/* Stacked aunty avatars */}
-          <View style={styles.gateAvatarRow}>
-            {['1','2','3','4','5'].map((id, i) => (
-              <View key={id} style={[styles.gateAvatar, { marginLeft: i === 0 ? 0 : -14, borderColor: auntyColors[id].accent }]}>
-                <AuntyAvatar auntyId={id} size={46} />
-              </View>
-            ))}
-          </View>
-
-          <Text style={styles.gateTitle}>The aunties are watching.</Text>
-          <Text style={styles.gateSubtitle}>
-            Weekly check-ins with photo comparisons, AI hair analysis, and personalized adjustments from the full council.
-          </Text>
-
-          <View style={styles.gateFeatures}>
-            {[
-              { icon: <PhotoCompareIcon color={colors.primary} size={18} strokeWidth={1.8} />, text: 'Photo progress comparisons' },
-              { icon: <AIIcon color={colors.primary} size={18} strokeWidth={1.8} />, text: 'AI hair health analysis' },
-              { icon: <PenIcon color={colors.primary} size={18} strokeWidth={1.8} />, text: 'Personalized routine adjustments' },
-              { icon: <ChatIcon color={colors.primary} size={18} strokeWidth={1.8} />, text: 'Direct aunty feedback each week' },
-            ].map((f, i) => (
-              <View key={i} style={styles.gateFeatureRow}>
-                <View style={styles.gateFeatureIconWrap}>{f.icon}</View>
-                <Text style={styles.gateFeatureText}>{f.text}</Text>
-              </View>
-            ))}
-          </View>
-
-          <Button label="Unlock Premium" onPress={() => {}} style={{ width: '100%' }} />
-          <Text style={styles.gatePricing}>$6.99 / month · $49.99 / year</Text>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -195,73 +147,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.muted,
     marginTop: 4,
-  },
-
-  // Premium gate
-  gateState: {
-    flex: 1,
-    padding: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.lg,
-  },
-  gateAvatarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  gateAvatar: {
-    borderWidth: 2.5,
-    borderRadius: 27,
-    ...shadows.sm,
-  },
-  gateTitle: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.black,
-    color: colors.ink,
-    textAlign: 'center',
-    letterSpacing: -0.5,
-  },
-  gateSubtitle: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
-    color: colors.muted,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  gateFeatures: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    padding: spacing.md,
-    width: '100%',
-    gap: spacing.sm,
-  },
-  gateFeatureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  gateFeatureIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.sm,
-    backgroundColor: 'rgba(245,197,66,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  gateFeatureText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.ink,
-    fontWeight: fontWeight.medium,
-  },
-  gatePricing: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.muted,
   },
 
   content: { padding: spacing.md, gap: spacing.md },

@@ -9,7 +9,6 @@ import { useAuth } from '@/context/AuthContext';
 import { routineService } from '@/services/supabase';
 import { userService } from '@/services/supabase';
 import { notificationService } from '@/services/notifications';
-import { useSubscription } from '@/context/SubscriptionContext';
 import AuntyAvatar from '@/components/AuntyAvatar';
 import { colors, spacing, fontSize, fontWeight, fonts, auntyColors } from '@/constants/theme';
 
@@ -20,7 +19,6 @@ export default function SendOffScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user, updateUser } = useAuth();
   const { data, hairAnalysis, councilResponse, routine } = useOnboarding();
-  const { isActive } = useSubscription();
 
   const portraitsFade = useRef(new Animated.Value(0)).current;
   const messageFade = useRef(new Animated.Value(0)).current;
@@ -45,10 +43,8 @@ export default function SendOffScreen({ navigation }: Props) {
         updateUser({ onboarding_complete: true });
       }).catch(console.error);
 
-      // Schedule check-in notifications if subscribed
-      if (isActive) {
-        notificationService.scheduleCheckinReminders().catch(console.error);
-      }
+      // Schedule check-in reminders
+      notificationService.scheduleCheckinReminders().catch(console.error);
     }
 
     // Run animation sequence

@@ -2,20 +2,16 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
-import { useSubscription } from '@/context/SubscriptionContext';
-import { getAllProducts, getFreeProducts } from '@/constants/products';
+import { getAllProducts } from '@/constants/products';
 import { productService } from '@/services/supabase';
 import { getAunty } from '@/constants/aunties';
 import AuntyAvatar from '@/components/AuntyAvatar';
-import Button from '@/components/Button';
 import { colors, fonts, spacing, fontSize, fontWeight, radius, auntyColors, shadows } from '@/constants/theme';
 
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { isActive } = useSubscription();
-
-  const products = isActive ? getAllProducts() : getFreeProducts();
+  const products = getAllProducts();
 
   const handleProductPress = async (productId: string, affiliateLink: string) => {
     if (user) {
@@ -29,44 +25,13 @@ export default function ProductsScreen() {
       <View style={styles.header}>
         <Text style={styles.eyebrow}>Aunty-curated</Text>
         <Text style={styles.title}>Product Shelf</Text>
-        <Text style={styles.subtitle}>
-          {isActive ? 'Your full shelf — every product hand-picked.' : '3 starting products. Upgrade for the full shelf.'}
-        </Text>
+        <Text style={styles.subtitle}>Your full shelf — every product hand-picked.</Text>
       </View>
 
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }]}
         showsVerticalScrollIndicator={false}
       >
-        {!isActive && (
-          <View style={styles.upgradeBanner}>
-            <View style={styles.upgradeBannerAccent} />
-            <View style={styles.upgradeHeader}>
-              <View style={styles.upgradeIconRow}>
-                {['5','6','7'].map((id, i) => (
-                  <View key={id} style={[styles.upgradeAvatar, { marginLeft: i === 0 ? 0 : -10, borderColor: auntyColors[id].accent }]}>
-                    <AuntyAvatar auntyId={id} size={32} />
-                  </View>
-                ))}
-              </View>
-              <View style={styles.upgradeTextBlock}>
-                <Text style={styles.upgradeTitle}>Unlock the full shelf</Text>
-                <Text style={styles.upgradeText}>7+ products · seasonal updates</Text>
-              </View>
-            </View>
-            <Text style={styles.upgrdeDescription}>
-              Get every aunty's hand-picked product recommendation, updated seasonally as your hair evolves.
-            </Text>
-            <Button
-              label="Upgrade to Premium"
-              onPress={() => {}}
-              variant="dark"
-              style={{ marginTop: spacing.md }}
-            />
-            <Text style={styles.upgradePricing}>$6.99 / month · $49.99 / year</Text>
-          </View>
-        )}
-
         {products.map(product => {
           const aunty = getAunty(product.recommended_by_aunty_id);
           const ac = auntyColors[product.recommended_by_aunty_id];

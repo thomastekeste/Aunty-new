@@ -6,7 +6,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { OnboardingStackParamList } from '@/types';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { getAunty } from '@/constants/aunties';
-import { getFreeProducts } from '@/constants/products';
+import { getAllProducts } from '@/constants/products';
 import AuntyAvatar from '@/components/AuntyAvatar';
 import Button from '@/components/Button';
 import { colors, spacing, fontSize, fontWeight, radius, fonts, auntyColors, shadows } from '@/constants/theme';
@@ -18,7 +18,7 @@ const DAY_KEYS = ['wash_day', 'style_day', 'refresh_day', 'rest_day'] as const;
 export default function RoutineScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { routine, data, hairAnalysis } = useOnboarding();
-  const freeProducts = getFreeProducts();
+  const allProducts = getAllProducts();
 
   const hairTags = [
     data.porosity && `${data.porosity} porosity`,
@@ -152,11 +152,10 @@ export default function RoutineScreen({ navigation }: Props) {
         {/* Product Shelf */}
         <View style={styles.scheduleHeader}>
           <Text style={styles.sectionEyebrow}>Your Product Shelf</Text>
-          <Text style={styles.sectionTitle}>3 products to start</Text>
-          <Text style={styles.sectionSubtitle}>Upgrade for the full aunty-curated shelf.</Text>
+          <Text style={styles.sectionTitle}>Aunty-curated picks</Text>
         </View>
 
-        {freeProducts.map(product => (
+        {allProducts.map(product => (
           <TouchableOpacity
             key={product.id}
             style={styles.productCard}

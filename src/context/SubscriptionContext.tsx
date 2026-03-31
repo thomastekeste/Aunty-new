@@ -13,18 +13,20 @@ const SubscriptionContext = createContext<SubscriptionContextType | undefined>(u
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [isActive, setIsActive] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  // All features unlocked by default — billing gates will be re-wired later
+  const [isActive, setIsActive] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      rcService.init(user.id)
-        .then(() => refresh())
-        .catch(() => setIsLoading(false));
-    } else {
-      setIsActive(false);
-      setIsLoading(false);
-    }
+    // RevenueCat init commented out until billing is enabled
+    // if (user) {
+    //   rcService.init(user.id)
+    //     .then(() => refresh())
+    //     .catch(() => setIsLoading(false));
+    // } else {
+    //   setIsActive(false);
+    //   setIsLoading(false);
+    // }
   }, [user?.id]);
 
   const refresh = async () => {
