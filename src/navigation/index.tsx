@@ -2,9 +2,10 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
-import { colors } from '@/constants/theme';
+import { colors, fonts } from '@/constants/theme';
+import { HomeIcon, RoutineIcon, ProgressIcon, ProductsIcon } from '@/components/Icons';
 
 // Onboarding screens
 import SplashScreen from '@/screens/onboarding/SplashScreen';
@@ -81,26 +82,14 @@ function OnboardingNavigator() {
 
 // ── Tab bar icon ─────────────────────────────────────────────────────
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    Home: '⌂',
-    RoutineTab: '⊞',
-    Progress: '◷',
-    Products: '⊡',
-  };
-  return (
-    <View style={tabIconStyles.container}>
-      <Text style={[tabIconStyles.icon, focused && tabIconStyles.iconActive]}>
-        {icons[label] ?? '○'}
-      </Text>
-    </View>
-  );
+  const color = focused ? colors.ink : colors.mutedLight;
+  const sw = focused ? 2.4 : 1.5;
+  if (label === 'Home') return <HomeIcon color={color} size={22} strokeWidth={sw} />;
+  if (label === 'RoutineTab') return <RoutineIcon color={color} size={22} strokeWidth={sw} />;
+  if (label === 'Progress') return <ProgressIcon color={color} size={22} strokeWidth={sw} />;
+  if (label === 'Products') return <ProductsIcon color={color} size={22} strokeWidth={sw} />;
+  return null;
 }
-
-const tabIconStyles = StyleSheet.create({
-  container: { alignItems: 'center', justifyContent: 'center' },
-  icon: { fontSize: 20, color: colors.muted },
-  iconActive: { color: colors.primary },
-});
 
 // ── Main tabs ────────────────────────────────────────────────────────
 function MainTabs() {
@@ -109,10 +98,22 @@ function MainTabs() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarShowLabel: true,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.muted,
-        tabBarStyle: { borderTopColor: colors.border },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '800',
+          fontFamily: fonts.body,
+          letterSpacing: 0.5,
+          marginTop: 2,
+        },
+        tabBarActiveTintColor: colors.ink,
+        tabBarInactiveTintColor: colors.mutedLight,
+        tabBarStyle: {
+          borderTopWidth: 1,
+          borderTopColor: colors.borderLight,
+          backgroundColor: colors.surface,
+          paddingTop: 8,
+          paddingBottom: 6,
+        },
         tabBarIcon: ({ focused }) => <TabIcon label={route.name} focused={focused} />,
       })}
     >

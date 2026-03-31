@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity, Share } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { OnboardingStackParamList } from '@/types';
@@ -10,7 +11,7 @@ import { userService } from '@/services/supabase';
 import { notificationService } from '@/services/notifications';
 import { useSubscription } from '@/context/SubscriptionContext';
 import AuntyAvatar from '@/components/AuntyAvatar';
-import { colors, spacing, fontSize, fontWeight, fonts } from '@/constants/theme';
+import { colors, spacing, fontSize, fontWeight, fonts, auntyColors } from '@/constants/theme';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'SendOff'>;
 const AUNTY_IDS = ['1', '2', '3', '4', '5', '6', '7'];
@@ -95,10 +96,17 @@ export default function SendOffScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      <StatusBar style="light" />
       {/* Overlapping portraits */}
       <Animated.View style={[styles.portraits, { opacity: portraitsFade }]}>
         {AUNTY_IDS.map((id, i) => (
-          <View key={id} style={[styles.avatarWrap, { marginLeft: i === 0 ? 0 : -14 }]}>
+          <View
+            key={id}
+            style={[
+              styles.avatarWrap,
+              { marginLeft: i === 0 ? 0 : -14, borderColor: auntyColors[id].accent },
+            ]}
+          >
             <AuntyAvatar auntyId={id} size={56} />
           </View>
         ))}
@@ -167,7 +175,11 @@ const styles = StyleSheet.create({
   },
   signoff: {
     fontFamily: fonts.body,
-    marginBottom: spacing.xl, textTransform: 'uppercase', letterSpacing: 1,
+    marginBottom: spacing.xl,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    color: 'rgba(254,249,243,0.4)',
+    fontSize: fontSize.sm,
   },
   finalLine: {
     fontFamily: fonts.display,
@@ -203,5 +215,5 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
-  continueBtnText: { fontFamily: fonts.body, fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.canvas },
+  continueBtnText: { fontFamily: fonts.body, fontSize: fontSize.md, fontWeight: fontWeight.black, color: colors.ink, textTransform: 'uppercase', letterSpacing: 0.5 },
 });

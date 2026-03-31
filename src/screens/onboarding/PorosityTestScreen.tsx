@@ -16,29 +16,35 @@ import AuntyBubble from '@/components/AuntyBubble';
 import Button from '@/components/Button';
 import ProgressBar from '@/components/ProgressBar';
 import { AUNTIES } from '@/constants/aunties';
-import { colors, spacing, fontSize, fontWeight, radius, fonts } from '@/constants/theme';
+import { colors, spacing, fontSize, fontWeight, radius, fonts, auntyColors } from '@/constants/theme';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'PorosityTest'>;
 type SubStep = 'intro' | 'test' | 'result';
 
-const RESULTS: Record<string, { porosity: Porosity; title: string; explanation: string; revealMsg: string }> = {
+const RESULTS: Record<string, { porosity: Porosity; title: string; explanation: string; revealMsg: string; icon: string; color: string }> = {
   float: {
     porosity: 'low',
     title: 'Low Porosity',
     explanation: 'Your hair cuticles are tightly closed. Products sit on top rather than absorbing. You need heat or steam to open the cuticle.',
     revealMsg: "Low porosity, honey. Your cuticles are sealed tight — that's why products just sit there. Warm up your treatments.",
+    icon: '💧',
+    color: '#00B4D8',
   },
   middle: {
     porosity: 'normal',
     title: 'Normal Porosity',
     explanation: 'Your cuticles are balanced — they absorb and retain moisture well. This is the sweet spot.',
     revealMsg: "Normal porosity — you're balanced, baby. Products absorb and stay. We work with what we've got.",
+    icon: '↔️',
+    color: '#F5C542',
   },
   sink: {
     porosity: 'high',
     title: 'High Porosity',
     explanation: 'Your cuticles are open and absorb moisture quickly but lose it just as fast. You need heavy sealers.',
     revealMsg: "High porosity. Your cuticles are wide open — drinks fast, loses fast. You need protein and sealers, now.",
+    icon: '💦',
+    color: '#FB5607',
   },
 };
 
@@ -100,58 +106,85 @@ export default function PorosityTestScreen({ navigation }: Props) {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* All 7 aunty avatars in a row */}
-        <View style={styles.councilRow}>
-          {['1','2','3','4','5','6','7'].map((id, i) => (
-            <View key={id} style={[styles.councilAvatar, { marginLeft: i === 0 ? 0 : -8 }]}>
-              <AuntyAvatar auntyId={id} size={36} />
-            </View>
-          ))}
-          <Text style={styles.councilLabel}>The full council</Text>
-        </View>
-
         {subStep === 'intro' && (
           <>
-            <Text style={styles.heading}>Porosity Test</Text>
-            <Text style={styles.body}>
-              Pull one strand of clean hair and drop it in a glass of water. Porosity tells us how well your hair absorbs and retains moisture — the foundation of everything we'll build.
-            </Text>
-            <View style={styles.illustrationBox}>
-              <Text style={styles.illustrationText}>Get a single strand of clean hair and a glass of room-temperature water.</Text>
+            <View style={styles.headerSection}>
+              <Text style={styles.stepBadge}>Step 1 of 3</Text>
+              <Text style={styles.heading}>Porosity Test</Text>
+              <Text style={styles.tagline}>Understanding how your hair drinks</Text>
             </View>
-            <Button label="I have my strand." onPress={startTest} />
+
+            <View style={styles.fullCard}>
+              <View style={styles.cardIconSection}>
+                <Text style={styles.largeIcon}>💧</Text>
+                <View style={styles.geometricPattern1} />
+              </View>
+              <View style={styles.cardContent}>
+                <Text style={styles.cardQuestion}>How well does your hair absorb moisture?</Text>
+                <Text style={styles.cardDescription}>
+                  Pull one strand of clean hair and drop it in a glass of water. Porosity tells us how well your hair absorbs and retains moisture — the foundation of everything we'll build.
+                </Text>
+                <View style={styles.instructionBox}>
+                  <Text style={styles.instructionTitle}>What you'll need:</Text>
+                  <Text style={styles.instructionText}>• One clean strand of hair</Text>
+                  <Text style={styles.instructionText}>• A glass of room-temperature water</Text>
+                  <Text style={styles.instructionText}>• 2 minutes of patience</Text>
+                </View>
+              </View>
+            </View>
+
+            <Button label="I'm ready to test" onPress={startTest} />
           </>
         )}
 
         {subStep === 'test' && (
           <>
-            <Text style={styles.heading}>Drop it in the water.</Text>
-            <Text style={styles.body}>Watch where the strand settles. Wait at least 2 minutes.</Text>
-
-            <View style={styles.timerBox}>
-              <Text style={styles.timerText}>{formatTime(timer)}</Text>
-              {timer === 0 && <Text style={styles.timerDone}>Time's up. What do you see?</Text>}
+            <View style={styles.headerSection}>
+              <Text style={styles.stepBadge}>Step 1 of 3</Text>
+              <Text style={styles.heading}>Drop it in</Text>
+              <Text style={styles.tagline}>Watch where your strand settles</Text>
             </View>
 
-            <Text style={styles.optionHeading}>Where is the strand?</Text>
-            {(['float', 'middle', 'sink'] as const).map(opt => {
-              const labels = {
-                float: 'Floating on top',
-                middle: 'Floating in the middle',
-                sink: 'Sank to the bottom',
-              };
-              return (
-                <TouchableOpacity
-                  key={opt}
-                  style={[styles.option, selection === opt && styles.optionSelected]}
-                  onPress={() => handleSelect(opt)}
-                >
-                  <Text style={[styles.optionText, selection === opt && styles.optionTextSelected]}>
-                    {labels[opt]}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+            <View style={[styles.fullCard, styles.timerCard]}>
+              <View style={styles.timerContent}>
+                <Text style={styles.timerLabel}>Time remaining</Text>
+                <Text style={styles.timerDisplay}>{formatTime(timer)}</Text>
+                {timer === 0 && <Text style={styles.timerDone}>⏱️ Time's up!</Text>}
+              </View>
+              <View style={styles.geometricPattern2} />
+            </View>
+
+            <View style={styles.fullCard}>
+              <Text style={styles.cardQuestion}>Where is the strand?</Text>
+              <Text style={styles.cardDescription}>Select what you observe:</Text>
+              <View style={styles.optionsContainer}>
+                {(['float', 'middle', 'sink'] as const).map(opt => {
+                  const labels = {
+                    float: { text: 'Floating on top', icon: '⬆️' },
+                    middle: { text: 'Floating in the middle', icon: '↔️' },
+                    sink: { text: 'Sank to the bottom', icon: '⬇️' },
+                  };
+                  const isSelected = selection === opt;
+                  return (
+                    <TouchableOpacity
+                      key={opt}
+                      style={[
+                        styles.answerCard,
+                        isSelected && styles.answerCardSelected,
+                        { borderColor: isSelected ? RESULTS[opt].color : colors.borderLight },
+                        isSelected && { backgroundColor: `${RESULTS[opt].color}12` },
+                      ]}
+                      onPress={() => handleSelect(opt)}
+                    >
+                      <Text style={styles.answerIcon}>{labels[opt].icon}</Text>
+                      <Text style={[styles.answerText, isSelected && { color: RESULTS[opt].color, fontWeight: fontWeight.black }]}>
+                        {labels[opt].text}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
 
             {selection && (
               <Button
@@ -165,12 +198,26 @@ export default function PorosityTestScreen({ navigation }: Props) {
 
         {subStep === 'result' && selection && (
           <>
-            <AuntyBubble auntyId="2" message={RESULTS[selection].revealMsg} />
-            <View style={styles.resultCard}>
-              <Text style={styles.resultTitle}>{RESULTS[selection].title}</Text>
-              <Text style={styles.resultBody}>{RESULTS[selection].explanation}</Text>
+            <View style={styles.headerSection}>
+              <Text style={styles.stepBadge}>Your Result</Text>
+              <Text style={styles.heading}>{RESULTS[selection].title}</Text>
             </View>
-            <Button label="Got it. Keep going." onPress={handleContinue} style={{ marginTop: spacing.md }} />
+
+            <View style={[styles.fullCard, { borderLeftWidth: 6, borderLeftColor: RESULTS[selection].color }]}>
+              <View style={styles.resultHeader}>
+                <Text style={[styles.resultIcon, { color: RESULTS[selection].color }]}>{RESULTS[selection].icon}</Text>
+                <View>
+                  <Text style={styles.resultLabel}>Porosity Profile</Text>
+                  <Text style={[styles.resultTitle, { color: RESULTS[selection].color }]}>{RESULTS[selection].title}</Text>
+                </View>
+              </View>
+
+              <Text style={styles.resultDescription}>{RESULTS[selection].explanation}</Text>
+
+              <AuntyBubble auntyId="2" message={RESULTS[selection].revealMsg} />
+            </View>
+
+            <Button label="Got it. Keep going." onPress={handleContinue} />
           </>
         )}
       </ScrollView>
@@ -189,92 +236,209 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     gap: spacing.sm,
   },
-  back: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   progressWrap: { flex: 1 },
-  content: { padding: spacing.md },
-  councilRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
+  content: { padding: spacing.md, gap: spacing.lg },
+
+  // Header
+  headerSection: {
+    marginBottom: spacing.sm,
   },
-  councilAvatar: { borderWidth: 2, borderColor: colors.canvas, borderRadius: 20 },
-  councilLabel: {
-    marginLeft: spacing.sm,
+  stepBadge: {
     fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.muted,
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    fontWeight: fontWeight.bold,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 2,
+    marginBottom: spacing.xs,
   },
   heading: {
     fontFamily: fonts.display,
-    fontSize: fontSize.xxl,
+    fontSize: 42,
     fontWeight: fontWeight.black,
     color: colors.ink,
-    marginBottom: spacing.sm,
-    letterSpacing: -0.5,
+    letterSpacing: -1,
+    marginBottom: spacing.xs,
   },
-  body: {
+  tagline: {
     fontFamily: fonts.body,
     fontSize: fontSize.md,
-    color: colors.textSecondary,
-    lineHeight: 26,
-    marginBottom: spacing.lg,
+    color: colors.muted,
+    fontWeight: fontWeight.medium,
   },
-  illustrationBox: {
-    alignItems: 'center',
-    padding: spacing.xl,
+
+  // Full-box cards
+  fullCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.lg,
-  },
-  illustrationText: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium, lineHeight: 24, textAlign: 'center' },
-  timerBox: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.lg,
-  },
-  timerText: { fontFamily: fonts.display, fontSize: 48, fontWeight: fontWeight.black, color: colors.ink, letterSpacing: -2 },
-  timerDone: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.success, marginTop: spacing.sm, fontWeight: fontWeight.semibold },
-  optionHeading: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.ink,
-    marginBottom: spacing.md,
-  },
-  option: {
-    padding: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    marginBottom: spacing.sm,
-    backgroundColor: colors.canvas,
-  },
-  optionSelected: { borderColor: colors.amber, backgroundColor: colors.surface },
-  optionText: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.text, fontWeight: fontWeight.medium },
-  optionTextSelected: { fontWeight: fontWeight.bold, color: colors.ink },
-  resultCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
     padding: spacing.lg,
-    marginTop: spacing.md,
+    overflow: 'hidden',
   },
-  resultTitle: {
+  cardIconSection: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    position: 'relative',
+  },
+  largeIcon: {
+    fontSize: 64,
+    marginBottom: spacing.sm,
+  },
+  geometricPattern1: {
+    position: 'absolute',
+    top: -20,
+    right: -20,
+    width: 100,
+    height: 100,
+    opacity: 0.05,
+    backgroundColor: colors.primary,
+    borderRadius: 50,
+  },
+  cardContent: {
+    gap: spacing.md,
+  },
+  cardQuestion: {
     fontFamily: fonts.display,
     fontSize: fontSize.xl,
     fontWeight: fontWeight.black,
     color: colors.ink,
-    marginBottom: spacing.sm,
+    letterSpacing: -0.5,
   },
-  resultBody: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.textSecondary, lineHeight: 24 },
+  cardDescription: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    lineHeight: 26,
+  },
+  instructionBox: {
+    backgroundColor: 'rgba(245,197,66,0.05)',
+    borderLeft: 4,
+    borderLeftColor: colors.primary,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  instructionTitle: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.ink,
+    marginBottom: spacing.xs,
+  },
+  instructionText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+
+  // Timer card
+  timerCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    minHeight: 180,
+  },
+  timerContent: {
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  timerLabel: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.muted,
+    fontWeight: fontWeight.bold,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
+  timerDisplay: {
+    fontFamily: fonts.display,
+    fontSize: 56,
+    fontWeight: fontWeight.black,
+    color: colors.ink,
+    letterSpacing: -2,
+  },
+  timerDone: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    color: colors.accent,
+    fontWeight: fontWeight.bold,
+    marginTop: spacing.sm,
+  },
+  geometricPattern2: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: colors.primary,
+    opacity: 0.04,
+    bottom: -40,
+    left: -40,
+  },
+
+  // Options
+  optionsContainer: {
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
+  answerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 2,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.canvas,
+    gap: spacing.md,
+  },
+  answerCardSelected: {
+    borderWidth: 2.5,
+    backgroundColor: 'transparent',
+  },
+  answerIcon: {
+    fontSize: 28,
+  },
+  answerText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+    flex: 1,
+  },
+
+  // Result
+  resultHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+    paddingBottom: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
+  },
+  resultIcon: {
+    fontSize: 40,
+  },
+  resultLabel: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    fontWeight: fontWeight.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  resultTitle: {
+    fontFamily: fonts.display,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.black,
+    letterSpacing: -0.3,
+  },
+  resultDescription: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    lineHeight: 26,
+    marginBottom: spacing.md,
+  },
 });

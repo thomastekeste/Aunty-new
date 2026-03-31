@@ -12,11 +12,12 @@ import ProgressBar from '@/components/ProgressBar';
 import { colors, spacing, fontSize, fontWeight, radius, fonts } from '@/constants/theme';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'ElasticityTest'>;
-type SubStep = 'intro' | 'result';
 
 const OPTIONS: Array<{
   key: 'snapped' | 'stretched' | 'barely';
   label: string;
+  icon: string;
+  color: string;
   elasticity: Elasticity;
   protein_needs: Elasticity;
   revealMsg: string;
@@ -24,6 +25,8 @@ const OPTIONS: Array<{
   {
     key: 'snapped',
     label: 'Snapped quickly',
+    icon: '✂️',
+    color: '#E0142C',
     elasticity: 'low',
     protein_needs: 'high',
     revealMsg: "That strand snapped fast — your hair needs protein, serious. We add that to the routine, don't skip it.",
@@ -31,6 +34,8 @@ const OPTIONS: Array<{
   {
     key: 'stretched',
     label: 'Stretched well, then snapped',
+    icon: '↔️',
+    color: '#F5C542',
     elasticity: 'normal',
     protein_needs: 'normal',
     revealMsg: "Good elasticity — that strand stretched before it broke. Your protein-moisture balance is solid. We build from here.",
@@ -38,6 +43,8 @@ const OPTIONS: Array<{
   {
     key: 'barely',
     label: 'Barely stretched at all',
+    icon: '📏',
+    color: '#9B5DE5',
     elasticity: 'low',
     protein_needs: 'high',
     revealMsg: "No stretch at all. Over-processed or protein-overloaded. We balance you out — moisture first, then reassess.",
@@ -47,8 +54,8 @@ const OPTIONS: Array<{
 export default function ElasticityTestScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { setData } = useOnboarding();
-  const [subStep, setSubStep] = useState<SubStep>('intro');
   const [selection, setSelection] = useState<typeof OPTIONS[0] | null>(null);
+  const [showResult, setShowResult] = useState(false);
 
   const handleContinue = () => {
     if (!selection) return;
@@ -71,53 +78,91 @@ export default function ElasticityTestScreen({ navigation }: Props) {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.councilRow}>
-          {['1','2','3','4','5','6','7'].map((id, i) => (
-            <View key={id} style={[styles.councilAvatar, { marginLeft: i === 0 ? 0 : -8 }]}>
-              <AuntyAvatar auntyId={id} size={36} />
-            </View>
-          ))}
-        </View>
-
-        {subStep === 'intro' ? (
+        {!showResult ? (
           <>
-            <Text style={styles.heading}>Strand Elasticity Test</Text>
-            <Text style={styles.body}>
-              Take a wet strand of hair between two fingers and gently stretch it. This tells us if your hair needs protein.
-            </Text>
-            <View style={styles.illustrationBox}>
-              <Text style={styles.illustrationText}>Stretch it slowly — take your time.</Text>
+            <View style={styles.headerSection}>
+              <Text style={styles.stepBadge}>Step 2 of 3</Text>
+              <Text style={styles.heading}>Elasticity Test</Text>
+              <Text style={styles.tagline}>Does your hair have protein strength?</Text>
             </View>
-            <Text style={styles.optionHeading}>What happened?</Text>
-            {OPTIONS.map(opt => (
-              <TouchableOpacity
-                key={opt.key}
-                style={[styles.option, selection?.key === opt.key && styles.optionSelected]}
-                onPress={() => setSelection(opt)}
-              >
-                <Text style={[styles.optionText, selection?.key === opt.key && styles.optionTextSelected]}>
-                  {opt.label}
+
+            <View style={styles.fullCard}>
+              <View style={styles.cardIconSection}>
+                <Text style={styles.largeIcon}>💪</Text>
+                <View style={styles.geometricDecor} />
+              </View>
+              <View style={styles.cardContent}>
+                <Text style={styles.cardQuestion}>How much does your hair stretch?</Text>
+                <Text style={styles.cardDescription}>
+                  Take a wet strand of hair between two fingers and gently stretch it. Elasticity tells us if your hair needs protein to strengthen its structure.
                 </Text>
-              </TouchableOpacity>
-            ))}
+                <View style={styles.instructionBox}>
+                  <Text style={styles.instructionTitle}>How to perform the test:</Text>
+                  <Text style={styles.instructionText}>• Use a wet strand of clean hair</Text>
+                  <Text style={styles.instructionText}>• Hold between thumb and index finger</Text>
+                  <Text style={styles.instructionText}>• Gently pull — take your time</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.fullCard}>
+              <Text style={styles.cardQuestion}>What happened when you stretched it?</Text>
+              <Text style={styles.cardDescription}>Select the best description:</Text>
+              <View style={styles.optionsContainer}>
+                {OPTIONS.map(opt => (
+                  <TouchableOpacity
+                    key={opt.key}
+                    style={[
+                      styles.answerCard,
+                      selection?.key === opt.key && styles.answerCardSelected,
+                      { borderColor: selection?.key === opt.key ? opt.color : colors.borderLight },
+                      selection?.key === opt.key && { backgroundColor: `${opt.color}12` },
+                    ]}
+                    onPress={() => setSelection(opt)}
+                  >
+                    <Text style={styles.answerIcon}>{opt.icon}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.answerText, selection?.key === opt.key && { color: opt.color, fontWeight: fontWeight.black }]}>
+                        {opt.label}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
             {selection && (
-              <Button label="See what that means" onPress={() => setSubStep('result')} style={{ marginTop: spacing.md }} />
+              <Button label="See what that means" onPress={() => setShowResult(true)} />
             )}
           </>
         ) : (
           <>
-            <AuntyBubble auntyId="4" message={selection!.revealMsg} />
-            <View style={styles.resultCard}>
-              <Text style={styles.resultTitle}>
-                {selection!.elasticity === 'normal' ? 'Normal Elasticity' : 'Low Elasticity'}
-              </Text>
-              <Text style={styles.resultBody}>
-                Protein needs: <Text style={{ fontWeight: fontWeight.bold }}>
-                  {selection!.protein_needs === 'high' ? 'High' : 'Normal'}
+            <View style={styles.headerSection}>
+              <Text style={styles.stepBadge}>Your Result</Text>
+              <Text style={styles.heading}>{selection!.elasticity === 'normal' ? 'Normal Elasticity' : 'Low Elasticity'}</Text>
+            </View>
+
+            <View style={[styles.fullCard, { borderLeftWidth: 6, borderLeftColor: selection!.color }]}>
+              <View style={styles.resultHeader}>
+                <Text style={[styles.resultIcon, { color: selection!.color }]}>{selection!.icon}</Text>
+                <View>
+                  <Text style={styles.resultLabel}>Protein Profile</Text>
+                  <Text style={[styles.resultTitle, { color: selection!.color }]}>
+                    {selection!.protein_needs === 'high' ? 'High Protein Needs' : 'Normal Protein Needs'}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.proteinInfo}>
+                Protein needs: <Text style={[styles.proteinBold, { color: selection!.color }]}>
+                  {selection!.protein_needs === 'high' ? 'High — build strength' : 'Normal — maintain balance'}
                 </Text>
               </Text>
+
+              <AuntyBubble auntyId="4" message={selection!.revealMsg} />
             </View>
-            <Button label="Continue" onPress={handleContinue} style={{ marginTop: spacing.md }} />
+
+            <Button label="Continue" onPress={handleContinue} />
           </>
         )}
       </ScrollView>
@@ -136,31 +181,167 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     gap: spacing.sm,
   },
-  back: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   progressWrap: { flex: 1 },
-  content: { padding: spacing.md },
-  councilRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
-  councilAvatar: { borderWidth: 2, borderColor: colors.canvas, borderRadius: 20 },
-  heading: { fontFamily: fonts.display, fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.ink, marginBottom: spacing.sm },
-  body: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.textSecondary, lineHeight: 24, marginBottom: spacing.lg },
-  illustrationBox: {
-    alignItems: 'center',
-    padding: spacing.xl,
+  content: { padding: spacing.md, gap: spacing.lg },
+
+  // Header
+  headerSection: {
+    marginBottom: spacing.sm,
+  },
+  stepBadge: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    fontWeight: fontWeight.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    marginBottom: spacing.xs,
+  },
+  heading: {
+    fontFamily: fonts.display,
+    fontSize: 42,
+    fontWeight: fontWeight.black,
+    color: colors.ink,
+    letterSpacing: -1,
+    marginBottom: spacing.xs,
+  },
+  tagline: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    color: colors.muted,
+    fontWeight: fontWeight.medium,
+  },
+
+  // Full-box cards
+  fullCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    padding: spacing.lg,
+    overflow: 'hidden',
+  },
+  cardIconSection: {
+    alignItems: 'center',
     marginBottom: spacing.lg,
+    position: 'relative',
   },
-  illustrationEmoji: { fontSize: 48, marginBottom: spacing.sm },
-  illustrationText: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.muted, fontWeight: fontWeight.medium },
-  optionHeading: { fontFamily: fonts.body, fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.ink, marginBottom: spacing.md },
-  option: {
-    padding: spacing.md, borderRadius: radius.md, borderWidth: 1.5,
-    borderColor: colors.border, marginBottom: spacing.sm, backgroundColor: colors.canvas,
+  largeIcon: {
+    fontSize: 64,
+    marginBottom: spacing.sm,
   },
-  optionSelected: { borderColor: colors.amber, backgroundColor: colors.surface },
-  optionText: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.text, fontWeight: fontWeight.medium },
-  optionTextSelected: { fontWeight: fontWeight.bold, color: colors.ink },
-  resultCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, marginTop: spacing.md },
-  resultTitle: { fontFamily: fonts.display, fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.ink, marginBottom: spacing.sm },
-  resultBody: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.textSecondary },
+  geometricDecor: {
+    position: 'absolute',
+    top: -30,
+    right: -30,
+    width: 120,
+    height: 120,
+    backgroundColor: colors.accent,
+    opacity: 0.04,
+    borderRadius: 60,
+  },
+  cardContent: {
+    gap: spacing.md,
+  },
+  cardQuestion: {
+    fontFamily: fonts.display,
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.black,
+    color: colors.ink,
+    letterSpacing: -0.5,
+  },
+  cardDescription: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    lineHeight: 26,
+  },
+  instructionBox: {
+    backgroundColor: 'rgba(251,86,7,0.05)',
+    borderLeft: 4,
+    borderLeftColor: colors.accent,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  instructionTitle: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.ink,
+    marginBottom: spacing.xs,
+  },
+  instructionText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+
+  // Options
+  optionsContainer: {
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
+  answerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 2,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.canvas,
+    gap: spacing.md,
+  },
+  answerCardSelected: {
+    borderWidth: 2.5,
+    backgroundColor: 'transparent',
+  },
+  answerIcon: {
+    fontSize: 28,
+  },
+  answerText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+  },
+
+  // Result
+  resultHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+    paddingBottom: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
+  },
+  resultIcon: {
+    fontSize: 40,
+  },
+  resultLabel: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    fontWeight: fontWeight.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  resultTitle: {
+    fontFamily: fonts.display,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.black,
+    letterSpacing: -0.3,
+  },
+  proteinInfo: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    lineHeight: 26,
+    marginBottom: spacing.md,
+  },
+  proteinBold: {
+    fontWeight: fontWeight.black,
+  },
 });

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { OnboardingStackParamList } from '@/types';
@@ -100,6 +101,7 @@ export default function CouncilConveningScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      <StatusBar style="light" />
       {/* Aunty row */}
       <View style={styles.councilRow}>
         {AUNTY_IDS.map((id, i) => (
@@ -108,7 +110,10 @@ export default function CouncilConveningScreen({ navigation }: Props) {
             style={[
               styles.avatarWrap,
               { marginLeft: i === 0 ? 0 : -12 },
-              i === activeAuntyIndex && styles.avatarActive,
+              i === activeAuntyIndex && [
+                styles.avatarActive,
+                { borderColor: auntyColors[id].accent },
+              ],
             ]}
           >
             <AuntyAvatar auntyId={id} size={52} />
@@ -142,7 +147,7 @@ export default function CouncilConveningScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.ink,
+    backgroundColor: colors.inkDeep,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
