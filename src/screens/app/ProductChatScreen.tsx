@@ -1,11 +1,20 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import React, { useState, useRef } from 'react';
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  TextInput, ActivityIndicator, KeyboardAvoidingView, Platform,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown, FadeInUp, FadeIn, SlideInRight, SlideOutLeft } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getAllProducts } from '@/constants/products';
 import { getAunty, AUNTIES } from '@/constants/aunties';
 import { generateAuntyResponse } from '@/services/gemini';
 import AuntyAvatar from '@/components/AuntyAvatar';
-import { colors, fonts, spacing, fontSize, fontWeight, radius, auntyColors, shadows } from '@/constants/theme';
+import Badge from '@/components/Badge';
+import {
+  colors, fonts, spacing, fontSize, fontWeight,
+  radius, auntyColors, shadows, gradients, typography, animation,
+} from '@/constants/theme';
 
 type ChatMode = 'products' | 'council';
 
@@ -13,242 +22,295 @@ interface CouncilMessage {
   id: string;
   role: 'user' | 'council';
   text: string;
-  timestamp: string;
 }
+
+const COUNCIL_IDS = ['1', '2', '3', '4', '5', '6', '7'];
 
 export default function ProductChatScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const products = getAllProducts();
+  const scrollRef = useRef<ScrollView>(null);
 
   const [mode, setMode] = useState<ChatMode>('products');
   const [councilMessages, setCouncilMessages] = useState<CouncilMessage[]>([
     {
       id: '0',
       role: 'council',
-      text: 'Welcome! We're the full council of aunties. Ask us anything about your hair, products, or your routine.',
-      timestamp: new Date().toISOString(),
+      text: "Welcome! We're all here — seven aunties, one council. Ask us anything about your hair, your routine, or the products we swear by.",
     },
   ]);
   const [councilInput, setCouncilInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleProductPress = (productId: string, auntyId: string) => {
+    const aunty = getAunty(auntyId);
     navigation.navigate('AuntyConversation', {
       auntyId,
       initialQuestion: `Tell me about this product and how it fits into my routine.`,
     });
   };
 
-  const handleCouncilToggle = () => {
-    setMode(mode === 'products' ? 'council' : 'products');
-  };
-
   const handleCouncilSend = async () => {
-    if (!councilInput.trim()) return;
+    if (!councilInput.trim() || isLoading) return;
+    const text = councilInput.trim();
 
-    // Add user message
-    const userMsg: CouncilMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      text: councilInput,
-      timestamp: new Date().toISOString(),
-    };
-
-    setCouncilMessages([...councilMessages, userMsg]);
+    const userMsg: CouncilMessage = { id: Date.now().toString(), role: 'user', text };
+    setCouncilMessages(prev => [...prev, userMsg]);
     setCouncilInput('');
     setIsLoading(true);
 
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+
     try {
-      // Generate unified council response
-      const councilNames = Object.values(AUNTIES)
-        .map(a => `${a.name} (${a.title})`)
-        .join(', ');
-
+      const councilNames = Object.values(AUNTIES).map(a => `${a.name} (${a.title})`).join(', ');
       const prompt = `You are a council of 7 hair care aunties: ${councilNames}.
-      The user asked: "${councilInput}"
-
-      Respond as the council speaking together. Use "we" and speak collectively. Each aunty has a different perspective but you're all collaborating.
-      Keep it warm, personal, and under 200 words. No need to introduce yourselves - just answer the question.`;
+The user asked: "${text}"
+Respond as the council speaking together with warmth and wisdom. Use "we" and speak collectively.
+Keep it personal, encouraging, and under 180 words. Reference their specific expertise naturally.`;
 
       const response = await generateAuntyResponse(prompt);
-
-      const councilMsg: CouncilMessage = {
+      setCouncilMessages(prev => [...prev, { id: Date.now().toString(), role: 'council', text: response }]);
+    } catch {
+      setCouncilMessages(prev => [...prev, {
         id: Date.now().toString(),
         role: 'council',
-        text: response,
-        timestamp: new Date().toISOString(),
-      };
-
-      setCouncilMessages(prev => [...prev, councilMsg]);
-    } catch (error) {
-      console.error('Council response error:', error);
-      const errorMsg: CouncilMessage = {
-        id: Date.now().toString(),
-        role: 'council',
-        text: "We're having trouble responding right now. Try again in a moment.",
-        timestamp: new Date().toISOString(),
-      };
-      setCouncilMessages(prev => [...prev, errorMsg]);
+        text: "We're having a moment — try again and we'll be right here for you.",
+      }]);
     } finally {
       setIsLoading(false);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
     }
   };
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Text style={styles.eyebrow}>Ask about products</Text>
-        <Text style={styles.title}>Product Chat</Text>
-        <Text style={styles.subtitle}>
-          {mode === 'products' ? 'Tap a product or talk to the whole council' : 'Talk to the full council'}
-        </Text>
-      </View>
-
-      {mode === 'products' ? (
-        // PRODUCTS MODE
-        <ScrollView
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }]}
-          showsVerticalScrollIndicator={false}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
+    >
+      <View style={[styles.root, { paddingTop: insets.top }]}>
+        {/* Header */}
+        <LinearGradient
+          colors={gradients.canvas}
+          style={styles.header}
         >
-          {/* Product Carousel */}
-          <Text style={styles.sectionLabel}>Products</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.productCarousel}
-            scrollEventThrottle={16}
-          >
-            {products.map(product => {
-              const aunty = getAunty(product.recommended_by_aunty_id);
-              const ac = auntyColors[product.recommended_by_aunty_id];
-
-              return (
-                <TouchableOpacity
-                  key={product.id}
-                  style={[styles.productChip, { borderColor: `${ac.accent}40`, backgroundColor: `${ac.accent}12` }]}
-                  onPress={() => handleProductPress(product.id, product.recommended_by_aunty_id)}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.chipContent}>
-                    <Text style={styles.productChipName}>{product.name}</Text>
-                    <Text style={[styles.productChipBrand, { color: ac.accent }]}>{aunty.name}</Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
-          {/* Talk to Council Section */}
-          <View style={styles.councilSection}>
-            <Text style={styles.sectionLabel}>Or talk to the council</Text>
-            <TouchableOpacity
-              style={styles.councilCard}
-              onPress={handleCouncilToggle}
-              activeOpacity={0.8}
-            >
-              <View style={styles.councilAvatarRow}>
-                {['1', '2', '3', '4', '5', '6', '7'].map((id, i) => (
-                  <View
-                    key={id}
-                    style={[
-                      styles.councilAvatar,
-                      { marginLeft: i === 0 ? 0 : -12, borderColor: auntyColors[id].accent },
-                    ]}
-                  >
-                    <AuntyAvatar auntyId={id} size={32} />
-                  </View>
-                ))}
-              </View>
-              <Text style={styles.councilTitle}>Talk to the council</Text>
-              <Text style={styles.councilSubtitle}>Get advice from all seven aunties</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Info Section */}
-          <View style={styles.infoSection}>
-            <Text style={styles.infoTitle}>How it works</Text>
-            <View style={styles.infoBullet}>
-              <Text style={styles.infoBulletDot}>•</Text>
-              <Text style={styles.infoBulletText}>Tap a product to chat with the aunty who recommends it</Text>
+          <View style={styles.headerTop}>
+            <View>
+              <Text style={styles.eyebrow}>Hair Advice</Text>
+              <Text style={styles.title}>Chat</Text>
             </View>
-            <View style={styles.infoBullet}>
-              <Text style={styles.infoBulletDot}>•</Text>
-              <Text style={styles.infoBulletText}>Ask questions about ingredients, application, or how it fits your routine</Text>
-            </View>
-            <View style={styles.infoBullet}>
-              <Text style={styles.infoBulletDot}>•</Text>
-              <Text style={styles.infoBulletText}>Or talk to the full council for broader hair advice</Text>
-            </View>
-          </View>
-        </ScrollView>
-      ) : (
-        // COUNCIL MODE
-        <View style={styles.councilModeContainer}>
-          {/* Council Aunties Header */}
-          <View style={styles.councilHeader}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.councilHeaderRow}>
-              {['1', '2', '3', '4', '5', '6', '7'].map(id => (
-                <View key={id} style={styles.councilHeaderAvatar}>
-                  <AuntyAvatar auntyId={id} size={40} />
-                  <Text style={styles.councilHeaderName}>{AUNTIES[id].name}</Text>
-                </View>
-              ))}
-            </ScrollView>
-            <TouchableOpacity
-              style={styles.backBtn}
-              onPress={handleCouncilToggle}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.backBtnText}>← Products</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Messages */}
-          <ScrollView style={styles.messagesContainer} contentContainerStyle={styles.messagesList}>
-            {councilMessages.map(msg => (
-              <View
-                key={msg.id}
-                style={[
-                  styles.messageBubble,
-                  msg.role === 'user' ? styles.userMessage : styles.councilMessage,
-                ]}
+            {/* Mode toggle pill */}
+            <View style={styles.modePill}>
+              <TouchableOpacity
+                style={[styles.modeBtn, mode === 'products' && styles.modeBtnActive]}
+                onPress={() => setMode('products')}
+                activeOpacity={0.8}
               >
-                <Text style={[styles.messageText, msg.role === 'user' && styles.userMessageText]}>
-                  {msg.text}
+                <Text style={[styles.modeBtnText, mode === 'products' && styles.modeBtnTextActive]}>
+                  Products
                 </Text>
-              </View>
-            ))}
-            {isLoading && (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={styles.loadingText}>The council is thinking...</Text>
-              </View>
-            )}
-          </ScrollView>
-
-          {/* Input */}
-          <View style={[styles.inputContainer, { paddingBottom: insets.bottom + spacing.sm }]}>
-            <TextInput
-              style={styles.input}
-              placeholder="Ask the council..."
-              placeholderTextColor={colors.muted}
-              value={councilInput}
-              onChangeText={setCouncilInput}
-              multiline
-              editable={!isLoading}
-            />
-            <TouchableOpacity
-              style={[styles.sendBtn, isLoading && styles.sendBtnDisabled]}
-              onPress={handleCouncilSend}
-              disabled={isLoading || !councilInput.trim()}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.sendBtnText}>Send</Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeBtn, mode === 'council' && styles.modeBtnActive]}
+                onPress={() => setMode('council')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.modeBtnText, mode === 'council' && styles.modeBtnTextActive]}>
+                  Council
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      )}
-    </View>
+        </LinearGradient>
+
+        {mode === 'products' ? (
+          /* ── PRODUCTS MODE ── */
+          <ScrollView
+            contentContainerStyle={[styles.productsContent, { paddingBottom: insets.bottom + 80 }]}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Product cards */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Featured Products</Text>
+              <Text style={styles.sectionSub}>Tap to chat with the aunty who recommends it</Text>
+              <View style={styles.productGrid}>
+                {products.map((product, i) => {
+                  const aunty = getAunty(product.recommended_by_aunty_id);
+                  const ac = auntyColors[product.recommended_by_aunty_id];
+                  return (
+                    <Animated.View key={product.id} entering={FadeInDown.delay(i * 60).springify()}>
+                      <TouchableOpacity
+                        style={[styles.productCard, { borderColor: `${ac.accent}35` }]}
+                        onPress={() => handleProductPress(product.id, product.recommended_by_aunty_id)}
+                        activeOpacity={0.85}
+                      >
+                        <LinearGradient
+                          colors={[ac.bg, '#ffffff']}
+                          style={styles.productCardGradient}
+                        >
+                          <View style={styles.productCardTop}>
+                            <View style={[styles.productAuntyAvatar, { borderColor: `${ac.accent}60` }]}>
+                              <AuntyAvatar auntyId={product.recommended_by_aunty_id} size={32} />
+                            </View>
+                            <Badge
+                              label="Ask"
+                              variant="aunty"
+                              auntyColor={ac.accent}
+                              size="sm"
+                            />
+                          </View>
+                          <Text style={styles.productName}>{product.name}</Text>
+                          <Text style={[styles.productAuntyName, { color: ac.text }]}>
+                            {aunty.name} recommends
+                          </Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </Animated.View>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Council call-to-action */}
+            <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.section}>
+              <Text style={styles.sectionLabel}>The Full Council</Text>
+              <TouchableOpacity
+                style={styles.councilCTA}
+                onPress={() => setMode('council')}
+                activeOpacity={0.9}
+              >
+                <LinearGradient
+                  colors={gradients.councilGold}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.councilCTAGradient}
+                >
+                  {/* Stacked avatars */}
+                  <View style={styles.councilAvatarStack}>
+                    {COUNCIL_IDS.map((id, i) => (
+                      <View
+                        key={id}
+                        style={[
+                          styles.councilStackAvatar,
+                          {
+                            marginLeft: i === 0 ? 0 : -14,
+                            borderColor: auntyColors[id].accent,
+                            zIndex: 7 - i,
+                          },
+                        ]}
+                      >
+                        <AuntyAvatar auntyId={id} size={38} />
+                      </View>
+                    ))}
+                  </View>
+                  <Text style={styles.councilCTATitle}>Talk to the Council</Text>
+                  <Text style={styles.councilCTASub}>All 7 aunties, one conversation →</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
+          </ScrollView>
+        ) : (
+          /* ── COUNCIL MODE ── */
+          <View style={styles.councilContainer}>
+            {/* All 7 aunties header strip */}
+            <View style={styles.councilStrip}>
+              <LinearGradient colors={['#FDF3C0', '#FEF8EC']} style={styles.councilStripGradient}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.councilStripRow}
+                >
+                  {COUNCIL_IDS.map((id, i) => {
+                    const ac = auntyColors[id];
+                    return (
+                      <Animated.View
+                        key={id}
+                        entering={FadeIn.delay(i * 50)}
+                        style={styles.councilMemberWrap}
+                      >
+                        <View style={[styles.councilMemberRing, { borderColor: ac.accent }]}>
+                          <AuntyAvatar auntyId={id} size={42} />
+                        </View>
+                        <Text style={[styles.councilMemberName, { color: ac.text }]}>
+                          {AUNTIES[id].name}
+                        </Text>
+                      </Animated.View>
+                    );
+                  })}
+                </ScrollView>
+              </LinearGradient>
+            </View>
+
+            {/* Messages */}
+            <ScrollView
+              ref={scrollRef}
+              style={styles.messages}
+              contentContainerStyle={[styles.messagesList, { paddingBottom: spacing.md }]}
+              showsVerticalScrollIndicator={false}
+            >
+              {councilMessages.map((msg, i) => (
+                <Animated.View
+                  key={msg.id}
+                  entering={FadeInDown.delay(i === 0 ? 0 : 50).springify()}
+                  style={[
+                    styles.messageBubble,
+                    msg.role === 'user' ? styles.userBubble : styles.councilBubble,
+                  ]}
+                >
+                  {msg.role === 'council' && (
+                    <Text style={styles.councilLabel}>THE COUNCIL</Text>
+                  )}
+                  <Text style={[
+                    styles.messageText,
+                    msg.role === 'user' && styles.userMessageText,
+                  ]}>
+                    {msg.text}
+                  </Text>
+                </Animated.View>
+              ))}
+              {isLoading && (
+                <View style={styles.thinkingBubble}>
+                  <Text style={styles.councilLabel}>THE COUNCIL</Text>
+                  <View style={styles.thinkingDots}>
+                    {[0, 1, 2].map(i => (
+                      <View key={i} style={[styles.dot, { opacity: 0.4 + i * 0.2 }]} />
+                    ))}
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+
+            {/* Input */}
+            <View style={[styles.inputBar, { paddingBottom: insets.bottom + spacing.sm }]}>
+              <TextInput
+                style={styles.input}
+                placeholder="Ask the council anything..."
+                placeholderTextColor={colors.muted}
+                value={councilInput}
+                onChangeText={setCouncilInput}
+                multiline
+                maxLength={500}
+                editable={!isLoading}
+                onSubmitEditing={handleCouncilSend}
+              />
+              <TouchableOpacity
+                style={[styles.sendBtn, (!councilInput.trim() || isLoading) && styles.sendBtnOff]}
+                onPress={handleCouncilSend}
+                disabled={!councilInput.trim() || isLoading}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={gradients.primary}
+                  style={styles.sendGradient}
+                >
+                  <Text style={styles.sendText}>↑</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -259,227 +321,237 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
   },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   eyebrow: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
+    ...typography.overline,
     color: colors.primary,
-    fontWeight: fontWeight.bold,
-    textTransform: 'uppercase',
-    letterSpacing: 3,
-    marginBottom: spacing.xs,
+    marginBottom: 2,
   },
   title: {
-    fontFamily: fonts.display,
-    fontSize: 36,
-    fontWeight: fontWeight.black,
+    ...typography.h1,
     color: colors.ink,
-    letterSpacing: -1,
   },
-  subtitle: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.muted,
-    marginTop: 4,
-  },
-  content: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    gap: spacing.lg,
-  },
-  sectionLabel: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.muted,
-    fontWeight: fontWeight.black,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-  },
-  productCarousel: {
-    gap: spacing.sm,
-    paddingRight: spacing.md,
-  },
-  productChip: {
-    borderRadius: radius.md,
+  modePill: {
+    flexDirection: 'row',
+    backgroundColor: colors.offWhite,
+    borderRadius: radius.full,
+    padding: 4,
     borderWidth: 1,
-    padding: spacing.md,
-    minWidth: 140,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
-  chipContent: {
-    gap: spacing.xs,
+  modeBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
   },
-  productChipName: {
+  modeBtnActive: {
+    backgroundColor: colors.primary,
+    ...shadows.gold,
+  },
+  modeBtnText: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
+    color: colors.muted,
+  },
+  modeBtnTextActive: {
     color: colors.ink,
   },
-  productChipBrand: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+
+  // PRODUCTS
+  productsContent: {
+    padding: spacing.md,
+    gap: spacing.xl,
   },
-  councilSection: {
+  section: {
     gap: spacing.sm,
-    marginTop: spacing.md,
   },
-  councilCard: {
-    backgroundColor: colors.surface,
+  sectionLabel: {
+    ...typography.label,
+    color: colors.ink,
+  },
+  sectionSub: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.muted,
+  },
+  productGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  productCard: {
+    width: 155,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    ...shadows.md,
+  },
+  productCardGradient: {
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  productCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  productAuntyAvatar: {
+    borderWidth: 2,
+    borderRadius: 20,
+    padding: 1,
+  },
+  productName: {
+    fontFamily: fonts.display,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.black,
+    color: colors.ink,
+    lineHeight: 18,
+  },
+  productAuntyName: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    fontWeight: fontWeight.semibold,
+    letterSpacing: 0.2,
+  },
+  councilCTA: {
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    ...shadows.lg,
+    borderWidth: 1.5,
+    borderColor: `${colors.primary}60`,
+  },
+  councilCTAGradient: {
     padding: spacing.lg,
     alignItems: 'center',
     gap: spacing.md,
-    ...shadows.sm,
   },
-  councilAvatarRow: {
+  councilAvatarStack: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  councilAvatar: {
-    borderWidth: 2,
-    borderRadius: 20,
+  councilStackAvatar: {
+    borderWidth: 2.5,
+    borderRadius: 23,
+    padding: 1,
   },
-  councilTitle: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.black,
+  councilCTATitle: {
+    ...typography.h3,
     color: colors.ink,
-    textAlign: 'center',
-    letterSpacing: -0.3,
   },
-  councilSubtitle: {
+  councilCTASub: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
-    color: colors.muted,
-    textAlign: 'center',
-  },
-  infoSection: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    gap: spacing.sm,
-  },
-  infoTitle: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.black,
-    color: colors.ink,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: spacing.sm,
-  },
-  infoBullet: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  infoBulletDot: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
-    color: colors.primary,
-    fontWeight: fontWeight.bold,
-  },
-  infoBulletText: {
-    flex: 1,
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.text,
-    lineHeight: 20,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.semibold,
   },
 
-  // COUNCIL MODE STYLES
-  councilModeContainer: {
+  // COUNCIL MODE
+  councilContainer: {
     flex: 1,
-    flexDirection: 'column',
   },
-  councilHeader: {
+  councilStrip: {
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
-    paddingBottom: spacing.sm,
+    ...shadows.sm,
   },
-  councilHeaderRow: {
-    paddingHorizontal: spacing.md,
+  councilStripGradient: {
     paddingVertical: spacing.sm,
-    gap: spacing.xs,
   },
-  councilHeaderAvatar: {
+  councilStripRow: {
+    paddingHorizontal: spacing.md,
+    gap: spacing.md,
+    alignItems: 'center',
+  },
+  councilMemberWrap: {
     alignItems: 'center',
     gap: 4,
   },
-  councilHeaderName: {
+  councilMemberRing: {
+    borderWidth: 2.5,
+    borderRadius: 999,
+    padding: 2,
+  },
+  councilMemberName: {
     fontFamily: fonts.body,
-    fontSize: fontSize.xs,
+    fontSize: 10,
     fontWeight: fontWeight.bold,
-    color: colors.ink,
     textAlign: 'center',
-    maxWidth: 50,
   },
-  backBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    marginBottom: spacing.sm,
-  },
-  backBtnText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.primary,
-  },
-  messagesContainer: {
+  messages: {
     flex: 1,
   },
   messagesList: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    padding: spacing.md,
     gap: spacing.sm,
   },
   messageBubble: {
     maxWidth: '85%',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    ...shadows.sm,
   },
-  userMessage: {
+  userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: colors.primary,
+    backgroundColor: colors.ink,
+    borderBottomRightRadius: radius.xs,
   },
-  councilMessage: {
+  councilBubble: {
     alignSelf: 'flex-start',
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: `${colors.primary}40`,
+    borderBottomLeftRadius: radius.xs,
+  },
+  councilLabel: {
+    ...typography.overline,
+    color: colors.primary,
+    marginBottom: spacing.xs,
   },
   messageText: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
     color: colors.text,
-    lineHeight: 20,
+    lineHeight: 21,
   },
   userMessageText: {
-    color: colors.ink,
+    color: colors.canvas,
     fontWeight: fontWeight.semibold,
   },
-  loadingContainer: {
+  thinkingBubble: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: `${colors.primary}40`,
+    borderRadius: radius.lg,
+    borderBottomLeftRadius: radius.xs,
+    padding: spacing.md,
+    ...shadows.sm,
+  },
+  thinkingDots: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
+    gap: spacing.xs,
+    paddingTop: spacing.xs,
   },
-  loadingText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.muted,
-    fontStyle: 'italic',
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
   },
-  inputContainer: {
+  inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: spacing.sm,
@@ -492,33 +564,37 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
     borderColor: colors.borderLight,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    paddingTop: spacing.sm,
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
     color: colors.text,
     maxHeight: 100,
+    ...shadows.sm,
   },
   sendBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    justifyContent: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    ...shadows.gold,
+  },
+  sendBtnOff: {
+    opacity: 0.45,
+  },
+  sendGradient: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  sendBtnDisabled: {
-    opacity: 0.5,
-  },
-  sendBtnText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
+  sendText: {
+    fontSize: 20,
     color: colors.ink,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontWeight: fontWeight.black,
+    lineHeight: 22,
   },
 });

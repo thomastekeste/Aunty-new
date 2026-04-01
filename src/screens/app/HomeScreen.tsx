@@ -15,7 +15,8 @@ import { AUNTIES, getAunty } from '@/constants/aunties';
 import { DailyRoutine } from '@/types';
 import AuntyPortrait from '@/components/AuntyPortrait';
 import AuntyAvatar from '@/components/AuntyAvatar';
-import { colors, auntyColors, spacing, fontSize, fontWeight, radius, fonts, shadows } from '@/constants/theme';
+import { colors, auntyColors, spacing, fontSize, fontWeight, radius, fonts, shadows, gradients, typography } from '@/constants/theme';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Day-based primary aunty — each day of week maps to an aunty
 const DAY_AUNTY: Record<number, string> = {
@@ -141,7 +142,12 @@ export default function HomeScreen({ navigation }: any) {
       >
         {/* ── Hero: Aunty Portrait + Personal Greeting ── */}
         <Animated.View style={[styles.heroWrap, fadeSlide(heroAnim)]}>
-          <View style={[styles.hero, { backgroundColor: ac.bgDark }]}>
+          <LinearGradient
+            colors={[ac.bg, `${ac.accent}18`, ac.bg]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.hero}
+          >
             {/* Soft ambient glow behind portrait */}
             <View style={[styles.heroGlow, { backgroundColor: ac.accent }]} />
 
@@ -149,31 +155,38 @@ export default function HomeScreen({ navigation }: any) {
               <Text style={styles.timeGreeting}>{getTimeGreeting()}</Text>
               <Text style={[styles.heroName, { color: colors.ink }]}>{firstName}.</Text>
               <View style={[styles.heroRule, { backgroundColor: ac.accent }]} />
-              <Text style={[styles.heroAuntyName, { color: ac.text }]}>
-                {aunty.name} is with you today
-              </Text>
+              <View style={[styles.heroAuntyPill, { backgroundColor: `${ac.accent}20`, borderColor: `${ac.accent}40` }]}>
+                <Text style={[styles.heroAuntyName, { color: ac.text }]}>
+                  {aunty.name} is with you
+                </Text>
+              </View>
             </View>
 
             <View style={styles.heroPortrait}>
-              <View style={[styles.portraitRing, { borderColor: `${ac.accent}50` }]}>
+              <View style={[styles.portraitRing, { borderColor: `${ac.accent}70`, shadowColor: ac.accent }]}>
                 <AuntyPortrait auntyId={todayAuntyId} size={110} />
               </View>
             </View>
-          </View>
+          </LinearGradient>
         </Animated.View>
 
         {/* ── Personal Greeting Card ── */}
         <Animated.View style={fadeSlide(greetingAnim)}>
-          <View style={[styles.greetingCard, { borderLeftColor: ac.accent }]}>
-            <Text style={[styles.greetingAuntyName, { color: ac.text }]}>
-              {aunty.name.toUpperCase()} · {aunty.title}
-            </Text>
-            <Text style={styles.greetingText}>"{personalGreeting}"</Text>
-            {aunty.greeting && (
-              <Text style={[styles.greetingDialect, { color: ac.text }]}>
-                {aunty.greeting}
-              </Text>
-            )}
+          <View style={[styles.greetingCard, { borderColor: `${ac.accent}30` }]}>
+            <View style={[styles.greetingAccentBar, { backgroundColor: ac.accent }]} />
+            <View style={styles.greetingInner}>
+              <View style={[styles.greetingNamePill, { backgroundColor: `${ac.accent}18` }]}>
+                <Text style={[styles.greetingAuntyName, { color: ac.text }]}>
+                  {aunty.name.toUpperCase()} · {aunty.title}
+                </Text>
+              </View>
+              <Text style={styles.greetingText}>"{personalGreeting}"</Text>
+              {aunty.greeting && (
+                <Text style={[styles.greetingDialect, { color: ac.text }]}>
+                  {aunty.greeting}
+                </Text>
+              )}
+            </View>
           </View>
         </Animated.View>
 
@@ -304,24 +317,37 @@ export default function HomeScreen({ navigation }: any) {
         <TouchableOpacity
           style={styles.checkinCard}
           onPress={() => navigation.navigate('CheckinModal', { auntyId: todayAuntyId, userInitiated: true })}
-          activeOpacity={0.85}
+          activeOpacity={0.88}
         >
-          <View style={styles.checkinAvatarRow}>
-            {['1', '2', '3', '4', '5'].map((id, i) => (
-              <View
-                key={id}
-                style={[styles.checkinAvatar, { marginLeft: i === 0 ? 0 : -10, borderColor: auntyColors[id].accent }]}
-              >
-                <AuntyAvatar auntyId={id} size={34} />
-              </View>
-            ))}
-          </View>
-          <Text style={styles.checkinTitle}>Time for a hair check-in?</Text>
-          <Text style={styles.checkinSub}>The aunties want to see where you are. Share a photo or just talk to them.</Text>
-          <View style={styles.checkinArrowRow}>
-            <Text style={[styles.checkinCTA, { color: ac.accent }]}>Start your check-in</Text>
-            <Text style={[styles.checkinArrow, { color: ac.accent }]}> →</Text>
-          </View>
+          <LinearGradient
+            colors={gradients.dark}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.checkinGradient}
+          >
+            {/* Gold accent bar at top */}
+            <LinearGradient
+              colors={gradients.primary}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.checkinTopBar}
+            />
+            <View style={styles.checkinAvatarRow}>
+              {['1', '2', '3', '4', '5'].map((id, i) => (
+                <View
+                  key={id}
+                  style={[styles.checkinAvatar, { marginLeft: i === 0 ? 0 : -10, borderColor: auntyColors[id].accent }]}
+                >
+                  <AuntyAvatar auntyId={id} size={34} />
+                </View>
+              ))}
+            </View>
+            <Text style={styles.checkinTitle}>Time for a hair check-in?</Text>
+            <Text style={styles.checkinSub}>The aunties want to see where you are. Share a photo or just talk to them.</Text>
+            <View style={styles.checkinArrowRow}>
+              <Text style={styles.checkinCTA}>Start your check-in →</Text>
+            </View>
+          </LinearGradient>
         </TouchableOpacity>
 
         {/* ── Your Journey ── */}
@@ -459,33 +485,31 @@ const styles = StyleSheet.create({
   scroll: { padding: spacing.md, gap: spacing.md },
 
   // Hero
-  heroWrap: { borderRadius: radius.lg, overflow: 'hidden', ...shadows.md },
+  heroWrap: { borderRadius: radius.xl, overflow: 'hidden', ...shadows.lg },
   hero: {
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     padding: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     overflow: 'hidden',
-    minHeight: 160,
+    minHeight: 170,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   heroGlow: {
     position: 'absolute',
-    top: -30,
-    right: -30,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    opacity: 0.18,
+    top: -40,
+    right: -40,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    opacity: 0.22,
   },
   heroLeft: { flex: 1, paddingRight: spacing.sm },
   timeGreeting: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
+    ...typography.overline,
     color: colors.muted,
-    fontWeight: fontWeight.bold,
-    textTransform: 'uppercase',
-    letterSpacing: 2.5,
     marginBottom: spacing.xs,
   },
   heroName: {
@@ -494,6 +518,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.black,
     letterSpacing: -2,
     lineHeight: 46,
+    color: colors.ink,
   },
   heroRule: {
     width: 36,
@@ -501,36 +526,58 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     marginVertical: spacing.sm,
   },
+  heroAuntyPill: {
+    alignSelf: 'flex-start',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
   heroAuntyName: {
     fontFamily: fonts.body,
-    fontSize: fontSize.xs,
+    fontSize: 11,
     fontWeight: fontWeight.bold,
     textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    letterSpacing: 1,
   },
   heroPortrait: { alignItems: 'flex-end' },
   portraitRing: {
-    borderWidth: 2,
+    borderWidth: 2.5,
     borderRadius: 60,
     overflow: 'hidden',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
 
   // Greeting card
   greetingCard: {
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderLeftWidth: 4,
+    overflow: 'hidden',
+    ...shadows.md,
+  },
+  greetingAccentBar: {
+    height: 4,
+    width: '100%',
+  },
+  greetingInner: {
     padding: spacing.md,
-    ...shadows.sm,
+    gap: spacing.sm,
+  },
+  greetingNamePill: {
+    alignSelf: 'flex-start',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
   },
   greetingAuntyName: {
     fontFamily: fonts.body,
-    fontSize: fontSize.xs,
+    fontSize: 10,
     fontWeight: fontWeight.black,
-    letterSpacing: 1.2,
-    marginBottom: spacing.xs,
+    letterSpacing: 1.5,
   },
   greetingText: {
     fontFamily: fonts.display,
@@ -543,8 +590,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
-    marginTop: spacing.sm,
-    opacity: 0.7,
+    opacity: 0.75,
   },
 
   // Mood
@@ -585,75 +631,6 @@ const styles = StyleSheet.create({
   },
   moodChipTextSelected: {
     color: '#fff',
-  },
-
-  // Routine
-  routineSection: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    padding: spacing.md,
-    ...shadows.sm,
-  },
-  routineSectionTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.sm,
-  },
-  sectionEyebrow: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.muted,
-    fontWeight: fontWeight.bold,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    marginBottom: 2,
-  },
-  routineTitle: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.black,
-    color: colors.ink,
-    letterSpacing: -0.3,
-  },
-  timePill: {
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 5,
-    borderWidth: 1,
-  },
-  timePillText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
-  },
-  routineInvite: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 22,
-    marginBottom: spacing.md,
-  },
-  routineStartBtn: {
-    borderRadius: radius.lg,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  routineStartText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.black,
-    color: '#fff',
-    letterSpacing: 0.2,
-  },
-  routineEmpty: { paddingVertical: spacing.sm },
-  routineEmptyText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.muted,
-    lineHeight: 22,
   },
 
   // Ask an Aunty
@@ -737,10 +714,20 @@ const styles = StyleSheet.create({
 
   // Check-in
   checkinCard: {
-    backgroundColor: colors.ink,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    ...shadows.xl,
+  },
+  checkinGradient: {
+    borderRadius: radius.xl,
     padding: spacing.lg,
-    ...shadows.lg,
+    paddingTop: 0,
+    overflow: 'hidden',
+  },
+  checkinTopBar: {
+    height: 4,
+    width: '100%',
+    marginBottom: spacing.lg,
   },
   checkinAvatarRow: {
     flexDirection: 'row',
@@ -748,7 +735,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   checkinAvatar: {
-    borderWidth: 2,
+    borderWidth: 2.5,
     borderRadius: 20,
   },
   checkinTitle: {
@@ -757,12 +744,12 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.black,
     color: colors.canvas,
     letterSpacing: -0.3,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   checkinSub: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
-    color: 'rgba(254,248,236,0.55)',
+    color: 'rgba(254,248,236,0.78)',
     lineHeight: 22,
     marginBottom: spacing.md,
   },
@@ -772,38 +759,28 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.black,
     textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  checkinArrow: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.black,
+    letterSpacing: 1.2,
+    color: colors.primary,
   },
 
   // Journey
   journeyCard: {
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.borderLight,
     padding: spacing.lg,
-    ...shadows.sm,
+    ...shadows.md,
+    overflow: 'hidden',
   },
   journeyEyebrow: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
+    ...typography.overline,
     color: colors.muted,
-    fontWeight: fontWeight.bold,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
     marginBottom: 4,
   },
   journeyTitle: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.black,
+    ...typography.h3,
     color: colors.ink,
-    letterSpacing: -0.3,
     marginBottom: spacing.xs,
   },
   journeySub: {
@@ -817,5 +794,67 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.black,
+  },
+
+  // Routine
+  routineSection: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    padding: spacing.md,
+    ...shadows.md,
+  },
+  routineSectionTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.sm,
+  },
+  sectionEyebrow: {
+    ...typography.overline,
+    color: colors.muted,
+    marginBottom: 2,
+  },
+  routineTitle: {
+    ...typography.h3,
+    color: colors.ink,
+  },
+  timePill: {
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+    borderWidth: 1,
+  },
+  timePillText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.black,
+  },
+  routineInvite: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 22,
+    marginBottom: spacing.md,
+  },
+  routineStartBtn: {
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  routineStartText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.black,
+    color: '#fff',
+    letterSpacing: 0.2,
+  },
+  routineEmpty: { paddingVertical: spacing.sm },
+  routineEmptyText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.muted,
+    lineHeight: 22,
   },
 });

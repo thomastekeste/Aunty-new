@@ -2,9 +2,10 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/context/AuthContext';
-import { colors, fonts } from '@/constants/theme';
+import { colors, fonts, gradients, shadows, radius, fontWeight } from '@/constants/theme';
 import { HomeIcon, RoutineIcon, ChatIcon } from '@/components/Icons';
 
 // Onboarding screens
@@ -79,27 +80,39 @@ function OnboardingNavigator() {
 
 // ── Tab bar icon ─────────────────────────────────────────────────────
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const color = focused ? colors.ink : colors.mutedLight;
-  const sw = focused ? 2.4 : 1.5;
+  const color = focused ? colors.ink : colors.muted;
+  const sw = focused ? 2.2 : 1.6;
 
   return (
-    <View style={{ alignItems: 'center' }}>
+    <View style={tabStyles.iconWrap}>
       {focused && (
-        <View style={{
-          position: 'absolute',
-          top: -10,
-          width: 28,
-          height: 3,
-          borderRadius: 2,
-          backgroundColor: colors.primary,
-        }} />
+        <LinearGradient
+          colors={gradients.primary}
+          style={tabStyles.activeIndicator}
+        />
       )}
-      {label === 'Home' && <HomeIcon color={color} size={22} strokeWidth={sw} />}
+      {label === 'Home'    && <HomeIcon    color={color} size={22} strokeWidth={sw} />}
       {label === 'Journey' && <RoutineIcon color={color} size={22} strokeWidth={sw} />}
-      {label === 'Chat' && <ChatIcon color={color} size={22} strokeWidth={sw} />}
+      {label === 'Chat'    && <ChatIcon    color={color} size={22} strokeWidth={sw} />}
     </View>
   );
 }
+
+const tabStyles = StyleSheet.create({
+  iconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    paddingTop: 6,
+  },
+  activeIndicator: {
+    position: 'absolute',
+    top: 0,
+    width: 32,
+    height: 3,
+    borderRadius: radius.full,
+  },
+});
 
 // ── Main tabs ────────────────────────────────────────────────────────
 function MainTabs() {
@@ -110,27 +123,31 @@ function MainTabs() {
         tabBarShowLabel: true,
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: '800',
+          fontWeight: fontWeight.black,
           fontFamily: fonts.body,
-          letterSpacing: 0.5,
+          letterSpacing: 0.8,
           marginTop: 2,
+          textTransform: 'uppercase',
         },
         tabBarActiveTintColor: colors.ink,
-        tabBarInactiveTintColor: colors.mutedLight,
+        tabBarInactiveTintColor: colors.muted,
         tabBarStyle: {
           borderTopWidth: 1,
           borderTopColor: colors.borderLight,
           backgroundColor: colors.surface,
-          paddingTop: 12,
-          paddingBottom: 6,
-          height: 64,
+          paddingTop: 4,
+          paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+          height: Platform.OS === 'ios' ? 82 : 66,
+          ...shadows.md,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.06,
         },
         tabBarIcon: ({ focused }) => <TabIcon label={route.name} focused={focused} />,
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
-      <Tab.Screen name="Journey" component={JourneyScreen} options={{ title: 'Journey' }} />
-      <Tab.Screen name="Chat" component={ProductChatScreen} options={{ title: 'Chat' }} />
+      <Tab.Screen name="Home"    component={HomeScreen}        options={{ title: 'Home' }} />
+      <Tab.Screen name="Journey" component={JourneyScreen}     options={{ title: 'Journey' }} />
+      <Tab.Screen name="Chat"    component={ProductChatScreen} options={{ title: 'Chat' }} />
     </Tab.Navigator>
   );
 }
