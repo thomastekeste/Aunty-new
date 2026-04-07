@@ -22,7 +22,7 @@ import Purchases, {
 
 // ─── Config ────────────────────────────────────────────────────
 
-const RC_API_KEY = 'appl_test_yrphoAjDJZIVlLnfxntZjumIQFa';
+const RC_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY || '';
 const ENTITLEMENT_ID = 'Aunty Pro';
 
 // ─── Types ─────────────────────────────────────────────────────

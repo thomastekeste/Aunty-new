@@ -18,7 +18,8 @@
       "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "Aunty Curl uses your camera to analyze your hair texture and track progress.",
-        "NSPhotoLibraryUsageDescription": "Aunty Curl accesses your photos to analyze your hair and track your journey."
+        "NSPhotoLibraryUsageDescription": "Aunty Curl accesses your photos to analyze your hair and track your journey.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

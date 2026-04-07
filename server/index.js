@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
+import rateLimit from 'express-rate-limit';
 
 import config from './src/config.js';
 import authMiddleware from './src/middleware/auth.js';
@@ -12,10 +13,40 @@ import { sendPushNotification } from './src/services/notifications.js';
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+// ─── Rate Limiting ──────────────────────────────────────────────
+
+// General: 60 requests per 15 minutes per IP
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Try again later.' },
+});
+
+// Auth: 5 attempts per 15 minutes per IP
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Try again in 15 minutes.' },
+});
+
+// AI generation: 10 requests per 15 minutes per IP (Gemini is expensive)
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many AI requests. Try again later.' },
+});
+
 // ─── Middleware ──────────────────────────────────────────────────
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+app.use(generalLimiter);
 
 // ─── Health Check ───────────────────────────────────────────────
 
@@ -25,7 +56,7 @@ app.get('/health', (_req, res) => {
 
 // ─── Onboarding Intake ──────────────────────────────────────────
 
-app.post('/api/onboarding/intake', authMiddleware, async (req, res) => {
+app.post('/api/onboarding/intake', aiLimiter, authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const { name, hairProfile } = req.body;
@@ -64,7 +95,7 @@ app.post('/api/onboarding/intake', authMiddleware, async (req, res) => {
 
 // ─── Photo Analysis ─────────────────────────────────────────────
 
-app.post('/api/photos/analyze', authMiddleware, upload.single('photo'), async (req, res) => {
+app.post('/api/photos/analyze', aiLimiter, authMiddleware, upload.single('photo'), async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -101,7 +132,7 @@ app.post('/api/photos/analyze', authMiddleware, upload.single('photo'), async (r
 
 // ─── Council Generation ─────────────────────────────────────────
 
-app.post('/api/council/generate', authMiddleware, async (req, res) => {
+app.post('/api/council/generate', aiLimiter, authMiddleware, async (req, res) => {
   try {
     const { hairProfile } = req.body;
 
@@ -121,7 +152,7 @@ app.post('/api/council/generate', authMiddleware, async (req, res) => {
 
 // ─── Routine Generation ─────────────────────────────────────────
 
-app.post('/api/routine/generate', authMiddleware, async (req, res) => {
+app.post('/api/routine/generate', aiLimiter, authMiddleware, async (req, res) => {
   try {
     const { hairProfile, councilResponse } = req.body;
 
@@ -143,7 +174,7 @@ app.post('/api/routine/generate', authMiddleware, async (req, res) => {
 
 // ─── Check-in Submission ────────────────────────────────────────
 
-app.post('/api/checkin/submit', authMiddleware, async (req, res) => {
+app.post('/api/checkin/submit', aiLimiter, authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const { weekNumber, hostingAuntyId, mood, notes, photoUri } = req.body;
