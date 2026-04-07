@@ -1,54 +1,84 @@
+/**
+ * PrimaryGoalScreen — Carmen hosts goal selection.
+ *
+ * "What does your dream hair look like?"
+ * Seven goal options as rich cards, single select.
+ */
+
 import React, { useState } from 'react';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { OnboardingStackParamList, PrimaryGoal } from '@/types';
-import { useOnboarding } from '@/context/OnboardingContext';
-import ConsultationShell from '@/components/ConsultationShell';
-import OptionCard from '@/components/OptionCard';
-import Button from '@/components/Button';
-import { GrowthIcon, DropIcon, CurlIcon, VolumeIcon, LeafIcon } from '@/components/Icons';
+import { View, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ConsultationShell } from '../../components/ConsultationShell';
+import { OptionCard } from '../../components/OptionCard';
+import { useOnboarding } from '../../context/OnboardingContext';
+import { AUNTIES } from '../../constants/aunties';
+import type { OnboardingStackParamList, PrimaryGoal } from '../../types';
+import { spacing } from '../../constants/theme';
 
-type Props = NativeStackScreenProps<OnboardingStackParamList, 'PrimaryGoal'>;
+type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'PrimaryGoal'>;
 
-const C = { length: '#12C064', moisture: '#00B4D8', definition: '#9B5DE5', volume: '#F5C542', health: '#FB5607' };
-const OPTIONS: Array<{ label: string; value: PrimaryGoal; icon: React.ReactNode; color: string }> = [
-  { label: 'Length — I want it to grow', value: 'length', icon: <GrowthIcon color={C.length} size={22} strokeWidth={2} />, color: C.length },
-  { label: 'Moisture — it\'s always dry', value: 'moisture', icon: <DropIcon color={C.moisture} size={22} strokeWidth={2} />, color: C.moisture },
-  { label: 'Definition — I want real curls', value: 'definition', icon: <CurlIcon color={C.definition} size={22} strokeWidth={2} />, color: C.definition },
-  { label: 'Volume — more is more', value: 'volume', icon: <VolumeIcon color={C.volume} size={22} strokeWidth={2} />, color: C.volume },
-  { label: 'Health — fix what\'s broken', value: 'health', icon: <LeafIcon color={C.health} size={22} strokeWidth={2} />, color: C.health },
+interface GoalOption {
+  value: PrimaryGoal;
+  label: string;
+  description: string;
+  icon: string;
+}
+
+const GOAL_OPTIONS: GoalOption[] = [
+  { value: 'moisture', label: 'Moisture', description: 'Dry, crunchy hair.', icon: '' },
+  { value: 'growth', label: 'Growth', description: 'Retain length.', icon: '' },
+  { value: 'definition', label: 'Curl definition', description: 'Bouncy, defined curls.', icon: '' },
+  { value: 'damage-repair', label: 'Damage repair', description: 'Heat or chemical damage.', icon: '' },
+  { value: 'scalp-health', label: 'Scalp health', description: 'Itchy, flaky scalp.', icon: '' },
+  { value: 'simplify-routine', label: 'Simplify routine', description: 'Too many products.', icon: '' },
+  { value: 'transition', label: 'Transitioning', description: 'Going natural.', icon: '' },
 ];
 
-export default function PrimaryGoalScreen({ navigation }: Props) {
-  const { data, setData } = useOnboarding();
-  const [selected, setSelected] = useState<PrimaryGoal | null>(data.primary_goal ?? null);
+export default function PrimaryGoalScreen() {
+  const navigation = useNavigation<Nav>();
+  const { state, updateHairProfile } = useOnboarding();
+  const auntyId = state.data.chosenAuntyId || 'denise';
+  const [selected, setSelected] = useState<PrimaryGoal | undefined>(
+    state.data.hairProfile.primaryGoal
+  );
 
   const handleContinue = () => {
     if (!selected) return;
-    setData({ primary_goal: selected });
-    navigation.navigate('Failures');
+    updateHairProfile({ primaryGoal: selected });
+    navigation.navigate('HairHabits');
   };
 
   return (
     <ConsultationShell
-      step={15}
-      totalSteps={18}
-      auntyId="1"
-      phaseBadge="Ngozi's Turn · Moisture Authority"
-      auntyMessage="Ahn ahn, now we talk moisture o. Marcia has the roots sorted. What do you want MOST from your hair right now? Tell me the truth."
-      question="What's your #1 goal?"
-      onBack={() => navigation.goBack()}
-      footer={<Button label="Continue" onPress={handleContinue} disabled={!selected} />}
+      auntyId={auntyId}
+      question="What would change everything for your hair? Pick the one that speaks to you most."
+      step={4}
+      totalSteps={8}
+      ctaLabel="That's my dream"
+      ctaDisabled={!selected}
+      onCtaPress={handleContinue}
     >
-      {OPTIONS.map(opt => (
-        <OptionCard
-          key={opt.value}
-          label={opt.label}
-          selected={selected === opt.value}
-          onPress={() => setSelected(opt.value)}
-          icon={opt.icon}
-          color={opt.color}
-        />
-      ))}
+      <View style={styles.options}>
+        {GOAL_OPTIONS.map((goal, index) => (
+          <OptionCard
+            key={goal.value}
+            label={goal.label}
+            description={goal.description}
+            icon={goal.icon}
+            selected={selected === goal.value}
+            onPress={() => setSelected(goal.value)}
+            auntyId={auntyId}
+            index={index}
+          />
+        ))}
+      </View>
     </ConsultationShell>
   );
 }
+
+const styles = StyleSheet.create({
+  options: {
+    gap: spacing.xs,
+  },
+});

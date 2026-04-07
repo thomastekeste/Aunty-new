@@ -1,198 +1,195 @@
+/**
+ * Navigation — Root navigator with auth, onboarding, and app flows.
+ *
+ * Auth: if not authenticated, show SignUp/SignIn screens
+ * Onboarding: if authenticated but not complete, show consultation flow
+ * App: if authenticated and onboarding complete, show tab navigator + modals
+ */
+
 import React from 'react';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, StyleSheet, Platform } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth } from '@/context/AuthContext';
-import { colors, fonts, gradients, shadows, radius, fontWeight } from '@/constants/theme';
-import { HomeIcon, RoutineIcon, ChatIcon } from '@/components/Icons';
+
+import { TabBar } from '../components/TabBar';
+import { useOnboarding } from '../context/OnboardingContext';
+import { useAuth } from '../context/AuthContext';
+import { colors } from '../constants/theme';
+
+// Auth screens
+import SignUpScreen from '../screens/auth/SignUpScreen';
+import SignInScreen from '../screens/auth/SignInScreen';
 
 // Onboarding screens
-import SplashScreen from '@/screens/onboarding/SplashScreen';
-import MeetCouncilScreen from '@/screens/onboarding/MeetCouncilScreen';
-import NameScreen from '@/screens/onboarding/NameScreen';
-import SignUpScreen from '@/screens/onboarding/SignUpScreen';
-import LocationScreen from '@/screens/onboarding/LocationScreen';
-import HairTestSuite from '@/screens/onboarding/HairTestSuite';
-import PhotoUploadScreen from '@/screens/onboarding/PhotoUploadScreen';
-import CurlTypeRevealScreen from '@/screens/onboarding/CurlTypeRevealScreen';
-import WashFrequencyScreen from '@/screens/onboarding/WashFrequencyScreen';
-import PrimaryGoalScreen from '@/screens/onboarding/PrimaryGoalScreen';
-import FailuresScreen from '@/screens/onboarding/FailuresScreen';
-import HeatUseScreen from '@/screens/onboarding/HeatUseScreen';
-import RelaxerHistoryScreen from '@/screens/onboarding/RelaxerHistoryScreen';
-import ProtectiveStylingScreen from '@/screens/onboarding/ProtectiveStylingScreen';
-import ScalpConcernsScreen from '@/screens/onboarding/ScalpConcernsScreen';
-import TimeAvailableScreen from '@/screens/onboarding/TimeAvailableScreen';
-import CouncilConveningScreen from '@/screens/onboarding/CouncilConveningScreen';
-import CouncilSpeaksScreen from '@/screens/onboarding/CouncilSpeaksScreen';
-import RoutineScreen from '@/screens/onboarding/RoutineScreen';
-import SendOffScreen from '@/screens/onboarding/SendOffScreen';
+import { WelcomeScreen } from '../screens/onboarding/WelcomeScreen';
+import NameEntryScreen from '../screens/onboarding/NameEntryScreen';
+import CurlTypeScreen from '../screens/onboarding/CurlTypeScreen';
+import PorosityTestScreen from '../screens/onboarding/PorosityTestScreen';
+import PrimaryGoalScreen from '../screens/onboarding/PrimaryGoalScreen';
+import HairHabitsScreen from '../screens/onboarding/HairHabitsScreen';
+import StrugglesScreen from '../screens/onboarding/StrugglesScreen';
+import BudgetQuestionScreen from '../screens/onboarding/BudgetQuestionScreen';
+import CouncilConveningScreen from '../screens/onboarding/CouncilConveningScreen';
+import CouncilVerdictScreen from '../screens/onboarding/CouncilVerdictScreen';
+import ValuePreviewScreen from '../screens/onboarding/ValuePreviewScreen';
+import ProductRevealScreen from '../screens/onboarding/ProductRevealScreen';
+import SendOffScreen from '../screens/onboarding/SendOffScreen';
 
 // App screens
-import HomeScreen from '@/screens/app/HomeScreen';
-import JourneyScreen from '@/screens/app/JourneyScreen';
-import ProductChatScreen from '@/screens/app/ProductChatScreen';
-import CheckinScreen from '@/screens/app/CheckinScreen';
-import AuntyConversationScreen from '@/screens/app/AuntyConversationScreen';
-import HairJourneyScreen from '@/screens/app/HairJourneyScreen';
+import HomeScreen from '../screens/app/HomeScreen';
+import RitualScreen from '../screens/app/RitualScreen';
+import CouncilScreen from '../screens/app/CouncilScreen';
+import JourneyScreen from '../screens/app/JourneyScreen';
+import ProductsScreen from '../screens/app/ProductsScreen';
+import SettingsScreen from '../screens/app/SettingsScreen';
+import RitualStepScreen from '../screens/app/RitualStepScreen';
+import CheckInScreen from '../screens/app/CheckInScreen';
 
-import {
+import type {
   RootStackParamList,
   OnboardingStackParamList,
-  AppStackParamList,
   AppTabParamList,
-} from '@/types';
+  AppStackParamList,
+} from '../types';
 
-const RootStack = createNativeStackNavigator<RootStackParamList>();
+// ─── Auth Stack ─────────────────────────────────────────────────
+
+type AuthStackParamList = {
+  SignUp: undefined;
+  SignIn: undefined;
+};
+
+const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+
+function AuthNavigator() {
+  return (
+    <AuthStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        animation: 'slide_from_right',
+        gestureEnabled: true,
+      }}
+    >
+      <AuthStack.Screen name="SignUp" component={SignUpScreen} />
+      <AuthStack.Screen name="SignIn" component={SignInScreen} />
+    </AuthStack.Navigator>
+  );
+}
+
+// ─── Onboarding Stack ───────────────────────────────────────────
+
 const OnboardingStack = createNativeStackNavigator<OnboardingStackParamList>();
-const AppStack = createNativeStackNavigator<AppStackParamList>();
-const Tab = createBottomTabNavigator<AppTabParamList>();
 
-// ── Onboarding flow ──────────────────────────────────────────────────
 function OnboardingNavigator() {
   return (
-    <OnboardingStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-      <OnboardingStack.Screen name="Splash" component={SplashScreen} />
-      <OnboardingStack.Screen name="MeetCouncil" component={MeetCouncilScreen} />
-      <OnboardingStack.Screen name="Name" component={NameScreen} />
-      <OnboardingStack.Screen name="SignUp" component={SignUpScreen} />
-      <OnboardingStack.Screen name="Location" component={LocationScreen} />
-      <OnboardingStack.Screen name="PorosityTest" component={HairTestSuite} />
-      <OnboardingStack.Screen name="PhotoUpload" component={PhotoUploadScreen} />
-      <OnboardingStack.Screen name="CurlTypeReveal" component={CurlTypeRevealScreen} />
-      <OnboardingStack.Screen name="WashFrequency" component={WashFrequencyScreen} />
+    <OnboardingStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        animation: 'slide_from_right',
+        gestureEnabled: true,
+      }}
+    >
+      <OnboardingStack.Screen name="Welcome" component={WelcomeScreen} />
+      <OnboardingStack.Screen name="ValuePreview" component={ValuePreviewScreen} />
+      <OnboardingStack.Screen name="NameEntry" component={NameEntryScreen} />
+      <OnboardingStack.Screen name="CurlType" component={CurlTypeScreen} />
+      <OnboardingStack.Screen name="PorosityTest" component={PorosityTestScreen} />
       <OnboardingStack.Screen name="PrimaryGoal" component={PrimaryGoalScreen} />
-      <OnboardingStack.Screen name="Failures" component={FailuresScreen} />
-      <OnboardingStack.Screen name="HeatUse" component={HeatUseScreen} />
-      <OnboardingStack.Screen name="RelaxerHistory" component={RelaxerHistoryScreen} />
-      <OnboardingStack.Screen name="ProtectiveStyling" component={ProtectiveStylingScreen} />
-      <OnboardingStack.Screen name="ScalpConcerns" component={ScalpConcernsScreen} />
-      <OnboardingStack.Screen name="TimeAvailable" component={TimeAvailableScreen} />
+      <OnboardingStack.Screen name="HairHabits" component={HairHabitsScreen} />
+      <OnboardingStack.Screen name="Struggles" component={StrugglesScreen} />
+      <OnboardingStack.Screen name="BudgetQuestion" component={BudgetQuestionScreen} />
       <OnboardingStack.Screen name="CouncilConvening" component={CouncilConveningScreen} />
-      <OnboardingStack.Screen name="CouncilSpeaks" component={CouncilSpeaksScreen} />
-      <OnboardingStack.Screen name="Routine" component={RoutineScreen} />
+      <OnboardingStack.Screen name="CouncilVerdict" component={CouncilVerdictScreen} />
+      <OnboardingStack.Screen name="ProductReveal" component={ProductRevealScreen} />
       <OnboardingStack.Screen name="SendOff" component={SendOffScreen} />
     </OnboardingStack.Navigator>
   );
 }
 
-// ── Tab bar icon ─────────────────────────────────────────────────────
-function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const color = focused ? colors.ink : colors.muted;
-  const sw = focused ? 2.2 : 1.6;
+// ─── App Tab Navigator ──────────────────────────────────────────
 
+const AppTab = createBottomTabNavigator<AppTabParamList>();
+
+function TabNavigator() {
   return (
-    <View style={tabStyles.iconWrap}>
-      {focused && (
-        <LinearGradient
-          colors={gradients.primary}
-          style={tabStyles.activeIndicator}
-        />
-      )}
-      {label === 'Home'    && <HomeIcon    color={color} size={22} strokeWidth={sw} />}
-      {label === 'Journey' && <RoutineIcon color={color} size={22} strokeWidth={sw} />}
-      {label === 'Chat'    && <ChatIcon    color={color} size={22} strokeWidth={sw} />}
-    </View>
-  );
-}
-
-const tabStyles = StyleSheet.create({
-  iconWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    paddingTop: 6,
-  },
-  activeIndicator: {
-    position: 'absolute',
-    top: 0,
-    width: 32,
-    height: 3,
-    borderRadius: radius.full,
-  },
-});
-
-// ── Main tabs ────────────────────────────────────────────────────────
-function MainTabs() {
-  return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarShowLabel: true,
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: fontWeight.black,
-          fontFamily: fonts.body,
-          letterSpacing: 0.8,
-          marginTop: 2,
-          textTransform: 'uppercase',
-        },
-        tabBarActiveTintColor: colors.ink,
-        tabBarInactiveTintColor: colors.muted,
-        tabBarStyle: {
-          borderTopWidth: 1,
-          borderTopColor: colors.borderLight,
-          backgroundColor: colors.surface,
-          paddingTop: 4,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 8,
-          height: Platform.OS === 'ios' ? 82 : 66,
-          ...shadows.md,
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.06,
-        },
-        tabBarIcon: ({ focused }) => <TabIcon label={route.name} focused={focused} />,
-      })}
+    <AppTab.Navigator
+      tabBar={(props) => <TabBar {...props} />}
+      screenOptions={{ headerShown: false }}
     >
-      <Tab.Screen name="Home"    component={HomeScreen}        options={{ title: 'Home' }} />
-      <Tab.Screen name="Journey" component={JourneyScreen}     options={{ title: 'Journey' }} />
-      <Tab.Screen name="Chat"    component={ProductChatScreen} options={{ title: 'Chat' }} />
-    </Tab.Navigator>
+      <AppTab.Screen name="Home" component={HomeScreen} />
+      <AppTab.Screen name="Ritual" component={RitualScreen} />
+      <AppTab.Screen name="Products" component={ProductsScreen} />
+      <AppTab.Screen name="Chat" component={CouncilScreen} />
+      <AppTab.Screen name="Journey" component={JourneyScreen} />
+    </AppTab.Navigator>
   );
 }
 
-// ── App stack (tabs + modals + new screens) ─────────────────────────────────
+// ─── App Stack (tabs + modal screens) ───────────────────────────
+
+const AppStack = createNativeStackNavigator<AppStackParamList>();
+
 function AppNavigator() {
   return (
     <AppStack.Navigator screenOptions={{ headerShown: false }}>
-      <AppStack.Screen name="Tabs" component={MainTabs} />
-      <AppStack.Screen
-        name="CheckinModal"
-        component={CheckinScreen}
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <AppStack.Screen
-        name="AuntyConversation"
-        component={AuntyConversationScreen}
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <AppStack.Screen
-        name="HairJourney"
-        component={HairJourneyScreen}
-        options={{ animation: 'slide_from_right', headerShown: false }}
-      />
+      <AppStack.Screen name="Tabs" component={TabNavigator} />
+      <AppStack.Group screenOptions={{ presentation: 'modal', animation: 'slide_from_bottom' }}>
+        <AppStack.Screen name="HairProfile" component={PlaceholderScreen} />
+        <AppStack.Screen name="Settings" component={SettingsScreen} />
+        <AppStack.Screen name="RitualSteps" component={RitualStepScreen} />
+        <AppStack.Screen name="CheckIn" component={CheckInScreen} />
+      </AppStack.Group>
     </AppStack.Navigator>
   );
 }
 
-// ── Root ─────────────────────────────────────────────────────────────
-export default function RootNavigator() {
-  const { user, isLoading } = useAuth();
+// Placeholder for screens not yet built
+function PlaceholderScreen() {
+  return (
+    <View style={loadingStyles.container}>
+      <ActivityIndicator color={colors.primary} size="large" />
+    </View>
+  );
+}
 
-  if (isLoading) return null;
+// ─── Root Navigator ─────────────────────────────────────────────
 
-  const showApp = user && user.onboarding_complete;
+const RootStack = createNativeStackNavigator<RootStackParamList & { Auth: undefined }>();
+
+export function RootNavigator() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { state } = useOnboarding();
+
+  // Show loading while checking auth state
+  if (authLoading) {
+    return (
+      <View style={loadingStyles.container}>
+        <ActivityIndicator color={colors.primary} size="large" />
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer>
       <RootStack.Navigator screenOptions={{ headerShown: false, animation: 'none' }}>
-        {showApp ? (
-          <RootStack.Screen name="App" component={AppNavigator} />
-        ) : (
+        {!isAuthenticated ? (
+          <RootStack.Screen name="Auth" component={AuthNavigator} />
+        ) : !state.isComplete ? (
           <RootStack.Screen name="Onboarding" component={OnboardingNavigator} />
+        ) : (
+          <RootStack.Screen name="App" component={AppNavigator} />
         )}
       </RootStack.Navigator>
     </NavigationContainer>
   );
 }
+
+const loadingStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.dark.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

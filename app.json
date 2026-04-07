@@ -1,54 +1,40 @@
 {
   "expo": {
-    "name": "Aunty",
-    "slug": "aunty",
+    "name": "Aunty Curl",
+    "slug": "aunty-curl-council",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1A0F08"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.auntyco.app",
+      "bundleIdentifier": "com.auntycurl.app",
+      "buildNumber": "1",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "We need access to your photos for your hair profile.",
-        "NSCameraUsageDescription": "We need camera access to capture your hair photos.",
-        "NSMicrophoneUsageDescription": "Microphone is not used by this app.",
-        "ITSAppUsesNonExemptEncryption": false
+        "NSCameraUsageDescription": "Aunty Curl uses your camera to analyze your hair texture and track progress.",
+        "NSPhotoLibraryUsageDescription": "Aunty Curl accesses your photos to analyze your hair and track your journey."
       }
     },
     "android": {
+      "package": "com.auntycurl.app",
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff",
-        "foregroundImage": "./assets/icon.png"
-      },
-      "package": "com.auntyco.app",
-      "permissions": [
-        "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA"
-      ]
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1A0F08"
+      }
     },
     "plugins": [
-      [
-        "expo-notifications",
-        {
-          "color": "#000000"
-        }
-      ],
-      "expo-image-picker",
-      "expo-camera",
-      "expo-font"
+      "expo-font",
+      "expo-image"
     ],
     "extra": {
       "eas": {
-        "projectId": "6fa92ba4-b2f1-4076-aade-3d4195aa2c4f"
+        "projectId": "61a03883-cd9d-453e-9145-7584044acd14"
       }
     },
     "owner": "thomastekeste"

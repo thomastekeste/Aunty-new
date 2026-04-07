@@ -1,213 +1,174 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, TouchableOpacity, Share } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+/**
+ * SendOffScreen — The emotional close.
+ *
+ * Word-by-word reveal. Three lines that land.
+ * Not a motivational poster — a personal moment between
+ * the aunty and the user about what their hair means.
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { OnboardingStackParamList } from '@/types';
-import { useOnboarding } from '@/context/OnboardingContext';
-import { useAuth } from '@/context/AuthContext';
-import { routineService } from '@/services/supabase';
-import { userService } from '@/services/supabase';
-import { notificationService } from '@/services/notifications';
-import AuntyAvatar from '@/components/AuntyAvatar';
-import { colors, spacing, fontSize, fontWeight, fonts, auntyColors } from '@/constants/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  FadeInUp,
+  useSharedValue,
+  useAnimatedStyle,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import { AuntyAvatar } from '../../components/AuntyAvatar';
+import { WordReveal } from '../../components/WordReveal';
+import { Button } from '../../components/Button';
+import { AUNTIES } from '../../constants/aunties';
+import type { AuntyId } from '../../constants/aunties';
+import { useOnboarding } from '../../context/OnboardingContext';
+import {
+  colors,
+  auntyColors,
+  fonts,
+  fontSize,
+  spacing,
+  gradients,
+  letterSpacing,
+  animation,
+} from '../../constants/theme';
 
-type Props = NativeStackScreenProps<OnboardingStackParamList, 'SendOff'>;
-const AUNTY_IDS = ['1', '2', '3', '4', '5', '6', '7'];
+const { height: SCREEN_H } = Dimensions.get('window');
 
-export default function SendOffScreen({ navigation }: Props) {
+export default function SendOffScreen() {
   const insets = useSafeAreaInsets();
-  const { user, updateUser } = useAuth();
-  const { data, hairAnalysis, councilResponse, routine } = useOnboarding();
+  const { state, complete } = useOnboarding();
+  const name = state.data.name || 'Queen';
+  const auntyId: AuntyId = state.data.chosenAuntyId || 'denise';
+  const aunty = AUNTIES[auntyId];
+  const ac = auntyColors[auntyId];
 
-  const portraitsFade = useRef(new Animated.Value(0)).current;
-  const messageFade = useRef(new Animated.Value(0)).current;
-  const signoffFade = useRef(new Animated.Value(0)).current;
-  const finalLineScale = useRef(new Animated.Value(0.6)).current;
-  const finalLineFade = useRef(new Animated.Value(0)).current;
-  const calendarSlide = useRef(new Animated.Value(60)).current;
-  const calendarFade = useRef(new Animated.Value(0)).current;
-  const sharesFade = useRef(new Animated.Value(0)).current;
+  // 0=avatar entrance, 1=line1, 2=line2, 3=line3, 4=button
+  const [phase, setPhase] = useState(0);
 
-  const [saved, setSaved] = useState(false);
+  const btnOpacity = useSharedValue(0);
+  const btnStyle = useAnimatedStyle(() => ({
+    opacity: btnOpacity.value,
+  }));
 
   useEffect(() => {
-    // Save routine to Supabase
-    if (user && routine && councilResponse && !saved) {
-      setSaved(true);
-      routineService.save(user.id, routine, councilResponse).catch(console.error);
-      userService.update(user.id, {
-        onboarding_complete: true,
-        onboarding_step_completed: 22,
-      }).then(() => {
-        updateUser({ onboarding_complete: true });
-      }).catch(console.error);
-
-      // Schedule check-in reminders
-      notificationService.scheduleCheckinReminders().catch(console.error);
-    }
-
-    // Run animation sequence
-    Animated.sequence([
-      // Portraits drop in
-      Animated.timing(portraitsFade, { toValue: 1, duration: 600, useNativeDriver: true }),
-      // Message fades in
-      Animated.delay(200),
-      Animated.timing(messageFade, { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.delay(400),
-      Animated.timing(signoffFade, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.delay(400),
-      // Final line scales in
-      Animated.parallel([
-        Animated.timing(finalLineFade, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.spring(finalLineScale, { toValue: 1, friction: 4, useNativeDriver: true }),
-      ]),
-      Animated.delay(600),
-      // Calendar slides up
-      Animated.parallel([
-        Animated.timing(calendarSlide, { toValue: 0, duration: 500, useNativeDriver: true }),
-        Animated.timing(calendarFade, { toValue: 1, duration: 500, useNativeDriver: true }),
-      ]),
-      Animated.delay(200),
-      // Shares fade in
-      Animated.timing(sharesFade, { toValue: 1, duration: 400, useNativeDriver: true }),
-    ]).start();
+    const t = setTimeout(() => setPhase(1), 1200);
+    return () => clearTimeout(t);
   }, []);
 
-  const handleShare = async () => {
-    try {
-      await Share.share({
-        message: `My curl type is ${hairAnalysis?.curl_type?.toUpperCase() ?? 'natural'} and the Aunty council just built my personalized routine. Get yours at auntyco.app`,
-      });
-    } catch {}
+  const showButton = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    btnOpacity.value = withTiming(1, { duration: 400 });
+    setPhase(4);
   };
 
-  const handleContinue = () => {
-    // RootNavigator automatically switches to App screens when onboarding_complete = true
-  };
+  const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
 
-  const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+  const handleBegin = useCallback(async () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    try { await AsyncStorage.setItem('onboarding_completed_at', new Date().toISOString()); } catch {}
+    try { fetch(`${API_URL}/api/onboarding/intake`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state.data) }).catch(() => {}); } catch {}
+    complete();
+  }, [complete, state.data]);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <StatusBar style="light" />
-      {/* Overlapping portraits */}
-      <Animated.View style={[styles.portraits, { opacity: portraitsFade }]}>
-        {AUNTY_IDS.map((id, i) => (
-          <View
-            key={id}
-            style={[
-              styles.avatarWrap,
-              { marginLeft: i === 0 ? 0 : -14, borderColor: auntyColors[id].accent },
-            ]}
-          >
-            <AuntyAvatar auntyId={id} size={56} />
-          </View>
-        ))}
-      </Animated.View>
+    <LinearGradient colors={[...gradients.ceremony]} style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}>
 
-      {/* Personalized message */}
-      <Animated.Text style={[styles.message, { opacity: messageFade }]}>
-        {data.name ?? 'Friend'}, your {hairAnalysis?.curl_type?.toUpperCase() ?? 'natural'} hair routine is ready.
-      </Animated.Text>
+        {/* Aunty avatar with glow */}
+        <Animated.View entering={FadeInUp.delay(200).duration(800)} style={styles.avatarWrap}>
+          <View style={[styles.glow, { backgroundColor: ac.accent }]} />
+          <AuntyAvatar auntyId={auntyId} size={80} showRing glowing />
+        </Animated.View>
 
-      <Animated.Text style={[styles.signoff, { opacity: signoffFade }]}>
-        — All seven aunties
-      </Animated.Text>
+        <Animated.Text entering={FadeIn.delay(800)} style={[styles.label, { color: ac.accent }]}>
+          {aunty.name.toUpperCase()}
+        </Animated.Text>
 
-      {/* Final line */}
-      <Animated.Text
-        style={[
-          styles.finalLine,
-          { opacity: finalLineFade, transform: [{ scale: finalLineScale }] },
-        ]}
-      >
-        Go live and make ya aunty proud.
-      </Animated.Text>
+        {/* The monologue — three lines, word by word */}
+        <View style={styles.monologue}>
 
-      {/* 4-week calendar */}
-      <Animated.View
-        style={[
-          styles.calendar,
-          { opacity: calendarFade, transform: [{ translateY: calendarSlide }] },
-        ]}
-      >
-        {weeks.map((w, i) => (
-          <View key={i} style={styles.weekDot}>
-            <View style={[styles.dot, i === 0 && styles.dotActive]} />
-            <Text style={styles.weekLabel}>{w}</Text>
-          </View>
-        ))}
-        <Text style={styles.calendarNote}>The aunties will check in. Don't ghost them.</Text>
-      </Animated.View>
+          {phase >= 1 && (
+            <WordReveal
+              key="line1"
+              text={`${name}, your crown was never broken.`}
+              stagger={85}
+              onComplete={() => setTimeout(() => setPhase(2), 900)}
+              style={styles.line}
+            />
+          )}
 
-      {/* Share + Continue */}
-      <Animated.View style={[styles.actions, { opacity: sharesFade }]}>
-        <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
-          <Text style={styles.shareBtnText}>Share my result</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.continueBtn} onPress={handleContinue}>
-          <Text style={styles.continueBtnText}>Go to my routine →</Text>
-        </TouchableOpacity>
-      </Animated.View>
-    </View>
+          {phase >= 2 && (
+            <Animated.View entering={FadeIn.duration(250)} style={{ marginTop: spacing.lg }}>
+              <WordReveal
+                key="line2"
+                text="It just needed someone who speaks its language."
+                stagger={85}
+                onComplete={() => setTimeout(() => setPhase(3), 700)}
+                style={[styles.line, { color: ac.accent }]}
+              />
+            </Animated.View>
+          )}
+
+          {phase >= 3 && (
+            <Animated.View entering={FadeIn.duration(250)} style={{ marginTop: spacing.lg }}>
+              <WordReveal
+                key="line3"
+                text="Now go wear it like you mean it."
+                stagger={90}
+                onComplete={() => setTimeout(showButton, 600)}
+                style={styles.line}
+              />
+            </Animated.View>
+          )}
+        </View>
+
+        {/* Gold accent */}
+        {phase >= 3 && (
+          <Animated.View entering={FadeIn.delay(300)} style={[styles.rule, { backgroundColor: ac.accent }]} />
+        )}
+
+        <View style={{ flex: 1 }} />
+
+        {/* Button */}
+        <Animated.View style={[styles.btnWrap, btnStyle]}>
+          <Button label="Let's Go" onPress={handleBegin} variant="primary" size="lg" />
+        </Animated.View>
+
+        {phase >= 4 && (
+          <Animated.Text entering={FadeIn.delay(200)} style={styles.footer}>
+            — {aunty.name}
+          </Animated.Text>
+        )}
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1, backgroundColor: colors.ink,
-    alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  portraits: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xl },
-  avatarWrap: { borderWidth: 2, borderColor: colors.ink, borderRadius: 32 },
-  message: {
+  container: { flex: 1 },
+  content: { flex: 1, alignItems: 'center', paddingHorizontal: spacing.xl, justifyContent: 'center' },
+
+  avatarWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg },
+  glow: { position: 'absolute', width: 140, height: 140, borderRadius: 70, opacity: 0.18 },
+  label: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, letterSpacing: letterSpacing.widest, marginBottom: spacing.xxl },
+
+  monologue: { width: '100%', minHeight: SCREEN_H * 0.28 },
+  line: {
     fontFamily: fonts.display,
-    fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.canvas,
-    textAlign: 'center', lineHeight: 30, marginBottom: spacing.sm,
+    fontSize: fontSize.xxl,
+    color: colors.dark.text,
+    lineHeight: fontSize.xxl * 1.35,
+    letterSpacing: letterSpacing.tight,
   },
-  signoff: {
-    fontFamily: fonts.body,
-    marginBottom: spacing.xl,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    color: 'rgba(254,249,243,0.4)',
-    fontSize: fontSize.sm,
-  },
-  finalLine: {
-    fontFamily: fonts.display,
-    fontSize: 26, fontWeight: fontWeight.black, color: colors.amber,
-    textAlign: 'center', lineHeight: 32, marginBottom: spacing.xl,
-  },
-  calendar: {
-    alignItems: 'center', marginBottom: spacing.xl,
-  },
-  weekDot: { alignItems: 'center', marginBottom: spacing.xs },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: 'rgba(245,196,138,0.25)', marginBottom: 2 },
-  dotActive: { backgroundColor: colors.amber },
-  weekLabel: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.muted, fontWeight: fontWeight.medium },
-  calendarNote: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm, color: colors.muted, textAlign: 'center',
-    marginTop: spacing.sm, lineHeight: 20,
-  },
-  actions: { gap: spacing.sm, alignItems: 'center', width: '100%' },
-  shareBtn: {
-    paddingVertical: spacing.md, paddingHorizontal: spacing.xl,
-    borderWidth: 1.5, borderColor: 'rgba(245,196,138,0.35)', borderRadius: 999,
-    width: '100%', alignItems: 'center',
-  },
-  shareBtnText: { fontFamily: fonts.body, fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.amberLight },
-  continueBtn: {
-    paddingVertical: spacing.md, paddingHorizontal: spacing.xl,
-    backgroundColor: colors.amber, borderRadius: 999,
-    width: '100%', alignItems: 'center',
-    shadowColor: colors.amber,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  continueBtnText: { fontFamily: fonts.body, fontSize: fontSize.md, fontWeight: fontWeight.black, color: colors.ink, textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  rule: { width: 32, height: 2, opacity: 0.5, borderRadius: 1, marginTop: spacing.xl },
+
+  btnWrap: { width: '100%', marginBottom: spacing.md },
+  footer: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.dark.textMuted, letterSpacing: letterSpacing.wide },
 });

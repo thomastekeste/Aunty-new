@@ -1,260 +1,176 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
+/**
+ * ProductsScreen — Product recommendations tabbed by type.
+ *
+ * Horizontal tabs: Shampoo, Conditioner, Mask, Oil, etc.
+ * Each tab shows products matched to the user's hair profile.
+ */
+
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '@/context/AuthContext';
-import { getAllProducts } from '@/constants/products';
-import { productService } from '@/services/supabase';
-import { getAunty } from '@/constants/aunties';
-import AuntyAvatar from '@/components/AuntyAvatar';
-import { colors, fonts, spacing, fontSize, fontWeight, radius, auntyColors, shadows } from '@/constants/theme';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import { AuntyAvatar } from '../../components/AuntyAvatar';
+import { AUNTIES } from '../../constants/aunties';
+import { PRODUCTS, type Product, type ProductCategory } from '../../constants/products';
+import { useOnboarding } from '../../context/OnboardingContext';
+import {
+  colors,
+  auntyColors,
+  fonts,
+  fontSize,
+  spacing,
+  radius,
+  shadows,
+  letterSpacing,
+} from '../../constants/theme';
+
+const CAT_LABELS: Record<string, string> = {
+  cleanser: 'Shampoo', conditioner: 'Conditioner', 'deep-conditioner': 'Mask',
+  'leave-in': 'Leave-In', styler: 'Styler', gel: 'Gel', cream: 'Cream',
+  oil: 'Oil', 'protein-treatment': 'Protein', 'scalp-treatment': 'Scalp',
+  tool: 'Tools', accessory: 'Accessories',
+};
+
+function groupByCategory(products: Product[]): Map<ProductCategory, Product[]> {
+  const map = new Map<ProductCategory, Product[]>();
+  for (const p of products) {
+    const list = map.get(p.category) || [];
+    list.push(p);
+    map.set(p.category, list);
+  }
+  return map;
+}
 
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
-  const products = getAllProducts();
+  const { state } = useOnboarding();
+  const profile = state.data.hairProfile;
 
-  const handleProductPress = async (productId: string, affiliateLink: string) => {
-    if (user) {
-      productService.trackClick(user.id, productId).catch(console.error);
-    }
-    await Linking.openURL(affiliateLink);
-  };
+  // Filter products relevant to user's profile
+  const filtered = useMemo(() => {
+    return PRODUCTS.filter((p) => {
+      if (profile.curlType && p.curlTypes.length > 0 && !p.curlTypes.includes(profile.curlType)) return false;
+      return true;
+    });
+  }, [profile.curlType]);
+
+  const grouped = useMemo(() => groupByCategory(filtered), [filtered]);
+  const tabs = useMemo(() => Array.from(grouped.keys()), [grouped]);
+  const [activeTab, setActiveTab] = useState<ProductCategory>(tabs[0] || 'cleanser');
+  const activeProducts = grouped.get(activeTab) || [];
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top + spacing.md }]}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>Aunty-curated</Text>
-        <Text style={styles.title}>Product Shelf</Text>
-        <Text style={styles.subtitle}>Your full shelf — every product hand-picked.</Text>
+        <Text style={styles.overline}>AUNTY'S PICKS</Text>
+        <Text style={styles.title}>Your Products</Text>
+        <Text style={styles.subtitle}>
+          Matched to {profile.curlType || 'your'} hair
+        </Text>
       </View>
 
+      {/* Category tabs */}
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }]}
-        showsVerticalScrollIndicator={false}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabScroll}
+        contentContainerStyle={styles.tabRow}
       >
-        {products.map(product => {
-          const aunty = getAunty(product.recommended_by_aunty_id);
-          const ac = auntyColors[product.recommended_by_aunty_id];
+        {tabs.map((cat) => {
+          const active = activeTab === cat;
           return (
-            <TouchableOpacity
-              key={product.id}
-              style={[styles.productCard, { borderTopColor: ac.accent }]}
-              onPress={() => handleProductPress(product.id, product.affiliate_link)}
-              activeOpacity={0.8}
+            <Pressable
+              key={cat}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveTab(cat); }}
+              style={[styles.tab, active && styles.tabActive]}
             >
-              <View style={styles.productTop}>
-                <View style={styles.productInfo}>
-                  <View style={[styles.categoryPill, { backgroundColor: `${ac.accent}15`, borderColor: `${ac.accent}35` }]}>
-                    <Text style={[styles.categoryText, { color: ac.accent }]}>{product.category}</Text>
-                  </View>
-                  <Text style={styles.productName}>{product.name}</Text>
-                  <Text style={styles.productBrand}>{product.brand}</Text>
-                </View>
-                {product.price_usd && (
-                  <Text style={[styles.productPrice, { color: ac.text }]}>${product.price_usd.toFixed(2)}</Text>
-                )}
+              <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
+                {CAT_LABELS[cat] || cat}
+              </Text>
+              <View style={[styles.tabBadge, active && styles.tabBadgeActive]}>
+                <Text style={[styles.tabBadgeText, active && styles.tabBadgeTextActive]}>
+                  {grouped.get(cat)?.length || 0}
+                </Text>
               </View>
-
-              <View style={styles.productBottom}>
-                <View style={styles.recommendedBy}>
-                  <View style={[styles.avatarRing, { borderColor: `${ac.accent}50` }]}>
-                    <AuntyAvatar auntyId={product.recommended_by_aunty_id} size={24} />
-                  </View>
-                  <Text style={[styles.recommendedByText, { color: ac.text }]}>
-                    {aunty.name} recommends
-                  </Text>
-                </View>
-                <View style={[styles.shopBtn, { backgroundColor: ac.accent }]}>
-                  <Text style={styles.shopBtnText}>Shop →</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
+            </Pressable>
           );
         })}
+      </ScrollView>
+
+      {/* Products */}
+      <ScrollView
+        style={styles.productScroll}
+        contentContainerStyle={[styles.productList, { paddingBottom: insets.bottom + 100 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {activeProducts.map((p, i) => {
+          const ac = auntyColors[p.recommendedBy];
+          return (
+            <Animated.View key={p.id} entering={FadeInDown.delay(i * 50)}>
+              <View style={[styles.card, { borderLeftColor: ac.accent }]}>
+                <View style={styles.cardTop}>
+                  <Text style={styles.cardBrand}>{p.brand}</Text>
+                  <Text style={styles.cardPrice}>{p.price}</Text>
+                </View>
+                <Text style={styles.cardName}>{p.name}</Text>
+                <Text style={styles.cardDesc}>{p.description}</Text>
+                <View style={styles.auntyRow}>
+                  <AuntyAvatar auntyId={p.recommendedBy} size={28} showRing />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.auntyName, { color: ac.accent }]}>
+                      {AUNTIES[p.recommendedBy].name} says:
+                    </Text>
+                    <Text style={styles.auntyQuote}>"{p.whyItWorks}"</Text>
+                  </View>
+                </View>
+                {p.isBudgetFriendly && (
+                  <View style={styles.budgetTag}><Text style={styles.budgetText}>BUDGET FRIENDLY</Text></View>
+                )}
+              </View>
+            </Animated.View>
+          );
+        })}
+        {activeProducts.length === 0 && (
+          <Text style={styles.empty}>No products in this category for your hair type.</Text>
+        )}
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.canvas },
-  header: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  eyebrow: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.primary,
-    fontWeight: fontWeight.bold,
-    textTransform: 'uppercase',
-    letterSpacing: 3,
-    marginBottom: spacing.xs,
-  },
-  title: {
-    fontFamily: fonts.display,
-    fontSize: 36,
-    fontWeight: fontWeight.black,
-    color: colors.ink,
-    letterSpacing: -1,
-  },
-  subtitle: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.muted,
-    marginTop: 4,
-  },
-  content: { padding: spacing.md, gap: spacing.md },
+  container: { flex: 1, backgroundColor: colors.canvas },
+  header: { paddingHorizontal: spacing.lg, marginBottom: spacing.md },
+  overline: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, letterSpacing: letterSpacing.widest, color: colors.primary },
+  title: { fontFamily: fonts.display, fontSize: fontSize.xxxl, color: colors.ink, letterSpacing: letterSpacing.tight, marginTop: spacing.xs },
+  subtitle: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.muted, marginTop: spacing.xs },
 
-  // Upgrade banner
-  upgradeBanner: {
-    backgroundColor: colors.ink,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    overflow: 'hidden',
-    ...shadows.lg,
-  },
-  upgradeBannerAccent: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 4,
-    backgroundColor: colors.primary,
-  },
-  upgradeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  upgradeIconRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  upgradeAvatar: {
-    borderWidth: 2,
-    borderRadius: 20,
-  },
-  upgradeTextBlock: {
-    flex: 1,
-  },
-  upgradeTitle: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.black,
-    color: colors.canvas,
-    letterSpacing: -0.3,
-  },
-  upgradeText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: 'rgba(254,248,236,0.45)',
-    fontWeight: fontWeight.medium,
-    marginTop: 2,
-  },
-  upgrdeDescription: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: 'rgba(254,248,236,0.55)',
-    lineHeight: 20,
-  },
-  upgradePricing: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: 'rgba(254,248,236,0.3)',
-    textAlign: 'center',
-    marginTop: spacing.sm,
-  },
+  tabScroll: { maxHeight: 44, marginBottom: spacing.sm },
+  tabRow: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: 'center' },
+  tab: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  tabActive: { backgroundColor: colors.ink, borderColor: colors.ink },
+  tabLabel: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.muted },
+  tabLabelActive: { color: colors.canvas },
+  tabBadge: { backgroundColor: colors.canvasDeep, borderRadius: radius.full, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  tabBadgeActive: { backgroundColor: 'rgba(254,248,236,0.2)' },
+  tabBadgeText: { fontFamily: fonts.bodySemiBold, fontSize: 10, color: colors.muted },
+  tabBadgeTextActive: { color: colors.canvas },
 
-  // Product cards
-  productCard: {
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderTopWidth: 3,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    ...shadows.sm,
-  },
-  productTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.md,
-  },
-  productInfo: { flex: 1, marginRight: spacing.sm, gap: spacing.xs },
-  categoryPill: {
-    alignSelf: 'flex-start',
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderWidth: 1,
-    marginBottom: 2,
-  },
-  categoryText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  productName: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.black,
-    color: colors.ink,
-    letterSpacing: -0.2,
-  },
-  productBrand: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.muted,
-  },
-  productPrice: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.black,
-    letterSpacing: -0.5,
-  },
-  productBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-    paddingTop: spacing.sm,
-  },
-  recommendedBy: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  avatarRing: {
-    borderWidth: 1.5,
-    borderRadius: 15,
-    padding: 1,
-  },
-  recommendedByText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-  },
-  shopBtn: {
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 7,
-  },
-  shopBtnText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
-    color: 'rgba(255,255,255,0.9)',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
+  productScroll: { flex: 1 },
+  productList: { paddingHorizontal: spacing.lg, gap: spacing.sm },
+
+  card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderLeftWidth: 3, padding: spacing.md, gap: spacing.sm, ...shadows.sm },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardBrand: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.muted, textTransform: 'uppercase', letterSpacing: letterSpacing.wide },
+  cardPrice: { fontFamily: fonts.display, fontSize: fontSize.lg, color: colors.ink },
+  cardName: { fontFamily: fonts.display, fontSize: fontSize.xl, color: colors.ink, letterSpacing: letterSpacing.tight },
+  cardDesc: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkLight, lineHeight: fontSize.sm * 1.5 },
+  auntyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  auntyName: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs },
+  auntyQuote: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkLight, fontStyle: 'italic', lineHeight: fontSize.sm * 1.5 },
+  budgetTag: { alignSelf: 'flex-start', backgroundColor: 'rgba(26,122,74,0.1)', borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 2 },
+  budgetText: { fontFamily: fonts.bodySemiBold, fontSize: 9, color: colors.success, letterSpacing: letterSpacing.wider },
+  empty: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.muted, textAlign: 'center', paddingVertical: spacing.xxl },
 });

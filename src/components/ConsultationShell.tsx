@@ -1,253 +1,258 @@
 /**
- * Duolingo-style shell for all consultation screens (5–18).
- * Dark background · aunty avatar + speech bubble · full-width option rows · locked Continue button.
+ * ConsultationShell — Dark-mode ceremonial wrapper for all consultation questions.
+ *
+ * Provides: progress bar, back navigation, aunty avatar + speech bubble,
+ * scrollable content area, and a bottom CTA button.
  */
+
 import React from 'react';
 import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
+  Dimensions,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
-import ProgressBar from './ProgressBar';
-import AuntyAvatar from './AuntyAvatar';
-import { BackIcon } from './Icons';
-import { colors, auntyColors, spacing, fontSize, fontWeight, fonts, radius } from '@/constants/theme';
+import { useNavigation } from '@react-navigation/native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import { AuntyAvatar } from './AuntyAvatar';
+import { Button } from './Button';
+import { AUNTIES } from '../constants/aunties';
+import type { AuntyId } from '../constants/aunties';
+import {
+  colors,
+  auntyColors,
+  fonts,
+  fontSize,
+  spacing,
+  radius,
+  gradients,
+  letterSpacing,
+} from '../constants/theme';
 
-// Dark warm charcoal — the consultation "focus mode" background
-const SHELL_BG = '#171210';
-const SHELL_SURFACE = 'rgba(255,255,255,0.06)';
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-interface ConsultationShellProps {
+interface Props {
+  auntyId: AuntyId;
+  question: string;
   step: number;
   totalSteps: number;
-  auntyId: string;
-  auntyMessage: string;
-  question: string;
+  ctaLabel: string;
+  ctaDisabled?: boolean;
+  ctaLoading?: boolean;
+  onCtaPress: () => void;
   onBack?: () => void;
+  showBack?: boolean;
   children: React.ReactNode;
-  footer?: React.ReactNode;
-  phaseBadge?: string; // e.g. "Marcia's Turn · Root Whisperer"
+  keyboardAware?: boolean;
 }
 
-export default function ConsultationShell({
+export function ConsultationShell({
+  auntyId,
+  question,
   step,
   totalSteps,
-  auntyId,
-  auntyMessage,
-  question,
+  ctaLabel,
+  ctaDisabled = false,
+  ctaLoading = false,
+  onCtaPress,
   onBack,
+  showBack = true,
   children,
-  footer,
-  phaseBadge,
-}: ConsultationShellProps) {
+  keyboardAware = false,
+}: Props) {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
+  const aunty = AUNTIES[auntyId];
   const ac = auntyColors[auntyId];
-  const consultationStep = step - 4;
-  const consultationTotal = totalSteps - 4;
+  const progress = step / totalSteps;
 
-  return (
-    <KeyboardAvoidingView
-      style={[styles.root, { paddingTop: insets.top }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <StatusBar style="light" />
+  const handleBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (onBack) {
+      onBack();
+    } else {
+      navigation.goBack();
+    }
+  };
 
-      {/* Top bar — back + progress */}
-      <View style={styles.topBar}>
-        {onBack ? (
-          <TouchableOpacity onPress={onBack} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <BackIcon color="rgba(255,255,255,0.7)" size={22} strokeWidth={2} />
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.backBtn} />
-        )}
-        <View style={styles.progressWrap}>
-          <ProgressBar current={consultationStep} total={consultationTotal} dark />
+  const content = (
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Progress bar */}
+      <Animated.View
+        entering={FadeIn.duration(400)}
+        style={styles.progressWrapper}
+        accessibilityRole="progressbar"
+        accessibilityLabel={`Step ${step} of ${totalSteps}`}
+        accessibilityValue={{ min: 0, max: totalSteps, now: step }}
+      >
+        <View style={styles.progressTrack}>
+          <LinearGradient
+            colors={[...gradients.gold]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.progressFill, { width: `${progress * 100}%` }]}
+          />
         </View>
-        <Text style={styles.stepCount}>{consultationStep}/{consultationTotal}</Text>
+        <Text style={styles.progressLabel}>
+          {step} of {totalSteps}
+        </Text>
+      </Animated.View>
+
+      {/* Top row: back + question */}
+      <View style={styles.topRow}>
+        {showBack ? (
+          <Pressable
+            onPress={handleBack}
+            style={styles.backButton}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Text style={styles.backArrow}>{'\u2190'}</Text>
+          </Pressable>
+        ) : <View style={styles.backSpacer} />}
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+      {/* Question — big, direct, no bubble */}
+      <Text
+        style={[styles.question, { color: colors.dark.text }]}
+        accessibilityRole="header"
       >
-        {/* Phase badge */}
-        {phaseBadge && (
-          <View style={[styles.phaseBadgeWrap, { borderColor: `${ac.accent}40`, backgroundColor: `${ac.accent}12` }]}>
-            <View style={[styles.phaseBadgeDot, { backgroundColor: ac.accent }]} />
-            <Text style={[styles.phaseBadgeText, { color: ac.accent }]}>{phaseBadge}</Text>
-          </View>
-        )}
+        {question}
+      </Text>
 
-        {/* Aunty + speech bubble row — Duolingo style */}
-        <View style={styles.bubbleRow}>
-          {/* Avatar with accent ring */}
-          <View style={[styles.avatarRing, { borderColor: ac.accent }]}>
-            <AuntyAvatar auntyId={auntyId} size={72} />
-          </View>
-
-          {/* Speech bubble with left tail */}
-          <View style={styles.bubbleWrap}>
-            <View style={styles.bubbleTail} />
-            <View style={[styles.bubble, { borderColor: `${ac.accent}30` }]}>
-              <Text style={styles.bubbleText}>{auntyMessage}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Question */}
-        <Text style={styles.question}>{question}</Text>
-
-        {/* Options */}
-        <View style={styles.options}>{children}</View>
+      {/* Options */}
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + 100 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {children}
       </ScrollView>
 
-      {/* Footer — locked Continue button */}
-      {footer && (
-        <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
-          {footer}
+      {/* Bottom CTA */}
+      <View style={[styles.ctaContainer, { paddingBottom: insets.bottom + spacing.md }]}>
+        <LinearGradient
+          colors={['rgba(26, 15, 8, 0)', 'rgba(26, 15, 8, 0.95)', colors.dark.bg]}
+          style={styles.ctaGradient}
+        />
+        <View style={styles.ctaInner}>
+          <Button
+            label={ctaLabel}
+            onPress={onCtaPress}
+            variant="primary"
+            disabled={ctaDisabled}
+            loading={ctaLoading}
+            size="lg"
+          />
         </View>
-      )}
-    </KeyboardAvoidingView>
+      </View>
+    </View>
   );
+
+  if (keyboardAware) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        {content}
+      </KeyboardAvoidingView>
+    );
+  }
+
+  return content;
 }
 
 const styles = StyleSheet.create({
-  root: {
+  flex: {
     flex: 1,
-    backgroundColor: SHELL_BG,
+    backgroundColor: colors.dark.bg,
   },
-
-  // Top bar
-  topBar: {
+  container: {
+    flex: 1,
+    backgroundColor: colors.dark.bg,
+  },
+  progressWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
     gap: spacing.sm,
   },
-  backBtn: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
+  progressTrack: {
+    flex: 1,
+    height: 3,
+    backgroundColor: colors.dark.border,
+    borderRadius: 2,
+    overflow: 'hidden',
   },
-  progressWrap: { flex: 1 },
-  stepCount: {
+  progressFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  progressLabel: {
     fontFamily: fonts.body,
     fontSize: fontSize.xs,
-    color: 'rgba(255,255,255,0.35)',
-    fontWeight: fontWeight.bold,
-    width: 30,
-    textAlign: 'right',
+    color: colors.dark.textMuted,
+    letterSpacing: letterSpacing.wide,
   },
-
-  // Aunty + bubble
-  bubbleRow: {
+  topRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-    marginBottom: spacing.xl,
+    alignItems: 'center',
     paddingHorizontal: spacing.md,
   },
-  avatarRing: {
-    borderWidth: 2.5,
-    borderRadius: 40,
-    padding: 2,
-    flexShrink: 0,
+  backButton: {
+    width: 44,
+    height: 40,
+    justifyContent: 'center',
   },
-  bubbleWrap: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
+  backSpacer: {
+    width: 44,
+    height: 40,
   },
-  bubbleTail: {
-    width: 0,
-    height: 0,
-    borderTopWidth: 8,
-    borderBottomWidth: 8,
-    borderRightWidth: 12,
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderRightColor: 'rgba(255,255,255,0.1)',
-  },
-  bubble: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1,
-    borderRadius: radius.md,
-    padding: spacing.md,
-  },
-  bubbleText: {
+  backArrow: {
     fontFamily: fonts.body,
-    fontSize: fontSize.md,
-    color: 'rgba(255,255,255,0.9)',
-    lineHeight: 22,
-    fontWeight: fontWeight.medium,
+    fontSize: fontSize.xl,
+    color: colors.dark.text,
   },
-
-  // Phase badge
-  phaseBadgeWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderRadius: 99,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs,
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
-    gap: 6,
-  },
-  phaseBadgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  phaseBadgeText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-  },
-
-  // Question
   question: {
     fontFamily: fonts.display,
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.black,
-    color: '#ffffff',
+    fontSize: fontSize.xl,
+    lineHeight: fontSize.xl * 1.25,
+    letterSpacing: letterSpacing.tight,
+    paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
-    paddingHorizontal: spacing.md,
-    letterSpacing: -0.5,
-    lineHeight: 34,
   },
-
-  // Options
-  scroll: { flex: 1 },
-  content: { paddingTop: spacing.sm },
-  options: {
-    paddingHorizontal: spacing.md,
-    gap: spacing.xs,
+  scrollContent: {
+    paddingHorizontal: spacing.lg,
   },
-
-  // Footer
-  footer: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    backgroundColor: SHELL_BG,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
+  ctaContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  ctaGradient: {
+    position: 'absolute',
+    top: -40,
+    left: 0,
+    right: 0,
+    height: 40,
+  },
+  ctaInner: {
+    backgroundColor: colors.dark.bg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
   },
 });

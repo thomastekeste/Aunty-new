@@ -1,107 +1,249 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { authService, userService, IS_DEMO_MODE } from '@/services/supabase';
-import { User } from '@/types';
+/**
+ * AuthContext — Authentication provider using Supabase.
+ *
+ * When Supabase is not configured (no env vars), runs in "dev mode"
+ * where auth is bypassed and the user goes straight to onboarding.
+ */
 
-interface AuthContextType {
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase, isSupabaseConfigured } from '../services/supabase';
+import type { User } from '../types';
+import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
+
+// ─── Types ──────────────────────────────────────────────────────
+
+interface AuthState {
   user: User | null;
+  session: Session | null;
   isLoading: boolean;
-  error: string | null;
-  signUp: (email: string, password: string, name: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  updateUser: (patch: Partial<User>) => void;
+  isAuthenticated: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+interface AuthContextValue extends AuthState {
+  signUp: (email: string, password: string, name: string) => Promise<{ error?: string }>;
+  signIn: (email: string, password: string) => Promise<{ error?: string }>;
+  signOut: () => Promise<void>;
+  updateProfile: (data: Partial<User>) => Promise<void>;
+}
+
+const CACHE_KEY = '@aunty_curl_user';
+
+// ─── Context ────────────────────────────────────────────────────
+
+const AuthCtx = createContext<AuthContextValue | null>(null);
+
+// ─── Helpers ────────────────────────────────────────────────────
+
+function mapSupabaseUser(supaUser: any): User {
+  return {
+    id: supaUser.id,
+    email: supaUser.email ?? '',
+    name: supaUser.user_metadata?.name ?? '',
+    onboardingComplete: supaUser.user_metadata?.onboardingComplete ?? false,
+    subscriptionStatus: supaUser.user_metadata?.subscriptionStatus ?? 'free',
+    createdAt: supaUser.created_at,
+  };
+}
+
+async function cacheUser(user: User | null) {
+  try {
+    if (user) {
+      await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(user));
+    } else {
+      await AsyncStorage.removeItem(CACHE_KEY);
+    }
+  } catch {
+    // Caching is best-effort
+  }
+}
+
+// Dev mode user when Supabase is not configured
+const DEV_USER: User = {
+  id: 'dev-user',
+  email: 'dev@auntycurl.com',
+  name: '',
+  onboardingComplete: false,
+  subscriptionStatus: 'free',
+  createdAt: new Date().toISOString(),
+};
+
+// ─── Provider ───────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (IS_DEMO_MODE) {
-      // No backend configured — show onboarding as a guest
-      setIsLoading(false);
-      return;
+    let mounted = true;
+
+    async function init() {
+      // Always skip auth in dev mode (Expo Go)
+      if (__DEV__) {
+        if (mounted) {
+          setUser(DEV_USER);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      if (!isSupabaseConfigured || !supabase) {
+        if (mounted) {
+          setUser(DEV_USER);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      // Try cache first for instant splash avoidance
+      try {
+        const raw = await AsyncStorage.getItem(CACHE_KEY);
+        if (mounted && raw) {
+          setUser(JSON.parse(raw));
+        }
+      } catch {}
+
+      // Then verify with Supabase
+      const { data } = await supabase.auth.getSession();
+      if (mounted) {
+        if (data.session) {
+          const mapped = mapSupabaseUser(data.session.user);
+          setUser(mapped);
+          setSession(data.session);
+          cacheUser(mapped);
+        } else {
+          setUser(null);
+          setSession(null);
+          cacheUser(null);
+        }
+        setIsLoading(false);
+      }
     }
 
-    // Restore session on mount
-    authService.getSession().then(async session => {
-      if (session?.user) {
-        try {
-          const profile = await userService.get(session.user.id);
-          setUser(profile);
-        } catch {
-          setUser(null);
-        }
-      }
-      setIsLoading(false);
-    });
+    init();
 
-    // Listen for auth state changes
-    const { data: { subscription } } = authService.onAuthStateChange(async (userId) => {
-      if (userId) {
-        try {
-          const profile = await userService.get(userId);
-          setUser(profile);
-        } catch {
-          setUser(null);
-        }
-      } else {
-        setUser(null);
-      }
-    });
+    // Listen to auth state changes (only in production with Supabase)
+    if (!__DEV__ && isSupabaseConfigured && supabase) {
+      const { data: listener } = supabase.auth.onAuthStateChange(
+        (_event: AuthChangeEvent, newSession: Session | null) => {
+          if (!mounted) return;
+          if (newSession) {
+            const mapped = mapSupabaseUser(newSession.user);
+            setUser(mapped);
+            setSession(newSession);
+            cacheUser(mapped);
+          } else {
+            setUser(null);
+            setSession(null);
+            cacheUser(null);
+          }
+          setIsLoading(false);
+        },
+      );
 
-    return () => subscription.unsubscribe();
+      return () => {
+        mounted = false;
+        listener.subscription.unsubscribe();
+      };
+    }
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const signUp = async (email: string, password: string, name: string) => {
-    setError(null);
-    try {
-      const { user: authUser } = await authService.signUp(email, password);
-      if (authUser) {
-        const profile = await userService.create(authUser.id, name, email);
-        setUser(profile);
+  // ─── Auth Actions ───────────────────────────────────────────
+
+  const signUp = useCallback(
+    async (email: string, password: string, name: string): Promise<{ error?: string }> => {
+      if (!supabase) {
+        setUser({ ...DEV_USER, name, email });
+        return {};
       }
-    } catch (e: any) {
-      setError(e.message);
-      throw e;
-    }
-  };
-
-  const signIn = async (email: string, password: string) => {
-    setError(null);
-    try {
-      const { user: authUser } = await authService.signIn(email, password);
-      if (authUser) {
-        const profile = await userService.get(authUser.id);
-        setUser(profile);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name, onboardingComplete: false, subscriptionStatus: 'free' },
+        },
+      });
+      if (error) return { error: error.message };
+      if (data.user) {
+        const mapped = mapSupabaseUser(data.user);
+        setUser(mapped);
+        cacheUser(mapped);
       }
-    } catch (e: any) {
-      setError(e.message);
-      throw e;
-    }
-  };
-
-  const signOut = async () => {
-    await authService.signOut();
-    setUser(null);
-  };
-
-  const updateUser = (patch: Partial<User>) => {
-    setUser(prev => prev ? { ...prev, ...patch } : patch as User);
-  };
-
-  return (
-    <AuthContext.Provider value={{ user, isLoading, error, signUp, signIn, signOut, updateUser }}>
-      {children}
-    </AuthContext.Provider>
+      if (data.session) setSession(data.session);
+      return {};
+    },
+    [],
   );
+
+  const signIn = useCallback(
+    async (email: string, password: string): Promise<{ error?: string }> => {
+      if (!supabase) {
+        setUser(DEV_USER);
+        return {};
+      }
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return { error: error.message };
+      if (data.user) {
+        const mapped = mapSupabaseUser(data.user);
+        setUser(mapped);
+        cacheUser(mapped);
+      }
+      if (data.session) setSession(data.session);
+      return {};
+    },
+    [],
+  );
+
+  const signOut = useCallback(async () => {
+    if (supabase) await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    cacheUser(null);
+  }, []);
+
+  const updateProfile = useCallback(
+    async (data: Partial<User>) => {
+      if (supabase) {
+        await supabase.auth.updateUser({ data: data as Record<string, unknown> });
+      }
+      if (user) {
+        const updated = { ...user, ...data };
+        setUser(updated);
+        cacheUser(updated);
+      }
+    },
+    [user],
+  );
+
+  const value: AuthContextValue = {
+    user,
+    session,
+    isLoading,
+    isAuthenticated: !!user, // In dev mode, user is always set
+    signUp,
+    signIn,
+    signOut,
+    updateProfile,
+  };
+
+  return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }
 
-export function useAuth(): AuthContextType {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
+// ─── Hook ───────────────────────────────────────────────────────
+
+export function useAuth() {
+  const ctx = useContext(AuthCtx);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }

@@ -1,227 +1,208 @@
-# Aunty — Design System Master
+# Design System Master File
 
-> **LOGIC:** When building a specific page, check `design-system/pages/[page].md` first.
-> If it exists, its rules **override** this file. Otherwise, follow this exclusively.
-
----
-
-**Project:** Aunty — The Curl Council
-**Brand Essence:** Black aunties in your corner. Warm, authoritative, culturally proud.
-**Stack:** React Native + TypeScript + Expo
+> **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
+> If that file exists, its rules **override** this Master file.
+> If not, strictly follow the rules below.
 
 ---
 
-## The Two Worlds
-
-Aunty has two distinct visual modes. Every screen belongs to one:
-
-| World | When | Background | Text | Feel |
-|-------|------|-----------|------|------|
-| **Council World** | Splash, MeetCouncil, CouncilSpeaks, CouncilConvening, SendOff | `#180800` ink | `#FAF3E8` canvas | Ceremonial. Gathering. Ritual. |
-| **Care World** | All onboarding questions, Home, Routine, Check-in, Progress | `#FAF3E8` canvas | `#180800` ink | Kitchen counter. Practice. Daily care. |
-
-Never mix worlds on the same screen. Transitions between worlds use a fade (400ms).
+**Project:** Aunty Curl Council
+**Generated:** 2026-04-06 17:40:06
+**Category:** Luxury/Premium Brand
 
 ---
 
-## Color Palette
+## Global Rules
 
-### Core
-| Token | Value | Use |
-|-------|-------|-----|
-| `ink` | `#180800` | Council World backgrounds, heavy headings |
-| `canvas` | `#FAF3E8` | Care World backgrounds, light text on dark |
-| `offWhite` | `#F5EAD4` | Card backgrounds in Care World |
-| `surface` | `#EDD9A3` | Honey. Raised cards, input backgrounds |
-| `border` | `#C9A96E` | Gold-honey. All borders |
-| `muted` | `#8A6840` | Secondary text, placeholder text |
-| `text` | `#220F00` | Primary body text |
-| `textSecondary` | `#5C3A1E` | Secondary body text |
+### Color Palette
 
-### Signature Accent
-| Token | Value | Use |
-|-------|-------|-----|
-| `amber` | `#D4681E` | **The house color.** CTAs, active states, progress |
-| `amberLight` | `#F5C48A` | Tags, subtle highlights |
-| `amberDark` | `#8C3E08` | Pressed amber states |
+| Role | Hex | CSS Variable |
+|------|-----|--------------|
+| Primary | `#18181B` | `--color-primary` |
+| On Primary | `#FFFFFF` | `--color-on-primary` |
+| Secondary | `#3F3F46` | `--color-secondary` |
+| Accent/CTA | `#EC4899` | `--color-accent` |
+| Background | `#FAFAFA` | `--color-background` |
+| Foreground | `#09090B` | `--color-foreground` |
+| Muted | `#E8ECF0` | `--color-muted` |
+| Border | `#E4E4E7` | `--color-border` |
+| Destructive | `#DC2626` | `--color-destructive` |
+| Ring | `#18181B` | `--color-ring` |
 
-### Rich Secondary
-| Token | Value | Use |
-|-------|-------|-----|
-| `wine` | `#6B2D3E` | Authority, depth. Check-in CTA, premium moments |
-| `wineLight` | `#C48EA0` | Wine at low intensity |
+**Color Notes:** Editorial black + accent pink
 
-### Aunty Signature Colors
-| Aunty | Name | Color |
-|-------|------|-------|
-| 1 — Ngozi | Vivid amber-orange | `#B55A1C` |
-| 2 — Marcia | Deep purple | `#5B1F6C` |
-| 3 — Denise | Dark teal | `#1A4A5E` |
-| 4 — Fatou | Forest green | `#2A5E1A` |
-| 5 — Carmen | Deep red | `#B01C1C` |
-| 6 — Amara | Emerald | `#1A5E2A` |
-| 7 — Salma | Rich gold | `#7A5C1A` |
+### Typography
 
-### What to NEVER use
-- `#EC4899` pink — this is not Glossier
-- Cold white `#FFFFFF` — always use canvas or offWhite
-- Generic grey palettes
+- **Heading Font:** Playfair Display
+- **Body Font:** Inter
+- **Mood:** elegant, luxury, sophisticated, timeless, premium, editorial
+- **Google Fonts:** [Playfair Display + Inter](https://fonts.google.com/share?selection.family=Inter:wght@300;400;500;600;700|Playfair+Display:wght@400;500;600;700)
 
----
-
-## Typography
-
-**Two fonts only. No exceptions.**
-
-| Font | Role |
-|------|------|
-| **Fraunces** | Aunty voice, headings, big moments, screen titles — always italic when large |
-| **DM Sans** | Navigation, labels, body copy, functional UI |
-
-### Rules
-- **Aunty speaking** → Fraunces italic, xxl+, ink or canvas
-- **UI functional** → DM Sans regular/semibold
-- **Aunty name tag** → DM Sans black, uppercase, aunty color, letterSpacing 1
-- **Section eyebrow** → DM Sans black, uppercase, muted, letterSpacing 2-3
-- Body text minimum: **16px (fontSize.md)** — never smaller on mobile
-- Headline letter spacing: `-0.5` to `-2` (tighter = more editorial)
-- Body line height: `1.6`
-
-### What to NEVER use
-- Playfair Display — Fraunces is the brand
-- Inter — DM Sans is the brand
-
----
-
-## Spacing & Radius
-```
-Spacing: xs=4  sm=8  md=16  lg=24  xl=32  xxl=48
-Radius:  sm=8  md=14  lg=24  full=999
+**CSS Import:**
+```css
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
 ```
 
----
+### Spacing Variables
 
-## Components
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--space-xs` | `4px` / `0.25rem` | Tight gaps |
+| `--space-sm` | `8px` / `0.5rem` | Icon gaps, inline spacing |
+| `--space-md` | `16px` / `1rem` | Standard padding |
+| `--space-lg` | `24px` / `1.5rem` | Section padding |
+| `--space-xl` | `32px` / `2rem` | Large gaps |
+| `--space-2xl` | `48px` / `3rem` | Section margins |
+| `--space-3xl` | `64px` / `4rem` | Hero padding |
 
-### Button (Primary)
-- Background: `amber`, text: `canvas`
-- Border radius: `radius.full`
-- Font: DM Sans black, uppercase, letterSpacing 1.5
-- Height minimum: **48px**
-- Disabled: surface bg, muted text
-- Loading: spinner replaces label, still amber
+### Shadow Depths
 
-### AuntyBubble
-- Avatar: 48px, aunty `AUNTY_COLORS` background
-- Left border: 4px solid, aunty signature color
-- Bubble: 1px `border` color, subtle aunty color tint bg (5-8% opacity)
-- Name: DM Sans black, uppercase, aunty color, fontSize xs, letterSpacing 1
-- Message: **Fraunces italic**, fontSize md, lineHeight 24
-- Animation: FadeInDown 400ms, stagger +150ms per bubble
-
-### AuntyAvatar
-- Circle, `AUNTY_COLORS[id]` background
-- No portrait yet: initial letter, white, Fraunces bold, size * 0.38
-- Border: 2-3px matching world background (for overlap stacking effect)
-
-### Back Button
-- **Always SVG** (never ← text)
-- Touch area: **minimum 44x44px**
-- Color: ink on canvas, canvas on ink
-
-### OptionCard
-- Default: canvas bg, border color
-- Selected: surface bg, amber border 1.5px
-- Height minimum: 48px
+| Level | Value | Usage |
+|-------|-------|-------|
+| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift |
+| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)` | Cards, buttons |
+| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | Modals, dropdowns |
+| `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Hero images, featured cards |
 
 ---
 
-## Aunty Character System
+## Component Specs
 
-Full character data for `aunties.ts` expansion:
+### Buttons
 
+```css
+/* Primary Button */
+.btn-primary {
+  background: #EC4899;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 200ms ease;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* Secondary Button */
+.btn-secondary {
+  background: transparent;
+  color: #18181B;
+  border: 2px solid #18181B;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 200ms ease;
+  cursor: pointer;
+}
 ```
-Ngozi (1) — The Moisture Authority
-  dialect:     Nigerian Pidgin
-  quote:       "Ahn ahn! Dis hair need shea, not excuse o."
-  personality: Direct, urgent, deeply caring
-  ingredient:  Shea butter, hot oil, steam
-  win:         "Ah ah! Now we dey talk o!"
-  fail:        "Dis hair dey cry — you dey hear am?"
 
-Marcia (2) — The Root Whisperer
-  dialect:     Jamaican Patois
-  quote:       "Roots first, yuh hear mi? Always."
-  personality: Patient, methodical, growth-obsessed
-  ingredient:  JBCO, scalp massage, fenugreek
-  win:         "Yes pickney, di roots dem singing!"
-  fail:        "Roots first. Yuh forget already?"
+### Cards
 
-Denise (3) — The Cultural Elder
-  dialect:     AAVE
-  quote:       "Chile, I been natural before it was a whole trend."
-  personality: Confident, no excuses, culturally proud
-  ingredient:  LOC method, satin bonnet, protective styling
-  win:         "Now THAT'S what I'm talking about."
-  fail:        "Uh uh. We not doing this."
+```css
+.card {
+  background: #FAFAFA;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  transition: all 200ms ease;
+  cursor: pointer;
+}
 
-Fatou (4) — The Technician
-  dialect:     French-accented English
-  quote:       "La technique, ma chérie, c'est tout."
-  personality: Methodical, elegant, teaches process over product
-  ingredient:  Thread stretching, karité, braiding technique
-  win:         "Voilà. C'est parfait, ma chérie."
-  fail:        "La patience. Sans technique, rien n'est possible."
+.card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+```
 
-Carmen (5) — The Joy Bringer
-  dialect:     Spanglish
-  quote:       "Ay mija, esos rizos son un regalo de Dios."
-  personality: Warm, buoyant, sees beauty before anyone else
-  ingredient:  Flaxseed gel, finger coiling, wash-and-go
-  win:         "¡Ay! Those curls came OUT today, mami!"
-  fail:        "Oye, we try again. It's okay, corazón."
+### Inputs
 
-Amara (6) — The Strength Builder
-  dialect:     East African lilt (Amharic/English)
-  quote:       "Konjo, strong roots, strong hair. Abatochihn yawqu neberu."
-  personality: Quiet authority, long-game thinker, builds from within
-  ingredient:  Fenugreek protein mask, castor oil, strengthening
-  win:         "Strong hair. Like I knew it would be, konjo."
-  fail:        "The roots know. Keep going. Betam."
+```css
+.input {
+  padding: 12px 16px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 200ms ease;
+}
 
-Salma (7) — The Remedy Keeper
-  dialect:     North African (Darija/Arabic lilt)
-  quote:       "Yalla habibti — argan, haba saouda, ghassoul. Allah gave us everything."
-  personality: Ancient wisdom, mystical but practical, remedy-keeper
-  ingredient:  Argan, ghassoul clay, henna, black seed
-  win:         "Mashallah. This is what the plants promised, habibti."
-  fail:        "Sabr habibti. Patience is its own treatment."
+.input:focus {
+  border-color: #18181B;
+  outline: none;
+  box-shadow: 0 0 0 3px #18181B20;
+}
+```
+
+### Modals
+
+```css
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: var(--shadow-xl);
+  max-width: 500px;
+  width: 90%;
+}
 ```
 
 ---
 
-## Animation Language
-| Moment | Animation | Duration |
-|--------|-----------|----------|
-| Aunty bubble reveal | FadeInDown | 400ms |
-| Multiple bubbles | +150ms stagger per bubble | — |
-| Care ↔ Council world transition | Fade | 400ms |
-| CTA press | Scale 0.97 | 100ms |
-| Progress bar fill | Width transition | 300ms |
-| Reveal/result moment | Scale 0.95→1.0 + fade | 600ms |
+## Style Guidelines
 
-Always respect `prefers-reduced-motion`.
+**Style:** Liquid Glass
+
+**Keywords:** Flowing glass, morphing, smooth transitions, fluid effects, translucent, animated blur, iridescent, chromatic aberration
+
+**Best For:** Premium SaaS, high-end e-commerce, creative platforms, branding experiences, luxury portfolios
+
+**Key Effects:** Morphing elements (SVG/CSS), fluid animations (400-600ms curves), dynamic blur (backdrop-filter), color transitions
+
+### Page Pattern
+
+**Pattern Name:** Immersive/Interactive Experience
+
+- **Conversion Strategy:** 40% higher engagement. Performance trade-off. Provide skip option. Mobile fallback essential.
+- **CTA Placement:** After interaction complete + Skip option for impatient users
+- **Section Order:** 1. Full-screen interactive element, 2. Guided product tour, 3. Key benefits revealed, 4. CTA after completion
+
+---
+
+## Anti-Patterns (Do NOT Use)
+
+- ❌ Cheap visuals
+- ❌ Fast animations
+
+### Additional Forbidden Patterns
+
+- ❌ **Emojis as icons** — Use SVG icons (Heroicons, Lucide, Simple Icons)
+- ❌ **Missing cursor:pointer** — All clickable elements must have cursor:pointer
+- ❌ **Layout-shifting hovers** — Avoid scale transforms that shift layout
+- ❌ **Low contrast text** — Maintain 4.5:1 minimum contrast ratio
+- ❌ **Instant state changes** — Always use transitions (150-300ms)
+- ❌ **Invisible focus states** — Focus states must be visible for a11y
 
 ---
 
 ## Pre-Delivery Checklist
 
-- [ ] Screen belongs clearly to Council or Care World
-- [ ] Back button is SVG, 44x44px minimum touch area
-- [ ] No emoji used as icon
-- [ ] Body text ≥ 16px
-- [ ] Hosting aunty's signature color visible somewhere
-- [ ] CTA minimum 48px height, radius.full
-- [ ] AuntyBubble: Fraunces italic message, DM Sans name tag
-- [ ] Loading states use aunty-voiced copy, never "Loading..."
-- [ ] Error states designed (not just Alert)
+Before delivering any UI code, verify:
+
+- [ ] No emojis used as icons (use SVG instead)
+- [ ] All icons from consistent icon set (Heroicons/Lucide)
+- [ ] `cursor-pointer` on all clickable elements
+- [ ] Hover states with smooth transitions (150-300ms)
+- [ ] Light mode: text contrast 4.5:1 minimum
+- [ ] Focus states visible for keyboard navigation
+- [ ] `prefers-reduced-motion` respected
+- [ ] Responsive: 375px, 768px, 1024px, 1440px
+- [ ] No content hidden behind fixed navbars
+- [ ] No horizontal scroll on mobile

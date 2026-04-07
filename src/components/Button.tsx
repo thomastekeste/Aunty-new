@@ -1,266 +1,166 @@
-import React, { useRef } from 'react';
-import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  ViewStyle,
-  Animated,
-  View,
-} from 'react-native';
+/**
+ * Button — Premium tactile button with variants, haptic feedback, and spring animation.
+ */
+
+import React, { useCallback } from 'react';
+import { Pressable, Text, StyleSheet, ActivityIndicator, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { colors, radius, fontSize, fontWeight, spacing, fonts, shadows, gradients, animation } from '@/constants/theme';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { colors, fonts, fontSize, spacing, radius, shadows, gradients, animation } from '../constants/theme';
 
-interface ButtonProps {
+type Variant = 'primary' | 'secondary' | 'ghost' | 'dark' | 'accent';
+
+interface Props {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'dark' | 'accent' | 'glass';
+  variant?: Variant;
   loading?: boolean;
   disabled?: boolean;
-  style?: ViewStyle;
   size?: 'sm' | 'md' | 'lg';
   icon?: React.ReactNode;
-  iconPosition?: 'left' | 'right';
   fullWidth?: boolean;
 }
 
-export default function Button({
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+export function Button({
   label,
   onPress,
   variant = 'primary',
   loading = false,
   disabled = false,
-  style,
   size = 'md',
   icon,
-  iconPosition = 'left',
-  fullWidth = false,
-}: ButtonProps) {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const shadowAnim = useRef(new Animated.Value(1)).current;
+  fullWidth = true,
+}: Props) {
+  const opacity = useSharedValue(1);
 
-  const handlePressIn = () => {
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 0.96,
-        tension: animation.spring.tension,
-        friction: animation.spring.friction,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shadowAnim, {
-        toValue: 0,
-        duration: animation.micro,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-  };
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
 
-  const handlePressOut = () => {
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: animation.spring.tension,
-        friction: animation.spring.friction,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shadowAnim, {
-        toValue: 1,
-        duration: animation.fast,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
+  const handlePressIn = useCallback(() => {
+    opacity.value = withTiming(0.7, { duration: 100 });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
 
-  const handlePress = () => {
-    if (!disabled && !loading) {
+  const handlePressOut = useCallback(() => {
+    opacity.value = withTiming(1, { duration: 150 });
+  }, []);
+
+  const handlePress = useCallback(() => {
+    if (!loading && !disabled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       onPress();
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     }
+  }, [loading, disabled, onPress]);
+
+  const heights = { sm: 44, md: 52, lg: 60 };
+  const fontSizes = { sm: fontSize.sm, md: fontSize.md, lg: fontSize.base };
+  const isDisabled = disabled || loading;
+
+  const gradientColors = {
+    primary: gradients.gold,
+    accent: gradients.accent,
+    dark: gradients.dark,
+    secondary: [colors.canvas, colors.canvas] as const,
+    ghost: ['transparent', 'transparent'] as const,
   };
 
-  const sizeStyles = {
-    sm: { height: 40, paddingHorizontal: spacing.lg, gap: spacing.xs },
-    md: { height: 52, paddingHorizontal: spacing.xl, gap: spacing.sm },
-    lg: { height: 60, paddingHorizontal: spacing.xxl, gap: spacing.sm },
-  };
-
-  const labelColors: Record<string, string> = {
+  const textColors = {
     primary: colors.ink,
-    secondary: colors.ink,
-    ghost: colors.ink,
+    accent: '#FFFFFF',
     dark: colors.canvas,
-    accent: colors.white,
-    glass: colors.ink,
+    secondary: colors.primary,
+    ghost: colors.ink,
   };
 
-  const labelSizeStyles = {
-    sm: { fontSize: fontSize.sm, letterSpacing: 0.5 },
-    md: { fontSize: fontSize.md, letterSpacing: 0.8 },
-    lg: { fontSize: fontSize.lg, letterSpacing: 1 },
+  const shadowStyle = {
+    primary: shadows.gold,
+    accent: shadows.accent,
+    dark: shadows.md,
+    secondary: {},
+    ghost: {},
   };
-
-  const spinnerColor = ['primary', 'accent', 'dark'].includes(variant) ? colors.canvas : colors.ink;
-
-  const content = (
-    <View style={[styles.inner, sizeStyles[size]]}>
-      {loading ? (
-        <ActivityIndicator color={spinnerColor} size={size === 'sm' ? 'small' : 'small'} />
-      ) : (
-        <>
-          {icon && iconPosition === 'left' && <View style={styles.iconWrap}>{icon}</View>}
-          <Text
-            style={[
-              styles.label,
-              labelSizeStyles[size],
-              { color: labelColors[variant] },
-            ]}
-          >
-            {label}
-          </Text>
-          {icon && iconPosition === 'right' && <View style={styles.iconWrap}>{icon}</View>}
-        </>
-      )}
-    </View>
-  );
-
-  const containerStyle = [
-    styles.base,
-    fullWidth && styles.fullWidth,
-    (disabled || loading) && styles.disabled,
-    style,
-  ];
 
   return (
-    <Animated.View
-      style={[
-        { transform: [{ scale: scaleAnim }] },
-        fullWidth && styles.fullWidth,
-      ]}
+    <AnimatedPressable
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      disabled={isDisabled}
+      style={[animatedStyle, fullWidth && styles.fullWidth]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: isDisabled }}
     >
-      {variant === 'primary' ? (
-        <TouchableOpacity
-          onPress={handlePress}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-          disabled={disabled || loading}
-          activeOpacity={1}
-          style={containerStyle}
-        >
-          <LinearGradient
-            colors={gradients.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.gradient, { borderRadius: radius.full }]}
-          >
-            {content}
-          </LinearGradient>
-        </TouchableOpacity>
-      ) : variant === 'accent' ? (
-        <TouchableOpacity
-          onPress={handlePress}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-          disabled={disabled || loading}
-          activeOpacity={1}
-          style={[containerStyle, styles.accent]}
-        >
-          <LinearGradient
-            colors={gradients.accent}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.gradient, { borderRadius: radius.full }]}
-          >
-            {content}
-          </LinearGradient>
-        </TouchableOpacity>
-      ) : variant === 'dark' ? (
-        <TouchableOpacity
-          onPress={handlePress}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-          disabled={disabled || loading}
-          activeOpacity={1}
-          style={[containerStyle, styles.dark]}
-        >
-          <LinearGradient
-            colors={gradients.dark}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.gradient, { borderRadius: radius.full }]}
-          >
-            {content}
-          </LinearGradient>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity
-          style={[containerStyle, styles[variant]]}
-          onPress={handlePress}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-          disabled={disabled || loading}
-          activeOpacity={variant === 'ghost' ? 0.6 : 0.85}
-        >
-          {content}
-        </TouchableOpacity>
-      )}
-    </Animated.View>
+      <LinearGradient
+        colors={[...gradientColors[variant]]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[
+          styles.gradient,
+          { height: heights[size], borderRadius: radius.lg },
+          variant === 'secondary' && styles.secondaryBorder,
+          isDisabled && styles.disabled,
+          shadowStyle[variant],
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator color={textColors[variant]} size="small" />
+        ) : (
+          <View style={styles.content}>
+            {icon && <View style={styles.icon}>{icon}</View>}
+            <Text
+              style={[
+                styles.label,
+                {
+                  fontSize: fontSizes[size],
+                  color: textColors[variant],
+                  fontFamily: fonts.bodySemiBold,
+                },
+              ]}
+            >
+              {label}
+            </Text>
+          </View>
+        )}
+      </LinearGradient>
+    </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
-  base: {
-    borderRadius: radius.full,
-    overflow: 'hidden',
-    ...shadows.gold,
-  },
   fullWidth: {
-    alignSelf: 'stretch',
+    width: '100%',
   },
   gradient: {
-    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
   },
-  inner: {
+  content: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: spacing.sm,
   },
-  iconWrap: {
-    justifyContent: 'center',
-    alignItems: 'center',
+  label: {
+    letterSpacing: 0.3,
   },
-  secondary: {
-    backgroundColor: 'transparent',
+  icon: {
+    marginRight: 2,
+  },
+  secondaryBorder: {
     borderWidth: 1.5,
     borderColor: colors.primary,
-    ...shadows.sm,
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-  },
-  dark: {
-    overflow: 'hidden',
-    borderRadius: radius.full,
-    ...shadows.md,
-  },
-  accent: {
-    overflow: 'hidden',
-    borderRadius: radius.full,
-    ...shadows.accent,
-  },
-  glass: {
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
-    ...shadows.sm,
   },
   disabled: {
     opacity: 0.42,
-  },
-  label: {
-    fontFamily: fonts.body,
-    fontWeight: fontWeight.black,
-    textTransform: 'uppercase',
   },
 });

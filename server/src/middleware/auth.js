@@ -1,36 +1,36 @@
-const { getUserClient } = require('../services/supabase');
+import { createClient } from '@supabase/supabase-js';
+import config from '../config.js';
 
-function respond(res, success, data, error, status = 200) {
-  return res.status(status).json({ success, data: data || null, error: error || null });
-}
+/**
+ * Auth middleware — verifies the JWT from the Authorization header
+ * using Supabase's auth.getUser() and attaches the user to req.user.
+ */
+const supabaseAuth = createClient(config.supabaseUrl, config.supabaseAnonKey);
 
-async function requireAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return respond(res, false, null, 'Missing authorization token', 401);
+export default async function authMiddleware(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Missing or invalid Authorization header' });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+
+    const {
+      data: { user },
+      error,
+    } = await supabaseAuth.auth.getUser(token);
+
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    req.user = user;
+    req.token = token;
+    next();
+  } catch (err) {
+    console.error('Auth middleware error:', err);
+    return res.status(500).json({ error: 'Authentication failed' });
   }
-
-  const jwt = authHeader.replace('Bearer ', '');
-  const client = getUserClient(jwt);
-
-  const { data: { user }, error } = await client.auth.getUser();
-  if (error || !user) {
-    return respond(res, false, null, 'Invalid or expired token', 401);
-  }
-
-  req.user = user;
-  req.jwt = jwt;
-  req.supabase = client;
-  next();
 }
-
-function requireAdmin(req, res, next) {
-  const { adminPassword } = require('../config');
-  const provided = req.headers['x-admin-password'] || req.query.password;
-  if (provided !== adminPassword) {
-    return res.status(401).send('Unauthorized');
-  }
-  next();
-}
-
-module.exports = { requireAuth, requireAdmin, respond };

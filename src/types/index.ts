@@ -1,268 +1,180 @@
-// ── User & Auth ─────────────────────────────────────────────────────
+/**
+ * Aunty Curl Council — Core Type Definitions
+ */
+
+import type { AuntyId } from '../constants/aunties';
+
+// ─── Hair Science Types ──────────────────────────────────────────
+
+export type CurlType =
+  | '2a' | '2b' | '2c' // Wavy
+  | '3a' | '3b' | '3c' // Curly
+  | '4a' | '4b' | '4c'; // Coily
+
+export type Porosity = 'low' | 'normal' | 'high';
+export type Elasticity = 'low' | 'normal' | 'high';
+export type Density = 'thin' | 'medium' | 'thick';
+export type WashFrequency = 'daily' | 'every-other' | 'twice-weekly' | 'weekly' | 'biweekly' | 'monthly';
+export type HeatUse = 'never' | 'rarely' | 'monthly' | 'weekly' | 'daily';
+export type TimeAvailable = '10min' | '20min' | '30min' | '45min' | '60min' | '90min-plus';
+
+export type PrimaryGoal =
+  | 'moisture'
+  | 'growth'
+  | 'definition'
+  | 'damage-repair'
+  | 'scalp-health'
+  | 'simplify-routine'
+  | 'transition';
+
+// ─── User & Profile ──────────────────────────────────────────────
+
 export interface User {
   id: string;
   email: string;
   name: string;
   city?: string;
-  water_hardness?: 'soft' | 'medium' | 'hard';
-  subscription_status: 'free' | 'active' | 'cancelled';
-  onboarding_complete: boolean;
-  onboarding_step_completed: number;
-  expo_push_token?: string;
-  created_at: string;
-  updated_at: string;
-  // Personalization & memory
-  preferred_aunty_id?: string;
-  preferred_routine_length?: 'quick' | 'standard' | 'thorough';
-  communication_style?: 'casual' | 'nurturing' | 'direct';
-  last_checkin_date?: string;
+  waterHardness?: 'soft' | 'moderate' | 'hard';
+  onboardingComplete: boolean;
+  onboardingStep?: string;
+  preferredAuntyId?: AuntyId;
+  subscriptionStatus: 'free' | 'active' | 'cancelled';
+  createdAt: string;
 }
-
-// ── User Memory ──────────────────────────────────────────────────────
-export type UserMemoryType = 'goal' | 'struggle' | 'preference' | 'win' | 'personal_detail';
-
-export interface UserMemory {
-  id: string;
-  user_id: string;
-  memory_type: UserMemoryType;
-  content: string;
-  aunty_id?: string; // Which aunty should remember this
-  date: string;
-}
-
-// ── User Preferences ─────────────────────────────────────────────────
-export interface UserPreferences {
-  preferred_aunty_id?: string;
-  preferred_routine_length: 'quick' | 'standard' | 'thorough';
-  communication_style: 'casual' | 'nurturing' | 'direct';
-  allow_personalization: boolean;
-  allow_checkin_reminders: boolean;
-  product_sensitivity_notes?: string;
-}
-
-// ── Aunty Relationship ───────────────────────────────────────────────
-export interface AuntyRelationship {
-  user_id: string;
-  aunty_id: string;
-  visits: number;
-  latest_interaction?: string;
-  topics_discussed: string[];
-  trust_level: 'new' | 'building' | 'established' | 'deep';
-}
-
-// ── Hair Profile ─────────────────────────────────────────────────────
-export type Porosity = 'low' | 'normal' | 'high';
-export type Elasticity = 'low' | 'normal' | 'high';
-export type Density = 'thin' | 'medium' | 'thick';
-export type PrimaryGoal = 'length' | 'moisture' | 'definition' | 'volume' | 'health';
-export type WashFrequency = 'weekly' | 'bi_weekly' | 'monthly' | 'less_frequent';
-export type HeatUse = 'never' | 'rarely' | 'sometimes' | 'often';
-export type RelaxerHistory = 'never_relaxed' | 'currently_relaxed' | 'transitioning' | 'big_chopped';
-export type ProtectiveStyling = 'yes_regularly' | 'sometimes' | 'never';
-export type TimeAvailable = 'under_1h' | '1_2h' | '3plus_h';
-export type CurlType = '2a' | '2b' | '2c' | '3a' | '3b' | '3c' | '4a' | '4b' | '4c';
-
-// ── Onboarding Phases ────────────────────────────────────────────────
-export type OnboardingPhase = 'welcome' | 'know-you' | 'hair' | 'story' | 'reveal';
 
 export interface HairProfile {
-  id: string;
-  user_id: string;
-  curl_type?: CurlType;
-  porosity: Porosity;
+  curlType?: CurlType;
+  porosity?: Porosity;
   elasticity?: Elasticity;
-  protein_needs?: Elasticity;
   density?: Density;
-  primary_goal?: PrimaryGoal;
-  wash_frequency?: WashFrequency;
-  heat_use?: HeatUse;
-  relaxer_history?: RelaxerHistory;
-  protective_styling?: ProtectiveStyling;
-  time_available?: TimeAvailable;
-  failed_attempts?: string[];
-  scalp_concerns?: string[];
-  created_at: string;
-  updated_at: string;
+  primaryGoal?: PrimaryGoal;
+  secondaryGoals?: PrimaryGoal[];
+  washFrequency?: WashFrequency;
+  heatUse?: HeatUse;
+  relaxerHistory?: boolean;
+  colorTreated?: boolean;
+  protectiveStyling?: boolean;
+  scalpConcerns?: string[];
+  timeAvailable?: TimeAvailable;
+  failedAttempts?: string[];
+  productScope?: ProductScope;
+  productBudget?: ProductBudget;
 }
 
-// ── Photos ───────────────────────────────────────────────────────────
-export interface GeminiVisionAnalysis {
-  curl_type?: CurlType;
-  texture_description?: string;
-  visible_concerns?: string[];
-  condition_assessment?: string;
-}
+export type ProductScope = 'basics' | 'routine' | 'full' | 'everything';
+export type ProductBudget = 'under-30' | '30-60' | '60-100' | '100-plus';
 
-export interface Photo {
-  id: string;
-  user_id: string;
-  type: 'intake_front' | 'intake_back' | 'intake_closeup' | 'checkin';
-  checkin_id?: string;
-  storage_path: string;
-  analysis_json?: GeminiVisionAnalysis;
-  created_at: string;
-}
+// ─── Onboarding State ────────────────────────────────────────────
 
-// ── Routine ──────────────────────────────────────────────────────────
-export interface RoutineStep {
-  step_number: number;
+export interface OnboardingData {
   name: string;
-  description: string;
-  duration_minutes?: number;
-  product_category?: 'cleanser' | 'conditioner' | 'leave_in' | 'oil' | 'styler' | 'treatment';
-}
-
-export interface DayRoutine {
-  day_name: string;
-  hosted_by_aunty_id: string;
-  steps: RoutineStep[];
-  estimated_time_minutes: number;
-  purpose: string;
-}
-
-export interface DailyRoutine {
-  wash_day: DayRoutine;
-  style_day: DayRoutine;
-  refresh_day: DayRoutine;
-  rest_day: DayRoutine;
-}
-
-export interface AuntyCouncilMessage {
-  aunty_id: string;
-  aunty_name: string;
-  message: string;
-  timestamp: string;
+  chosenAuntyId?: AuntyId;
+  hairProfile: HairProfile;
+  photos: {
+    front?: string;
+    back?: string;
+    closeup?: string;
+  };
+  councilResponse?: CouncilResponse;
+  routine?: WeeklyRitual;
 }
 
 export interface CouncilResponse {
-  [key: string]: AuntyCouncilMessage | string;
+  auntyMessages: Record<AuntyId, string>;
   consensus: string;
+  hairProfileSummary: string;
+  keyFindings: string[];
 }
 
-export interface Routine {
-  id: string;
-  user_id: string;
-  routine_json: DailyRoutine;
-  council_response_json: CouncilResponse;
-  generated_at: string;
-  updated_at: string;
-}
+// ─── Weekly Ritual System ────────────────────────────────────────
 
-// ── Check-ins ────────────────────────────────────────────────────────
-export interface GeminiCheckinAnalysis {
-  progress_detected?: boolean;
-  comparison_notes?: string;
-  suggested_adjustments?: string[];
-  next_steps?: string[];
-}
+export type RitualDayType = 'wash' | 'style' | 'refresh' | 'rest' | 'scalp' | 'protein' | 'protect';
 
-export interface Checkin {
-  id: string;
-  user_id: string;
-  hosting_aunty_id: string;
-  initiated_by: 'system' | 'user';
-  week_number: number;
-  progress_notes?: string;
-  ai_analysis_json?: GeminiCheckinAnalysis;
-  created_at: string;
-}
-
-// ── Aunties ──────────────────────────────────────────────────────────
-export interface Aunty {
-  id: string;
+export interface RitualStep {
   name: string;
-  region: string;
-  specialty: string;
-  quote: string;
-  // Character voice
-  dialect: string;
-  personality: string;
+  description: string;
+  duration?: string; // e.g. "5 min"
+  product?: string;
+}
+
+export interface RitualDay {
+  dayOfWeek: number; // 0-6 (Sun-Sat)
+  type: RitualDayType;
+  label: string; // "Wash Day", "Style Day", etc.
+  hostAunty: AuntyId;
+  purpose: string;
+  estimatedTime: string; // "45 min"
+  steps: RitualStep[];
+}
+
+export interface WeeklyRitual {
+  id: string;
+  weekNumber: number;
+  days: RitualDay[];
+  theme?: string; // "Foundation Week", "Deep Moisture Week", etc.
+  isActive: boolean;
+}
+
+// ─── Check-ins & Journey ─────────────────────────────────────────
+
+export interface CheckIn {
+  id: string;
+  userId: string;
+  weekNumber: number;
+  hostingAuntyId: AuntyId;
+  mood?: 'great' | 'good' | 'okay' | 'struggling';
+  notes?: string;
+  photoUri?: string;
+  auntyResponse?: string;
+  createdAt: string;
+}
+
+export interface Milestone {
+  id: string;
   title: string;
-  ingredient: string;
-  win: string;
-  fail: string;
-  greeting: string;
+  description: string;
+  weekNumber: number;
+  achieved: boolean;
+  achievedAt?: string;
+  auntyId: AuntyId; // which aunty celebrates with you
 }
 
-// ── Products ─────────────────────────────────────────────────────────
-export interface Product {
-  id: string;
-  asin?: string;
-  name: string;
-  brand: string;
-  category: 'shampoo' | 'conditioner' | 'leave_in' | 'oil' | 'styler' | 'treatment';
-  recommended_by_aunty_id: string;
-  free_tier_shown: boolean;
-  affiliate_link: string;
-  price_usd?: number;
-}
+// ─── Navigation Types ────────────────────────────────────────────
 
-// ── Navigation ───────────────────────────────────────────────────────
 export type RootStackParamList = {
   Onboarding: undefined;
   App: undefined;
 };
 
 export type OnboardingStackParamList = {
-  Splash: undefined;
-  MeetCouncil: undefined;
-  Name: undefined;
-  SignUp: undefined;
-  Location: undefined;
+  Welcome: undefined;
+  ValuePreview: undefined;
+  NameEntry: undefined;
+  CurlType: undefined;
   PorosityTest: undefined;
-  ElasticityTest: undefined;
-  DensityTest: undefined;
-  PhotoUpload: undefined;
-  CurlTypeReveal: undefined;
-  WashFrequency: undefined;
   PrimaryGoal: undefined;
-  Failures: undefined;
-  HeatUse: undefined;
-  RelaxerHistory: undefined;
-  ProtectiveStyling: undefined;
-  ScalpConcerns: undefined;
-  TimeAvailable: undefined;
+  HairHabits: undefined;
+  Struggles: undefined;
+  BudgetQuestion: undefined;
   CouncilConvening: undefined;
-  CouncilSpeaks: undefined;
-  Routine: undefined;
+  CouncilVerdict: undefined;
+  ProductReveal: undefined;
   SendOff: undefined;
 };
 
 export type AppTabParamList = {
   Home: undefined;
-  Journey: undefined;
+  Ritual: undefined;
+  Products: undefined;
   Chat: undefined;
+  Journey: undefined;
 };
 
 export type AppStackParamList = {
   Tabs: undefined;
-  CheckinModal: { auntyId: string; userInitiated: boolean };
-  AuntyConversation: { auntyId: string; initialQuestion?: string };
-  HairJourney: undefined;
+  CheckIn: undefined;
+  RitualSteps: undefined;
+  AuntyChat: { auntyId: AuntyId };
+  HairProfile: undefined;
+  Settings: undefined;
 };
-
-// ── Onboarding State ─────────────────────────────────────────────────
-export interface OnboardingData {
-  name: string;
-  city: string;
-  water_hardness: 'soft' | 'medium' | 'hard';
-  porosity: Porosity;
-  elasticity: Elasticity;
-  density: Density;
-  failed_attempts: string[];
-  scalp_concerns: string[];
-  primary_goal: PrimaryGoal;
-  wash_frequency: WashFrequency;
-  heat_use: HeatUse;
-  relaxer_history: RelaxerHistory;
-  protective_styling: ProtectiveStyling;
-  time_available: TimeAvailable;
-  intake_photos: {
-    front?: string;
-    back?: string;
-    closeup?: string;
-  };
-  hair_analysis?: GeminiVisionAnalysis;
-}
-sis?: GeminiVisionAnalysis;
-}

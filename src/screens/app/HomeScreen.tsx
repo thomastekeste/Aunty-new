@@ -1,860 +1,279 @@
-import React, { useEffect, useState, useRef } from 'react';
+/**
+ * HomeScreen — Today's ritual is the hero. Everything actionable.
+ *
+ * Compact greeting + aunty avatar top bar.
+ * Today's ritual card front and center.
+ * Week progress dots. Quick questions. Check-in when due.
+ */
+
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  Animated,
-  TextInput,
+  StyleSheet,
+  Pressable,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '@/context/AuthContext';
-import { routineService } from '@/services/supabase';
-import { AUNTIES, getAunty } from '@/constants/aunties';
-import { DailyRoutine } from '@/types';
-import AuntyPortrait from '@/components/AuntyPortrait';
-import AuntyAvatar from '@/components/AuntyAvatar';
-import { colors, auntyColors, spacing, fontSize, fontWeight, radius, fonts, shadows, gradients, typography } from '@/constants/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 
-// Day-based primary aunty — each day of week maps to an aunty
-const DAY_AUNTY: Record<number, string> = {
-  0: '7', // Sunday — Salma
-  1: '1', // Monday — Ngozi
-  2: '2', // Tuesday — Marcia
-  3: '3', // Wednesday — Denise
-  4: '4', // Thursday — Fatou
-  5: '5', // Friday — Carmen
-  6: '6', // Saturday — Amara
+import { AuntyAvatar } from '../../components/AuntyAvatar';
+import { Button } from '../../components/Button';
+import {
+  colors,
+  auntyColors,
+  fonts,
+  fontSize,
+  spacing,
+  radius,
+  shadows,
+  gradients,
+  letterSpacing,
+} from '../../constants/theme';
+import { AUNTIES, type AuntyId } from '../../constants/aunties';
+import { useOnboarding } from '../../context/OnboardingContext';
+import type { RitualDayType } from '../../types';
+
+// ─── Today's ritual based on day of week ─────────────────────────
+
+const DAILY_RITUAL: Record<number, { type: RitualDayType; label: string; purpose: string; time: string }> = {
+  0: { type: 'rest', label: 'Rest Day', purpose: 'Let your hair breathe. Minimal touch.', time: '5 min' },
+  1: { type: 'wash', label: 'Wash Day', purpose: 'Deep cleanse & moisture reset.', time: '45 min' },
+  2: { type: 'scalp', label: 'Scalp Day', purpose: 'Nourish the roots. Oil + massage.', time: '15 min' },
+  3: { type: 'protect', label: 'Protect Day', purpose: 'Low-manipulation styling.', time: '30 min' },
+  4: { type: 'refresh', label: 'Refresh Day', purpose: 'Mid-week touch-up.', time: '10 min' },
+  5: { type: 'style', label: 'Style Day', purpose: 'Define & celebrate your curls.', time: '25 min' },
+  6: { type: 'protein', label: 'Strength Day', purpose: 'Protein treatment for resilience.', time: '20 min' },
 };
 
-// Warm, personal greetings per aunty — feels like she's speaking to the user directly
-const PERSONAL_GREETINGS: Record<string, string[]> = {
-  '1': [
-    "I've been thinking about your curls.",
-    "Moisture check — let's see how you're doing.",
-    "I know you've been busy. I'm still here.",
-  ],
-  '2': [
-    "Your roots have been on my mind.",
-    "How are we feeling from the roots today?",
-    "I haven't forgotten about you.",
-  ],
-  '3': [
-    "Chile, I was just thinking about you.",
-    "You showed up. That's everything.",
-    "We're going to figure this out together.",
-  ],
-  '4': [
-    "I've been waiting to check on your technique.",
-    "Patience and presence. That's all we need today.",
-    "Come, let's talk about where you are.",
-  ],
-  '5': [
-    "Mija, I've missed you!",
-    "Your curls are always on my mind, corazón.",
-    "Ready to celebrate those curls today?",
-  ],
-  '6': [
-    "Konjo, your hair has been in my thoughts.",
-    "I see the strength you've been building.",
-    "Come, let's nurture those roots together.",
-  ],
-  '7': [
-    "Habibti, I've been thinking of you.",
-    "Nature's wisdom is ready when you are.",
-    "You deserve this time for yourself.",
-  ],
+const TYPE_COLORS: Record<RitualDayType, string> = {
+  wash: colors.jewel.amber,
+  style: colors.jewel.rose,
+  refresh: colors.jewel.plum,
+  rest: colors.jewel.teal,
+  scalp: colors.jewel.emerald,
+  protein: colors.jewel.sienna,
+  protect: colors.jewel.indigo,
 };
 
-const MOOD_OPTIONS = [
-  { id: 'thriving', label: 'Thriving', color: colors.marcia },
-  { id: 'good', label: 'Good', color: colors.ngozi },
-  { id: 'okay', label: 'Just okay', color: colors.salma },
-  { id: 'tired', label: 'Tired', color: colors.fatou },
-  { id: 'frustrated', label: 'Frustrated', color: colors.carmen },
-];
+const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-const DAY_KEYS = ['wash_day', 'style_day', 'refresh_day', 'rest_day'] as const;
+const QUICK_QUESTIONS: Record<AuntyId, string[]> = {
+  ngozi: ['My hair feels dry', 'Deep conditioner rec?', 'Shea butter tips'],
+  marcia: ['Scalp is itchy', 'Growth tips', 'JBCO help'],
+  denise: ['Protective styles', 'Night routine', 'LOC method'],
+  fatou: ['Detangling help', 'Trim schedule', 'Sectioning tips'],
+  carmen: ['Wash-and-go tips', 'Curl definition', 'Gel vs cream'],
+  amara: ['Need protein?', 'Hair feels weak', 'Henna treatment'],
+  salma: ['Breakage remedies', 'Scalp balance', 'Argan oil tips'],
+};
 
-export default function HomeScreen({ navigation }: any) {
-  const insets = useSafeAreaInsets();
-  const { user } = useAuth();
-  const [routine, setRoutine] = useState<{ routine_json: DailyRoutine } | null>(null);
-  const [selectedMood, setSelectedMood] = useState<string | null>(null);
-  const [question, setQuestion] = useState('');
-
-  const todayAuntyId = DAY_AUNTY[new Date().getDay()];
-  const aunty = getAunty(todayAuntyId);
-  const ac = auntyColors[todayAuntyId];
-  const firstName = user?.name?.split(' ')[0] ?? 'friend';
-
-  // Pick a greeting that changes by time of day (morning/afternoon/evening)
-  const greetingIndex = Math.floor(new Date().getHours() / 8); // 0, 1, or 2
-  const personalGreeting = PERSONAL_GREETINGS[todayAuntyId]?.[greetingIndex] ?? PERSONAL_GREETINGS[todayAuntyId]?.[0];
-
-  const todayDayKey = DAY_KEYS[new Date().getDay() % 4];
-  const todayRoutine = routine?.routine_json?.[todayDayKey];
-
-  // Entrance animations
-  const heroAnim = useRef(new Animated.Value(0)).current;
-  const greetingAnim = useRef(new Animated.Value(0)).current;
-  const moodAnim = useRef(new Animated.Value(0)).current;
-  const routineAnim = useRef(new Animated.Value(0)).current;
-  const askAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (user?.id && !user.id.startsWith('demo-')) {
-      routineService.get(user.id).then(setRoutine).catch(console.error);
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    Animated.stagger(80, [
-      Animated.spring(heroAnim, { toValue: 1, friction: 9, tension: 50, useNativeDriver: true }),
-      Animated.spring(greetingAnim, { toValue: 1, friction: 9, tension: 50, useNativeDriver: true }),
-      Animated.spring(moodAnim, { toValue: 1, friction: 9, tension: 50, useNativeDriver: true }),
-      Animated.spring(routineAnim, { toValue: 1, friction: 9, tension: 50, useNativeDriver: true }),
-      Animated.spring(askAnim, { toValue: 1, friction: 9, tension: 50, useNativeDriver: true }),
-    ]).start();
-  }, []);
-
-  const fadeSlide = (anim: Animated.Value) => ({
-    opacity: anim,
-    transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
-  });
-
-  const handleAskQuestion = () => {
-    if (question.trim()) {
-      navigation.navigate('AuntyConversation', { auntyId: todayAuntyId, initialQuestion: question.trim() });
-      setQuestion('');
-    } else {
-      navigation.navigate('AuntyConversation', { auntyId: todayAuntyId });
-    }
-  };
-
-  return (
-    <View style={styles.root}>
-      <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 100 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── Hero: Aunty Portrait + Personal Greeting ── */}
-        <Animated.View style={[styles.heroWrap, fadeSlide(heroAnim)]}>
-          <LinearGradient
-            colors={[ac.bg, `${ac.accent}18`, ac.bg]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.hero}
-          >
-            {/* Soft ambient glow behind portrait */}
-            <View style={[styles.heroGlow, { backgroundColor: ac.accent }]} />
-
-            <View style={styles.heroLeft}>
-              <Text style={styles.timeGreeting}>{getTimeGreeting()}</Text>
-              <Text style={[styles.heroName, { color: colors.ink }]}>{firstName}.</Text>
-              <View style={[styles.heroRule, { backgroundColor: ac.accent }]} />
-              <View style={[styles.heroAuntyPill, { backgroundColor: `${ac.accent}20`, borderColor: `${ac.accent}40` }]}>
-                <Text style={[styles.heroAuntyName, { color: ac.text }]}>
-                  {aunty.name} is with you
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.heroPortrait}>
-              <View style={[styles.portraitRing, { borderColor: `${ac.accent}70`, shadowColor: ac.accent }]}>
-                <AuntyPortrait auntyId={todayAuntyId} size={110} />
-              </View>
-            </View>
-          </LinearGradient>
-        </Animated.View>
-
-        {/* ── Personal Greeting Card ── */}
-        <Animated.View style={fadeSlide(greetingAnim)}>
-          <View style={[styles.greetingCard, { borderColor: `${ac.accent}30` }]}>
-            <View style={[styles.greetingAccentBar, { backgroundColor: ac.accent }]} />
-            <View style={styles.greetingInner}>
-              <View style={[styles.greetingNamePill, { backgroundColor: `${ac.accent}18` }]}>
-                <Text style={[styles.greetingAuntyName, { color: ac.text }]}>
-                  {aunty.name.toUpperCase()} · {aunty.title}
-                </Text>
-              </View>
-              <Text style={styles.greetingText}>"{personalGreeting}"</Text>
-              {aunty.greeting && (
-                <Text style={[styles.greetingDialect, { color: ac.text }]}>
-                  {aunty.greeting}
-                </Text>
-              )}
-            </View>
-          </View>
-        </Animated.View>
-
-        {/* ── Mood Check ── */}
-        <Animated.View style={fadeSlide(moodAnim)}>
-          <View style={styles.moodSection}>
-            <Text style={styles.moodLabel}>How are you feeling today?</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.moodScroll}>
-              <View style={styles.moodRow}>
-                {MOOD_OPTIONS.map(mood => {
-                  const isSelected = selectedMood === mood.id;
-                  return (
-                    <TouchableOpacity
-                      key={mood.id}
-                      style={[
-                        styles.moodChip,
-                        isSelected && { backgroundColor: mood.color, borderColor: mood.color },
-                      ]}
-                      onPress={() => setSelectedMood(isSelected ? null : mood.id)}
-                      activeOpacity={0.75}
-                    >
-                      <Text style={[styles.moodChipText, isSelected && styles.moodChipTextSelected]}>
-                        {mood.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </ScrollView>
-            {selectedMood && (
-              <MoodResponse auntyId={todayAuntyId} mood={selectedMood} auntyName={aunty.name} acText={ac.text} />
-            )}
-          </View>
-        </Animated.View>
-
-        {/* ── Today's Routine — warm, not clinical ── */}
-        <Animated.View style={fadeSlide(routineAnim)}>
-          <View style={styles.routineSection}>
-            <View style={styles.routineSectionTop}>
-              <View>
-                <Text style={styles.sectionEyebrow}>Ready when you are</Text>
-                <Text style={styles.routineTitle}>Today's Routine</Text>
-              </View>
-              {todayRoutine && (
-                <View style={[styles.timePill, { backgroundColor: `${ac.accent}15`, borderColor: `${ac.accent}30` }]}>
-                  <Text style={[styles.timePillText, { color: ac.text }]}>
-                    {todayRoutine.estimated_time_minutes} min
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {todayRoutine ? (
-              <>
-                <Text style={styles.routineInvite}>
-                  {aunty.name} has your {todayRoutine.day_name?.toLowerCase() ?? 'routine'} ready.
-                  {todayRoutine.purpose ? ` Today we're focused on ${todayRoutine.purpose?.toLowerCase()}.` : ''}
-                </Text>
-                <TouchableOpacity
-                  style={[styles.routineStartBtn, { backgroundColor: ac.accent }]}
-                  onPress={() => navigation.navigate('RoutineTab')}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.routineStartText}>Let's do this together</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <View style={styles.routineEmpty}>
-                <Text style={styles.routineEmptyText}>
-                  Complete your intake so {aunty.name} can build your routine.
-                </Text>
-              </View>
-            )}
-          </View>
-        </Animated.View>
-
-        {/* ── Ask an Aunty ── */}
-        <Animated.View style={fadeSlide(askAnim)}>
-          <View style={styles.askSection}>
-            <View style={styles.askHeader}>
-              <View style={styles.askAuntyRow}>
-                <AuntyAvatar auntyId={todayAuntyId} size={36} />
-                <View>
-                  <Text style={styles.askLabel}>Ask {aunty.name} anything</Text>
-                  <Text style={styles.askSub}>She's here to help</Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.askInputWrap}>
-              <TextInput
-                style={styles.askInput}
-                placeholder={`What's on your mind about your hair?`}
-                placeholderTextColor={colors.mutedLight}
-                value={question}
-                onChangeText={setQuestion}
-                multiline
-                numberOfLines={2}
-                returnKeyType="send"
-                onSubmitEditing={handleAskQuestion}
-              />
-              <TouchableOpacity
-                style={[styles.askSendBtn, { backgroundColor: ac.accent }]}
-                onPress={handleAskQuestion}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.askSendText}>Ask</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Quick questions */}
-            <View style={styles.quickQRow}>
-              {getQuickQuestions(aunty.specialty).map((q, i) => (
-                <TouchableOpacity
-                  key={i}
-                  style={[styles.quickQChip, { borderColor: `${ac.accent}40` }]}
-                  onPress={() => navigation.navigate('AuntyConversation', { auntyId: todayAuntyId, initialQuestion: q })}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.quickQText, { color: ac.text }]} numberOfLines={2}>{q}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </Animated.View>
-
-        {/* ── Check In with the Council ── */}
-        <TouchableOpacity
-          style={styles.checkinCard}
-          onPress={() => navigation.navigate('CheckinModal', { auntyId: todayAuntyId, userInitiated: true })}
-          activeOpacity={0.88}
-        >
-          <LinearGradient
-            colors={gradients.dark}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.checkinGradient}
-          >
-            {/* Gold accent bar at top */}
-            <LinearGradient
-              colors={gradients.primary}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.checkinTopBar}
-            />
-            <View style={styles.checkinAvatarRow}>
-              {['1', '2', '3', '4', '5'].map((id, i) => (
-                <View
-                  key={id}
-                  style={[styles.checkinAvatar, { marginLeft: i === 0 ? 0 : -10, borderColor: auntyColors[id].accent }]}
-                >
-                  <AuntyAvatar auntyId={id} size={34} />
-                </View>
-              ))}
-            </View>
-            <Text style={styles.checkinTitle}>Time for a hair check-in?</Text>
-            <Text style={styles.checkinSub}>The aunties want to see where you are. Share a photo or just talk to them.</Text>
-            <View style={styles.checkinArrowRow}>
-              <Text style={styles.checkinCTA}>Start your check-in →</Text>
-            </View>
-          </LinearGradient>
-        </TouchableOpacity>
-
-        {/* ── Your Journey ── */}
-        <TouchableOpacity
-          style={styles.journeyCard}
-          onPress={() => navigation.navigate('HairJourney')}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.journeyEyebrow}>Your story</Text>
-          <Text style={styles.journeyTitle}>Hair Journey</Text>
-          <Text style={styles.journeySub}>See how far you've come — the aunties remember everything.</Text>
-          <Text style={[styles.journeyCTA, { color: ac.accent }]}>View your journey →</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
-  );
-}
-
-// ── Mood Response Component ──────────────────────────────────────────────────
-function MoodResponse({
-  auntyId,
-  mood,
-  auntyName,
-  acText,
-}: {
-  auntyId: string;
-  mood: string;
-  auntyName: string;
-  acText: string;
-}) {
-  const responses: Record<string, Record<string, string>> = {
-    thriving: {
-      '1': "Ahn ahn! That's the energy I like o. Let's build on it.",
-      '2': "Yes! When you thrive, your hair thrives. This is the day.",
-      '3': "That's what I'm talking about. Let's do something with this energy.",
-      '4': "Parfait. When the spirit is high, the technique is sharp.",
-      '5': "Mija YES! I feel it too! Your curls are going to be everything today.",
-      '6': "Konjo, I knew it. Strong spirit, strong hair. Let's go.",
-      '7': "Mashallah, habibti. This energy is a blessing. Let's use it well.",
-    },
-    good: {
-      '1': "Good is enough, baby. Good is where we work. Let's go.",
-      '2': "Good roots, good day. We build from here.",
-      '3': "Good is good. Consistent and good? That's the dream.",
-      '4': "Good is the foundation of great, ma chérie.",
-      '5': "Good is beautiful, corazón. Let's make it even better.",
-      '6': "Good. Steady. That's how strength is built.",
-      '7': "Good is its own kind of grace. We work with what we have.",
-    },
-    okay: {
-      '1': "Okay is honest. I respect that. Let's focus on what you can control — your hair.",
-      '2': "It's okay to be okay. Your roots don't need you to be perfect.",
-      '3': "Okay is real. I don't need you to pretend.",
-      '4': "Okay days require patience. Let's be gentle today.",
-      '5': "Okay is okay, mija. Your curls love you anyway.",
-      '6': "Okay. I hear you. Let's take it slow and be kind to ourselves.",
-      '7': "Okay is honest. There's wisdom in knowing where you are.",
-    },
-    tired: {
-      '1': "Tired? Then we're doing the 10-minute routine today. No shame.",
-      '2': "Rest is part of the process. Your roots understand tired.",
-      '3': "Tired is real. You still showed up. That's what matters.",
-      '4': "Fatigue is not failure, ma chérie. We adapt.",
-      '5': "Ay corazón, tired is okay. Let's do what we can and rest.",
-      '6': "Tired means you've been giving a lot. Let's restore today.",
-      '7': "Habibti, rest is sacred. Even the simplest care counts today.",
-    },
-    frustrated: {
-      '1': "I hear the frustration. Hair is complicated. Let's trace what's happening.",
-      '2': "Frustrated? Then we go back to the roots — literally. Tell me everything.",
-      '3': "Uh uh, don't let frustration win. We figure this out together, hear me?",
-      '4': "Frustration means we haven't found the right technique yet. We will.",
-      '5': "Ay mija, I know this feeling. But your curls aren't against you, I promise.",
-      '6': "Frustrated is information, konjo. Tell me what's happening.",
-      '7': "Sabr, habibti. Patience. Let's understand what the hair is telling us.",
-    },
-  };
-
-  const response = responses[mood]?.[auntyId] ?? "I hear you. Let's take it one step at a time.";
-
-  return (
-    <View style={moodStyles.responseWrap}>
-      <Text style={[moodStyles.responseText, { color: acText }]}>{response}</Text>
-    </View>
-  );
-}
-
-const moodStyles = StyleSheet.create({
-  responseWrap: {
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-  },
-  responseText: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.sm,
-    fontStyle: 'italic',
-    lineHeight: 22,
-  },
-});
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function getTimeGreeting() {
+function getGreeting(): string {
   const h = new Date().getHours();
   if (h < 12) return 'Good morning';
   if (h < 17) return 'Good afternoon';
   return 'Good evening';
 }
 
-function getQuickQuestions(specialty: string): string[] {
-  const base = [
-    'Why is my hair so dry?',
-    'How do I retain more length?',
-    'What should I do on rest days?',
-  ];
-  if (specialty.toLowerCase().includes('moisture')) {
-    return ['Why does my hair feel dry after washing?', 'How often should I deep condition?', 'What is the LOC method?'];
-  }
-  if (specialty.toLowerCase().includes('scalp')) {
-    return ['How do I care for my scalp?', 'What causes scalp itch?', 'How often should I wash?'];
-  }
-  if (specialty.toLowerCase().includes('curl')) {
-    return ['How do I define my curls?', 'Why is my curl pattern uneven?', 'Wash-and-go tips?'];
-  }
-  if (specialty.toLowerCase().includes('length') || specialty.toLowerCase().includes('retention')) {
-    return ['Why am I not retaining length?', 'Best protective styles for growth?', 'How to reduce breakage?'];
-  }
-  return base;
+export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
+  const { state: ob, reset } = useOnboarding();
+  const auntyId: AuntyId = ob.data.chosenAuntyId || 'denise';
+  const aunty = AUNTIES[auntyId];
+  const ac = auntyColors[auntyId];
+  const name = ob.data.name || 'Queen';
+  const dayOfWeek = new Date().getDay();
+  const today = DAILY_RITUAL[dayOfWeek];
+  const todayColor = TYPE_COLORS[today.type];
+
+  const [weekNumber, setWeekNumber] = useState(1);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const d = await AsyncStorage.getItem('onboarding_completed_at');
+        if (d) {
+          const diff = Date.now() - new Date(d).getTime();
+          setWeekNumber(Math.max(1, Math.ceil(diff / (7 * 24 * 60 * 60 * 1000))));
+        }
+      } catch {}
+    })();
+  }, []);
+
+  return (
+    <View style={[styles.container, { paddingTop: insets.top + spacing.md }]}>
+      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 100 }} showsVerticalScrollIndicator={false}>
+
+        {/* ─── Top bar: greeting + avatar ──────────────── */}
+        <Animated.View entering={FadeIn.duration(400)} style={styles.topBar}>
+          <View>
+            <Text style={styles.greeting}>{getGreeting()}, {name}</Text>
+            <Text style={styles.greetingSub}>Week {weekNumber} of your journey</Text>
+          </View>
+          <AuntyAvatar auntyId={auntyId} size={44} showRing />
+        </Animated.View>
+
+        {/* ─── Today's Ritual (THE HERO) ───────────────── */}
+        <Animated.View entering={FadeInDown.delay(100).duration(400)}>
+          <View style={[styles.ritualCard, { borderLeftColor: todayColor }]}>
+            <Text style={styles.ritualOverline}>TODAY'S RITUAL</Text>
+            <View style={styles.ritualHeader}>
+              <View style={[styles.ritualDot, { backgroundColor: todayColor }]} />
+              <Text style={styles.ritualLabel}>{today.label}</Text>
+              <View style={[styles.timePill, { backgroundColor: todayColor + '18' }]}>
+                <Text style={[styles.timeText, { color: todayColor }]}>{today.time}</Text>
+              </View>
+            </View>
+            <Text style={styles.ritualPurpose}>{today.purpose}</Text>
+            <Button
+              label="Start Today's Ritual"
+              onPress={() => navigation.navigate('RitualSteps')}
+              variant="primary"
+              size="md"
+            />
+          </View>
+        </Animated.View>
+
+        {/* ─── Week Progress ───────────────────────────── */}
+        <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.weekSection}>
+          <Text style={styles.weekLabel}>THIS WEEK</Text>
+          <View style={styles.weekDots}>
+            {DAY_LABELS.map((d, i) => {
+              const isToday = i === dayOfWeek;
+              const isPast = i < dayOfWeek;
+              const dayRitual = DAILY_RITUAL[i];
+              const dc = TYPE_COLORS[dayRitual.type];
+              return (
+                <View key={i} style={styles.weekDotCol}>
+                  <View style={[
+                    styles.weekDot,
+                    { backgroundColor: isPast ? dc : 'transparent', borderColor: isToday ? dc : colors.border },
+                    isToday && { borderWidth: 2.5, borderColor: dc },
+                  ]} />
+                  <Text style={[styles.weekDotLabel, isToday && { color: colors.ink, fontFamily: fonts.bodySemiBold }]}>{d}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </Animated.View>
+
+        {/* ─── Ask Aunty ───────────────────────────────── */}
+        <Animated.View entering={FadeInDown.delay(300).duration(400)} style={styles.section}>
+          <Text style={styles.sectionOverline}>ASK {aunty.name.toUpperCase()}</Text>
+          <View style={styles.chips}>
+            {QUICK_QUESTIONS[auntyId].map((q, i) => (
+              <Pressable
+                key={i}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  navigation.navigate('Chat');
+                }}
+                style={[styles.chip, { borderColor: ac.accent, backgroundColor: ac.bg }]}
+              >
+                <Text style={[styles.chipText, { color: ac.text }]}>{q}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Animated.View>
+
+        {/* ─── Check-in (only if relevant) ─────────────── */}
+        <Animated.View entering={FadeInDown.delay(400).duration(400)}>
+          <LinearGradient colors={[...gradients.dark]} style={styles.checkinCard}>
+            <View style={styles.checkinRow}>
+              <AuntyAvatar auntyId={auntyId} size={40} showRing />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.checkinTitle}>Weekly Check-in</Text>
+                <Text style={styles.checkinSub}>How's your hair this week?</Text>
+              </View>
+            </View>
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                navigation.navigate('CheckIn');
+              }}
+              style={styles.checkinBtn}
+            >
+              <LinearGradient colors={[...gradients.gold]} style={styles.checkinBtnGradient}>
+                <Text style={styles.checkinBtnText}>Check In</Text>
+              </LinearGradient>
+            </Pressable>
+          </LinearGradient>
+        </Animated.View>
+
+        {/* Dev reset */}
+        <Pressable
+          onPress={async () => { await AsyncStorage.clear(); ob.isComplete && reset(); }}
+          style={styles.resetBtn}
+        >
+          <Text style={styles.resetText}>Sign Out & Reset</Text>
+        </Pressable>
+      </ScrollView>
+    </View>
+  );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.canvas },
-  scroll: { padding: spacing.md, gap: spacing.md },
+  container: { flex: 1, backgroundColor: colors.canvas },
 
-  // Hero
-  heroWrap: { borderRadius: radius.xl, overflow: 'hidden', ...shadows.lg },
-  hero: {
-    borderRadius: radius.xl,
-    padding: spacing.lg,
+  // Top bar
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    overflow: 'hidden',
-    minHeight: 170,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  heroGlow: {
-    position: 'absolute',
-    top: -40,
-    right: -40,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    opacity: 0.22,
-  },
-  heroLeft: { flex: 1, paddingRight: spacing.sm },
-  timeGreeting: {
-    ...typography.overline,
-    color: colors.muted,
-    marginBottom: spacing.xs,
-  },
-  heroName: {
-    fontFamily: fonts.display,
-    fontSize: 44,
-    fontWeight: fontWeight.black,
-    letterSpacing: -2,
-    lineHeight: 46,
-    color: colors.ink,
-  },
-  heroRule: {
-    width: 36,
-    height: 3,
-    borderRadius: 2,
-    marginVertical: spacing.sm,
-  },
-  heroAuntyPill: {
-    alignSelf: 'flex-start',
-    borderRadius: radius.full,
-    borderWidth: 1,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-  },
-  heroAuntyName: {
-    fontFamily: fonts.body,
-    fontSize: 11,
-    fontWeight: fontWeight.bold,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  heroPortrait: { alignItems: 'flex-end' },
-  portraitRing: {
-    borderWidth: 2.5,
-    borderRadius: 60,
-    overflow: 'hidden',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-
-  // Greeting card
-  greetingCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    overflow: 'hidden',
-    ...shadows.md,
-  },
-  greetingAccentBar: {
-    height: 4,
-    width: '100%',
-  },
-  greetingInner: {
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  greetingNamePill: {
-    alignSelf: 'flex-start',
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-  },
-  greetingAuntyName: {
-    fontFamily: fonts.body,
-    fontSize: 10,
-    fontWeight: fontWeight.black,
-    letterSpacing: 1.5,
-  },
-  greetingText: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.md,
-    fontStyle: 'italic',
-    color: colors.ink,
-    lineHeight: 26,
-  },
-  greetingDialect: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    opacity: 0.75,
-  },
-
-  // Mood
-  moodSection: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    padding: spacing.md,
-    ...shadows.sm,
-  },
-  moodLabel: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.ink,
-    marginBottom: spacing.sm,
-  },
-  moodScroll: { marginHorizontal: -spacing.md },
-  moodRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-  },
-  moodChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: 1.5,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.offWhite,
-  },
-  moodChipText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.ink,
-  },
-  moodChipTextSelected: {
-    color: '#fff',
-  },
-
-  // Ask an Aunty
-  askSection: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    padding: spacing.md,
-    ...shadows.sm,
-  },
-  askHeader: { marginBottom: spacing.sm },
-  askAuntyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  askLabel: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-    color: colors.ink,
-  },
-  askSub: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.muted,
-    marginTop: 1,
-  },
-  askInputWrap: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  askInput: {
-    flex: 1,
-    backgroundColor: colors.offWhite,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    padding: spacing.sm,
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.ink,
-    lineHeight: 22,
-    minHeight: 56,
-    textAlignVertical: 'top',
-  },
-  askSendBtn: {
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    alignSelf: 'flex-end',
-  },
-  askSendText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.black,
-    color: '#fff',
-  },
-  quickQRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  quickQChip: {
-    borderRadius: radius.full,
-    borderWidth: 1,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    backgroundColor: colors.offWhite,
-    maxWidth: '70%',
-  },
-  quickQText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    lineHeight: 18,
-  },
-
-  // Check-in
-  checkinCard: {
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-    ...shadows.xl,
-  },
-  checkinGradient: {
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    paddingTop: 0,
-    overflow: 'hidden',
-  },
-  checkinTopBar: {
-    height: 4,
-    width: '100%',
+    paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
   },
-  checkinAvatarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  checkinAvatar: {
-    borderWidth: 2.5,
-    borderRadius: 20,
-  },
-  checkinTitle: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.black,
-    color: colors.canvas,
-    letterSpacing: -0.3,
-    marginBottom: spacing.sm,
-  },
-  checkinSub: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: 'rgba(254,248,236,0.78)',
-    lineHeight: 22,
-    marginBottom: spacing.md,
-  },
-  checkinArrowRow: { flexDirection: 'row', alignItems: 'center' },
-  checkinCTA: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.black,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    color: colors.primary,
-  },
+  greeting: { fontFamily: fonts.display, fontSize: fontSize.xl, color: colors.ink, letterSpacing: letterSpacing.tight },
+  greetingSub: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.muted, marginTop: 2 },
 
-  // Journey
-  journeyCard: {
+  // Today's ritual hero
+  ritualCard: {
+    marginHorizontal: spacing.lg,
     backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    padding: spacing.lg,
-    ...shadows.md,
-    overflow: 'hidden',
-  },
-  journeyEyebrow: {
-    ...typography.overline,
-    color: colors.muted,
-    marginBottom: 4,
-  },
-  journeyTitle: {
-    ...typography.h3,
-    color: colors.ink,
-    marginBottom: spacing.xs,
-  },
-  journeySub: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.muted,
-    lineHeight: 22,
-    marginBottom: spacing.sm,
-  },
-  journeyCTA: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.black,
-  },
-
-  // Routine
-  routineSection: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    padding: spacing.md,
-    ...shadows.md,
-  },
-  routineSectionTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.sm,
-  },
-  sectionEyebrow: {
-    ...typography.overline,
-    color: colors.muted,
-    marginBottom: 2,
-  },
-  routineTitle: {
-    ...typography.h3,
-    color: colors.ink,
-  },
-  timePill: {
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 5,
-    borderWidth: 1,
-  },
-  timePillText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
-  },
-  routineInvite: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 22,
-    marginBottom: spacing.md,
-  },
-  routineStartBtn: {
     borderRadius: radius.lg,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
+    borderLeftWidth: 4,
+    padding: spacing.lg,
+    gap: spacing.md,
+    ...shadows.md,
   },
-  routineStartText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.black,
-    color: '#fff',
-    letterSpacing: 0.2,
-  },
-  routineEmpty: { paddingVertical: spacing.sm },
-  routineEmptyText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.muted,
-    lineHeight: 22,
-  },
+  ritualOverline: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, letterSpacing: letterSpacing.widest, color: colors.primary },
+  ritualHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  ritualDot: { width: 10, height: 10, borderRadius: 5 },
+  ritualLabel: { fontFamily: fonts.display, fontSize: fontSize.xxl, color: colors.ink, flex: 1, letterSpacing: letterSpacing.tight },
+  timePill: { borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 3 },
+  timeText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs },
+  ritualPurpose: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.inkLight, lineHeight: fontSize.md * 1.4 },
+
+  // Week progress
+  weekSection: { paddingHorizontal: spacing.lg, marginTop: spacing.lg },
+  weekLabel: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, letterSpacing: letterSpacing.widest, color: colors.muted, marginBottom: spacing.sm },
+  weekDots: { flexDirection: 'row', justifyContent: 'space-between' },
+  weekDotCol: { alignItems: 'center', gap: 4 },
+  weekDot: { width: 28, height: 28, borderRadius: 14, borderWidth: 1.5 },
+  weekDotLabel: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.muted },
+
+  // Ask aunty
+  section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
+  sectionOverline: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, letterSpacing: letterSpacing.widest, color: colors.primary, marginBottom: spacing.md },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full, borderWidth: 1, minHeight: 44, justifyContent: 'center' },
+  chipText: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm },
+
+  // Check-in
+  checkinCard: { marginHorizontal: spacing.lg, marginTop: spacing.xl, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
+  checkinRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  checkinTitle: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.md, color: colors.dark.text },
+  checkinSub: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.dark.textMuted },
+  checkinBtn: { borderRadius: radius.md, overflow: 'hidden' },
+  checkinBtnGradient: { paddingVertical: spacing.sm + 2, alignItems: 'center', borderRadius: radius.md },
+  checkinBtnText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.md, color: colors.ink },
+
+  // Dev
+  resetBtn: { marginTop: spacing.xxl, marginHorizontal: spacing.lg, marginBottom: spacing.lg, paddingVertical: spacing.md, alignItems: 'center', borderWidth: 1, borderColor: colors.error, borderRadius: radius.md },
+  resetText: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.error },
 });

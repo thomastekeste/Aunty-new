@@ -1,453 +1,189 @@
-import React, { useState, useEffect, useRef } from 'react';
+/**
+ * PorosityTestScreen — Marcia hosts the porosity water test.
+ *
+ * "Time fi test di roots."
+ * Interactive three-option test: float, sink slowly, sink fast.
+ */
+
+import React, { useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { ConsultationShell } from '../../components/ConsultationShell';
+import { OptionCard } from '../../components/OptionCard';
+import { useOnboarding } from '../../context/OnboardingContext';
+import { AUNTIES } from '../../constants/aunties';
+import type { OnboardingStackParamList, Porosity } from '../../types';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { BackIcon, DropIcon, BalanceIcon, SinkDownIcon, FloatUpIcon, FloatMiddleIcon } from '@/components/Icons';
-import { OnboardingStackParamList, Porosity } from '@/types';
-import { useOnboarding } from '@/context/OnboardingContext';
-import AuntyAvatar from '@/components/AuntyAvatar';
-import AuntyBubble from '@/components/AuntyBubble';
-import Button from '@/components/Button';
-import ProgressBar from '@/components/ProgressBar';
-import { AUNTIES } from '@/constants/aunties';
-import { colors, spacing, fontSize, fontWeight, radius, fonts, auntyColors } from '@/constants/theme';
+  colors,
+  fonts,
+  fontSize,
+  spacing,
+  radius,
+  auntyColors,
+} from '../../constants/theme';
 
-type Props = NativeStackScreenProps<OnboardingStackParamList, 'PorosityTest'>;
-type SubStep = 'intro' | 'test' | 'result';
+type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'PorosityTest'>;
 
-const RESULTS: Record<string, { porosity: Porosity; title: string; explanation: string; revealMsg: string; icon: React.ReactNode; color: string }> = {
-  float: {
-    porosity: 'low',
-    title: 'Low Porosity',
-    explanation: 'Your hair cuticles are tightly closed. Products sit on top rather than absorbing. You need heat or steam to open the cuticle.',
-    revealMsg: "Low porosity, honey. Your cuticles are sealed tight — that's why products just sit there. Warm up your treatments.",
-    icon: <FloatUpIcon color="#00B4D8" size={36} strokeWidth={2} />,
-    color: '#00B4D8',
+interface PorosityOption {
+  value: Porosity;
+  label: string;
+  description: string;
+  icon: string;
+  detail: string;
+}
+
+const OPTIONS: PorosityOption[] = [
+  {
+    value: 'low',
+    label: 'It floats on top',
+    description: 'Stays at the surface.',
+    icon: '',
+    detail: 'Low porosity — cuticles are sealed tight. Products sit on top. We use lightweight formulas.',
   },
-  middle: {
-    porosity: 'normal',
-    title: 'Normal Porosity',
-    explanation: 'Your cuticles are balanced — they absorb and retain moisture well. This is the sweet spot.',
-    revealMsg: "Normal porosity — you're balanced, baby. Products absorb and stay. We work with what we've got.",
-    icon: <FloatMiddleIcon color="#F5C542" size={36} strokeWidth={2} />,
-    color: '#F5C542',
+  {
+    value: 'normal',
+    label: 'It sinks slowly',
+    description: 'Hovers in the middle, then drifts down.',
+    icon: '',
+    detail: 'Normal porosity — balanced absorption. Your hair takes in what it needs.',
   },
-  sink: {
-    porosity: 'high',
-    title: 'High Porosity',
-    explanation: 'Your cuticles are open and absorb moisture quickly but lose it just as fast. You need heavy sealers.',
-    revealMsg: "High porosity. Your cuticles are wide open — drinks fast, loses fast. You need protein and sealers, now.",
-    icon: <SinkDownIcon color="#FB5607" size={36} strokeWidth={2} />,
-    color: '#FB5607',
+  {
+    value: 'high',
+    label: 'It sinks right away',
+    description: 'Drops to the bottom fast.',
+    icon: '',
+    detail: 'High porosity — cuticles are raised. Absorbs fast but loses moisture fast. We seal it.',
   },
-};
+];
 
-export default function PorosityTestScreen({ navigation }: Props) {
-  const insets = useSafeAreaInsets();
-  const { setData } = useOnboarding();
-  const [subStep, setSubStep] = useState<SubStep>('intro');
-  const [selection, setSelection] = useState<'float' | 'middle' | 'sink' | null>(null);
-  const [timer, setTimer] = useState(120);
-  const [timerActive, setTimerActive] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    if (timerActive && timer > 0) {
-      timerRef.current = setInterval(() => setTimer(t => t - 1), 1000);
-    } else if (timer === 0) {
-      clearInterval(timerRef.current!);
-    }
-    return () => clearInterval(timerRef.current!);
-  }, [timerActive, timer]);
-
-  const startTest = () => {
-    setSubStep('test');
-    setTimerActive(true);
-  };
-
-  const handleSelect = (opt: 'float' | 'middle' | 'sink') => {
-    setSelection(opt);
-    setTimerActive(false);
-    clearInterval(timerRef.current!);
-  };
-
-  const handleReveal = () => {
-    if (!selection) return;
-    setSubStep('result');
-  };
+export default function PorosityTestScreen() {
+  const navigation = useNavigation<Nav>();
+  const { state, updateHairProfile } = useOnboarding();
+  const auntyId = state.data.chosenAuntyId || 'denise';
+  const aunty = AUNTIES[auntyId];
+  const ac = auntyColors[auntyId];
+  const [selected, setSelected] = useState<Porosity | undefined>(
+    state.data.hairProfile.porosity
+  );
 
   const handleContinue = () => {
-    if (!selection) return;
-    const result = RESULTS[selection];
-    setData({ porosity: result.porosity });
-    navigation.navigate('ElasticityTest');
+    if (!selected) return;
+    updateHairProfile({ porosity: selected });
+    navigation.navigate('PrimaryGoal');
   };
 
-  const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  const selectedOption = OPTIONS.find((o) => o.value === selected);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <BackIcon color={colors.ink} size={22} strokeWidth={1.8} />
-        </TouchableOpacity>
-        <View style={styles.progressWrap}>
-          <ProgressBar current={2} total={14} />
+    <ConsultationShell
+      auntyId={auntyId}
+      question="Time to test your hair. Drop a strand in a glass of water. What happened?"
+      step={3}
+      totalSteps={8}
+      ctaLabel="Next"
+      ctaDisabled={!selected}
+      onCtaPress={handleContinue}
+    >
+      {/* Test instruction */}
+      <Animated.View
+        entering={FadeInDown.delay(200).duration(400)}
+        style={styles.instruction}
+        accessibilityRole="text"
+        accessibilityLabel="The Water Glass Test: Take a clean strand of hair. Drop it in a glass of room-temperature water. Wait 2 to 4 minutes and observe."
+      >
+        <Text style={styles.instructionIcon}>{'\uD83E\uDDEA'}</Text>
+        <View style={styles.instructionTextWrap}>
+          <Text style={styles.instructionTitle}>The Water Glass Test</Text>
+          <Text style={styles.instructionBody}>
+            Take a clean strand of hair (shed from your brush is fine). Drop it in a glass
+            of room-temperature water. Wait 2-4 minutes and observe.
+          </Text>
         </View>
+      </Animated.View>
+
+      {/* Options */}
+      <View style={styles.options}>
+        {OPTIONS.map((option, index) => (
+          <OptionCard
+            key={option.value}
+            label={option.label}
+            description={option.description}
+            icon={option.icon}
+            selected={selected === option.value}
+            onPress={() => setSelected(option.value)}
+            auntyId={auntyId}
+            index={index}
+          />
+        ))}
       </View>
 
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {subStep === 'intro' && (
-          <>
-            <View style={styles.headerSection}>
-              <Text style={styles.stepBadge}>Step 1 of 3</Text>
-              <Text style={styles.heading}>Porosity Test</Text>
-              <Text style={styles.tagline}>Understanding how your hair drinks</Text>
-            </View>
-
-            <View style={styles.fullCard}>
-              <View style={styles.cardIconSection}>
-                <View style={styles.largeIcon}><DropIcon color={colors.primary} size={64} strokeWidth={1.5} /></View>
-                <View style={styles.geometricPattern1} />
-              </View>
-              <View style={styles.cardContent}>
-                <Text style={styles.cardQuestion}>How well does your hair absorb moisture?</Text>
-                <Text style={styles.cardDescription}>
-                  Pull one strand of clean hair and drop it in a glass of water. Porosity tells us how well your hair absorbs and retains moisture — the foundation of everything we'll build.
-                </Text>
-                <View style={styles.instructionBox}>
-                  <Text style={styles.instructionTitle}>What you'll need:</Text>
-                  <Text style={styles.instructionText}>• One clean strand of hair</Text>
-                  <Text style={styles.instructionText}>• A glass of room-temperature water</Text>
-                  <Text style={styles.instructionText}>• 2 minutes of patience</Text>
-                </View>
-              </View>
-            </View>
-
-            <Button label="I'm ready to test" onPress={startTest} />
-          </>
-        )}
-
-        {subStep === 'test' && (
-          <>
-            <View style={styles.headerSection}>
-              <Text style={styles.stepBadge}>Step 1 of 3</Text>
-              <Text style={styles.heading}>Drop it in</Text>
-              <Text style={styles.tagline}>Watch where your strand settles</Text>
-            </View>
-
-            <View style={[styles.fullCard, styles.timerCard]}>
-              <View style={styles.timerContent}>
-                <Text style={styles.timerLabel}>Time remaining</Text>
-                <Text style={styles.timerDisplay}>{formatTime(timer)}</Text>
-                {timer === 0 && <Text style={styles.timerDone}>Time's up!</Text>}
-              </View>
-              <View style={styles.geometricPattern2} />
-            </View>
-
-            <View style={styles.fullCard}>
-              <Text style={styles.cardQuestion}>Where is the strand?</Text>
-              <Text style={styles.cardDescription}>Select what you observe:</Text>
-              <View style={styles.optionsContainer}>
-                {(['float', 'middle', 'sink'] as const).map(opt => {
-                  const isSelected = selection === opt;
-                  const labels = {
-                    float: { text: 'Floating on top', icon: <FloatUpIcon color={isSelected ? RESULTS.float.color : colors.muted} size={26} strokeWidth={2} /> },
-                    middle: { text: 'Floating in the middle', icon: <FloatMiddleIcon color={isSelected ? RESULTS.middle.color : colors.muted} size={26} strokeWidth={2} /> },
-                    sink: { text: 'Sank to the bottom', icon: <SinkDownIcon color={isSelected ? RESULTS.sink.color : colors.muted} size={26} strokeWidth={2} /> },
-                  };
-                  return (
-                    <TouchableOpacity
-                      key={opt}
-                      style={[
-                        styles.answerCard,
-                        isSelected && styles.answerCardSelected,
-                        { borderColor: isSelected ? RESULTS[opt].color : colors.borderLight },
-                        isSelected && { backgroundColor: `${RESULTS[opt].color}12` },
-                      ]}
-                      onPress={() => handleSelect(opt)}
-                    >
-                      <View style={styles.answerIcon}>{labels[opt].icon}</View>
-                      <Text style={[styles.answerText, isSelected && { color: RESULTS[opt].color, fontWeight: fontWeight.black }]}>
-                        {labels[opt].text}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {selection && (
-              <Button
-                label="Reveal my result"
-                onPress={handleReveal}
-                style={{ marginTop: spacing.md }}
-              />
-            )}
-          </>
-        )}
-
-        {subStep === 'result' && selection && (
-          <>
-            <View style={styles.headerSection}>
-              <Text style={styles.stepBadge}>Your Result</Text>
-              <Text style={styles.heading}>{RESULTS[selection].title}</Text>
-            </View>
-
-            <View style={[styles.fullCard, { borderLeftWidth: 6, borderLeftColor: RESULTS[selection].color }]}>
-              <View style={styles.resultHeader}>
-                <View style={styles.resultIcon}>{RESULTS[selection].icon}</View>
-                <View>
-                  <Text style={styles.resultLabel}>Porosity Profile</Text>
-                  <Text style={[styles.resultTitle, { color: RESULTS[selection].color }]}>{RESULTS[selection].title}</Text>
-                </View>
-              </View>
-
-              <Text style={styles.resultDescription}>{RESULTS[selection].explanation}</Text>
-
-              <AuntyBubble auntyId="2" message={RESULTS[selection].revealMsg} />
-            </View>
-
-            <Button label="Got it. Keep going." onPress={handleContinue} />
-          </>
-        )}
-      </ScrollView>
-    </View>
+      {/* Detail card on selection */}
+      {selectedOption && (
+        <Animated.View
+          entering={FadeInDown.duration(400)}
+          style={[styles.detailCard, { borderLeftColor: ac.accent }]}
+        >
+          <Text style={styles.detailText}>{selectedOption.detail}</Text>
+          <Text style={[styles.marciaNote, { color: ac.accent }]}>
+            {'\u2014 '} Aunty {aunty.name} say so.
+          </Text>
+        </Animated.View>
+      )}
+    </ConsultationShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.canvas },
-  topBar: {
+  instruction: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: spacing.sm,
-  },
-  progressWrap: { flex: 1 },
-  content: { padding: spacing.md, gap: spacing.lg },
-
-  // Header
-  headerSection: {
-    marginBottom: spacing.sm,
-  },
-  stepBadge: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.primary,
-    fontWeight: fontWeight.bold,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    marginBottom: spacing.xs,
-  },
-  heading: {
-    fontFamily: fonts.display,
-    fontSize: 42,
-    fontWeight: fontWeight.black,
-    color: colors.ink,
-    letterSpacing: -1,
-    marginBottom: spacing.xs,
-  },
-  tagline: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
-    color: colors.muted,
-    fontWeight: fontWeight.medium,
-  },
-
-  // Full-box cards
-  fullCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    padding: spacing.lg,
-    overflow: 'hidden',
-  },
-  cardIconSection: {
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-    position: 'relative',
-  },
-  largeIcon: {
-    width: 64,
-    height: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  geometricPattern1: {
-    position: 'absolute',
-    top: -20,
-    right: -20,
-    width: 100,
-    height: 100,
-    opacity: 0.05,
-    backgroundColor: colors.primary,
-    borderRadius: 50,
-  },
-  cardContent: {
-    gap: spacing.md,
-  },
-  cardQuestion: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.black,
-    color: colors.ink,
-    letterSpacing: -0.5,
-  },
-  cardDescription: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-    lineHeight: 26,
-  },
-  instructionBox: {
-    backgroundColor: 'rgba(245,197,66,0.05)',
-    borderLeft: 4,
-    borderLeftColor: colors.primary,
+    alignItems: 'flex-start',
+    backgroundColor: colors.dark.surfaceLight,
     borderRadius: radius.md,
     padding: spacing.md,
-    gap: spacing.xs,
-  },
-  instructionTitle: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.ink,
-    marginBottom: spacing.xs,
-  },
-  instructionText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
-
-  // Timer card
-  timerCard: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    minHeight: 180,
-  },
-  timerContent: {
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  timerLabel: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.muted,
-    fontWeight: fontWeight.bold,
-    textTransform: 'uppercase',
-    marginBottom: spacing.xs,
-  },
-  timerDisplay: {
-    fontFamily: fonts.display,
-    fontSize: 56,
-    fontWeight: fontWeight.black,
-    color: colors.ink,
-    letterSpacing: -2,
-  },
-  timerDone: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
-    color: colors.accent,
-    fontWeight: fontWeight.bold,
-    marginTop: spacing.sm,
-  },
-  geometricPattern2: {
-    position: 'absolute',
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: colors.primary,
-    opacity: 0.04,
-    bottom: -40,
-    left: -40,
-  },
-
-  // Options
-  optionsContainer: {
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-  answerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 2,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.canvas,
+    marginBottom: spacing.xl,
     gap: spacing.md,
   },
-  answerCardSelected: {
-    borderWidth: 2.5,
-    backgroundColor: 'transparent',
+  instructionIcon: {
+    fontSize: 28,
+    marginTop: 2,
   },
-  answerIcon: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  answerText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
+  instructionTextWrap: {
     flex: 1,
   },
-
-  // Result
-  resultHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-    paddingBottom: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
+  instructionTitle: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.dark.text,
+    marginBottom: 4,
   },
-  resultIcon: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  resultLabel: {
+  instructionBody: {
     fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.muted,
-    fontWeight: fontWeight.bold,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    fontSize: fontSize.sm,
+    color: colors.dark.textMuted,
+    lineHeight: fontSize.sm * 1.5,
   },
-  resultTitle: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.black,
-    letterSpacing: -0.3,
+  options: {
+    gap: spacing.xs,
   },
-  resultDescription: {
+  detailCard: {
+    backgroundColor: colors.dark.surfaceLight,
+    borderRadius: radius.md,
+    borderLeftWidth: 3,
+    padding: spacing.md,
+    marginTop: spacing.lg,
+  },
+  detailText: {
     fontFamily: fonts.body,
     fontSize: fontSize.md,
-    color: colors.textSecondary,
-    lineHeight: 26,
-    marginBottom: spacing.md,
+    color: colors.dark.text,
+    lineHeight: fontSize.md * 1.5,
+  },
+  marciaNote: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: auntyColors.marcia?.accent,
+    marginTop: spacing.sm,
   },
 });

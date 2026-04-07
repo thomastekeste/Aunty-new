@@ -1,106 +1,174 @@
-import React, { createContext, useContext, useState } from 'react';
-import { OnboardingData, GeminiVisionAnalysis, CouncilResponse, DailyRoutine, OnboardingPhase, UserPreferences } from '@/types';
+/**
+ * OnboardingContext — Manages all state collected during the consultation.
+ * Persists progress to AsyncStorage so it survives crashes/restarts.
+ */
 
-const PREFERENCE_DEFAULTS: UserPreferences = {
-  preferred_aunty_id: undefined,
-  preferred_routine_length: 'standard',
-  communication_style: 'nurturing',
-  allow_personalization: true,
-  allow_checkin_reminders: true,
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { OnboardingData, HairProfile, CouncilResponse, WeeklyRitual } from '../types';
+import type { AuntyId } from '../constants/aunties';
+
+const STORAGE_KEY = 'onboarding_progress';
+
+interface OnboardingState {
+  data: OnboardingData;
+  currentPhase: number; // 0-4
+  isComplete: boolean;
+  isRestored: boolean; // true after we attempt restore from storage
+}
+
+type Action =
+  | { type: 'SET_NAME'; payload: string }
+  | { type: 'SET_CHOSEN_AUNTY'; payload: AuntyId }
+  | { type: 'UPDATE_HAIR_PROFILE'; payload: Partial<HairProfile> }
+  | { type: 'SET_PHOTOS'; payload: Partial<OnboardingData['photos']> }
+  | { type: 'SET_COUNCIL_RESPONSE'; payload: CouncilResponse }
+  | { type: 'SET_ROUTINE'; payload: WeeklyRitual }
+  | { type: 'SET_PHASE'; payload: number }
+  | { type: 'COMPLETE' }
+  | { type: 'RESTORE'; payload: OnboardingState }
+  | { type: 'RESET' };
+
+const initialState: OnboardingState = {
+  data: {
+    name: '',
+    hairProfile: {},
+    photos: {},
+  },
+  currentPhase: 0,
+  isComplete: false,
+  isRestored: false,
 };
 
-interface OnboardingContextType {
-  data: Partial<OnboardingData>;
-  setData: (updates: Partial<OnboardingData>) => void;
-  hairAnalysis: GeminiVisionAnalysis | null;
-  setHairAnalysis: (a: GeminiVisionAnalysis) => void;
-  councilResponse: CouncilResponse | null;
-  setCouncilResponse: (r: CouncilResponse) => void;
-  routine: DailyRoutine | null;
-  setRoutine: (r: DailyRoutine) => void;
-  currentPhase: OnboardingPhase;
-  setCurrentPhase: (phase: OnboardingPhase) => void;
-  completionPercentage: number;
-  setCompletionPercentage: (percentage: number) => void;
-  preferences: UserPreferences;
-  setPreferences: (updates: Partial<UserPreferences>) => void;
+function reducer(state: OnboardingState, action: Action): OnboardingState {
+  switch (action.type) {
+    case 'SET_NAME':
+      return { ...state, data: { ...state.data, name: action.payload } };
+    case 'SET_CHOSEN_AUNTY':
+      return { ...state, data: { ...state.data, chosenAuntyId: action.payload } };
+    case 'UPDATE_HAIR_PROFILE':
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          hairProfile: { ...state.data.hairProfile, ...action.payload },
+        },
+      };
+    case 'SET_PHOTOS':
+      return {
+        ...state,
+        data: { ...state.data, photos: { ...state.data.photos, ...action.payload } },
+      };
+    case 'SET_COUNCIL_RESPONSE':
+      return { ...state, data: { ...state.data, councilResponse: action.payload } };
+    case 'SET_ROUTINE':
+      return { ...state, data: { ...state.data, routine: action.payload } };
+    case 'SET_PHASE':
+      return { ...state, currentPhase: action.payload };
+    case 'COMPLETE':
+      return { ...state, isComplete: true };
+    case 'RESTORE':
+      return { ...action.payload, isRestored: true };
+    case 'RESET':
+      return { ...initialState, isRestored: true };
+    default:
+      return state;
+  }
+}
+
+// Persist state to AsyncStorage (debounced by the caller)
+async function persistState(state: OnboardingState) {
+  try {
+    const serializable = {
+      data: state.data,
+      currentPhase: state.currentPhase,
+      isComplete: state.isComplete,
+    };
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
+  } catch (e) {
+    console.warn('[OnboardingContext] Failed to persist state:', e);
+  }
+}
+
+interface ContextValue {
+  state: OnboardingState;
+  setName: (name: string) => void;
+  setChosenAunty: (auntyId: AuntyId) => void;
+  updateHairProfile: (data: Partial<HairProfile>) => void;
+  setPhotos: (photos: Partial<OnboardingData['photos']>) => void;
+  setCouncilResponse: (response: CouncilResponse) => void;
+  setRoutine: (routine: WeeklyRitual) => void;
+  setPhase: (phase: number) => void;
+  complete: () => void;
   reset: () => void;
 }
 
-const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined);
-
-const DATA_DEFAULTS: Partial<OnboardingData> = {
-  name: '',
-  city: '',
-  water_hardness: 'medium',
-  porosity: 'normal',
-  elasticity: 'normal',
-  density: 'medium',
-  failed_attempts: [],
-  scalp_concerns: [],
-  primary_goal: 'moisture',
-  wash_frequency: 'weekly',
-  heat_use: 'never',
-  relaxer_history: 'never_relaxed',
-  protective_styling: 'sometimes',
-  time_available: '1_2h',
-  intake_photos: {},
-};
+const OnboardingCtx = createContext<ContextValue | null>(null);
 
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
-  const [data, setDataState] = useState<Partial<OnboardingData>>(DATA_DEFAULTS);
-  const [hairAnalysis, setHairAnalysis] = useState<GeminiVisionAnalysis | null>(null);
-  const [councilResponse, setCouncilResponse] = useState<CouncilResponse | null>(null);
-  const [routine, setRoutine] = useState<DailyRoutine | null>(null);
-  const [currentPhase, setCurrentPhase] = useState<OnboardingPhase>('welcome');
-  const [completionPercentage, setCompletionPercentage] = useState(0);
-  const [preferences, setPreferencesState] = useState<UserPreferences>(PREFERENCE_DEFAULTS);
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const isInitialized = useRef(false);
 
-  const setData = (updates: Partial<OnboardingData>) => {
-    setDataState(prev => ({ ...prev, ...updates }));
+  // Restore state from AsyncStorage on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          dispatch({
+            type: 'RESTORE',
+            payload: {
+              data: parsed.data || initialState.data,
+              currentPhase: parsed.currentPhase ?? 0,
+              isComplete: parsed.isComplete ?? false,
+              isRestored: true,
+            },
+          });
+        } else {
+          // Nothing stored, mark as restored anyway
+          dispatch({ type: 'RESTORE', payload: { ...initialState, isRestored: true } });
+        }
+      } catch (e) {
+        console.warn('[OnboardingContext] Failed to restore state:', e);
+        dispatch({ type: 'RESTORE', payload: { ...initialState, isRestored: true } });
+      }
+      isInitialized.current = true;
+    })();
+  }, []);
+
+  // Persist after every state change (skip the initial restore)
+  useEffect(() => {
+    if (isInitialized.current && state.isRestored) {
+      persistState(state);
+    }
+  }, [state]);
+
+  const value: ContextValue = {
+    state,
+    setName: useCallback((name) => dispatch({ type: 'SET_NAME', payload: name }), []),
+    setChosenAunty: useCallback((auntyId: AuntyId) => dispatch({ type: 'SET_CHOSEN_AUNTY', payload: auntyId }), []),
+    updateHairProfile: useCallback((data) => dispatch({ type: 'UPDATE_HAIR_PROFILE', payload: data }), []),
+    setPhotos: useCallback((photos) => dispatch({ type: 'SET_PHOTOS', payload: photos }), []),
+    setCouncilResponse: useCallback((r) => dispatch({ type: 'SET_COUNCIL_RESPONSE', payload: r }), []),
+    setRoutine: useCallback((r) => dispatch({ type: 'SET_ROUTINE', payload: r }), []),
+    setPhase: useCallback((p) => dispatch({ type: 'SET_PHASE', payload: p }), []),
+    complete: useCallback(() => dispatch({ type: 'COMPLETE' }), []),
+    reset: useCallback(async () => {
+      dispatch({ type: 'RESET' });
+      try {
+        await AsyncStorage.removeItem(STORAGE_KEY);
+      } catch (e) {
+        console.warn('[OnboardingContext] Failed to clear storage:', e);
+      }
+    }, []),
   };
 
-  const setPreferences = (updates: Partial<UserPreferences>) => {
-    setPreferencesState(prev => ({ ...prev, ...updates }));
-  };
-
-  const reset = () => {
-    setDataState(DATA_DEFAULTS);
-    setHairAnalysis(null);
-    setCouncilResponse(null);
-    setRoutine(null);
-    setCurrentPhase('welcome');
-    setCompletionPercentage(0);
-    setPreferencesState(PREFERENCE_DEFAULTS);
-  };
-
-  return (
-    <OnboardingContext.Provider
-      value={{
-        data,
-        setData,
-        hairAnalysis,
-        setHairAnalysis,
-        councilResponse,
-        setCouncilResponse,
-        routine,
-        setRoutine,
-        currentPhase,
-        setCurrentPhase,
-        completionPercentage,
-        setCompletionPercentage,
-        preferences,
-        setPreferences,
-        reset,
-      }}
-    >
-      {children}
-    </OnboardingContext.Provider>
-  );
+  return <OnboardingCtx.Provider value={value}>{children}</OnboardingCtx.Provider>;
 }
 
-export function useOnboarding(): OnboardingContextType {
-  const ctx = useContext(OnboardingContext);
-  if (!ctx) throw new Error('useOnboarding must be inside OnboardingProvider');
+export function useOnboarding() {
+  const ctx = useContext(OnboardingCtx);
+  if (!ctx) throw new Error('useOnboarding must be used within OnboardingProvider');
   return ctx;
 }

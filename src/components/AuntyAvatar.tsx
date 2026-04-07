@@ -1,43 +1,53 @@
-import React from 'react';
-import { View, ImageSourcePropType, StyleSheet } from 'react-native';
-import { Image } from 'react-native';
-import AuntyPortrait from './AuntyPortrait';
+/**
+ * AuntyAvatar — Circular avatar with portrait, colored ring, and optional glow.
+ * The primary visual identity element for each aunty across the app.
+ */
 
-interface AuntyAvatarProps {
-  auntyId: string;
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
+import { AuntyPortrait } from './AuntyPortrait';
+import { auntyColors } from '../constants/theme';
+import { AUNTIES, type AuntyId } from '../constants/aunties';
+
+interface Props {
+  auntyId: AuntyId;
   size?: number;
-  source?: ImageSourcePropType;
-  // Pass world='council' for ink border, world='care' for canvas border (stacking overlap effect)
-  world?: 'council' | 'care';
+  showRing?: boolean;
+  glowing?: boolean;
 }
 
-export default function AuntyAvatar({ auntyId, size = 56, source, world }: AuntyAvatarProps) {
-  const borderColor = world === 'council' ? '#1a0f0a' : world === 'care' ? '#fef9f3' : undefined;
+export function AuntyAvatar({ auntyId, size = 56, showRing = true, glowing = false }: Props) {
+  const ac = auntyColors[auntyId];
+  const aunty = AUNTIES[auntyId];
+  const ringWidth = size > 48 ? 3 : 2;
+  const outerSize = showRing ? size + ringWidth * 2 + 4 : size;
 
   return (
     <View
+      accessibilityRole="image"
+      accessibilityLabel={aunty ? `${aunty.name}, ${aunty.title}, ${aunty.region}` : `Aunty ${auntyId}`}
       style={[
         styles.container,
         {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
+          width: outerSize,
+          height: outerSize,
+          borderRadius: outerSize / 2,
         },
-        borderColor && {
-          borderWidth: size > 40 ? 3 : 2,
-          borderColor,
+        showRing && {
+          borderWidth: ringWidth,
+          borderColor: ac?.accent ?? '#D4A04A',
+        },
+        glowing && {
+          shadowColor: ac?.accent ?? '#D4A04A',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.5,
+          shadowRadius: 12,
         },
       ]}
     >
-      {source ? (
-        <Image
-          source={source}
-          style={{ width: size, height: size, borderRadius: size / 2 }}
-          resizeMode="cover"
-        />
-      ) : (
+      <View style={[styles.inner, { width: size, height: size, borderRadius: size / 2 }]}>
         <AuntyPortrait auntyId={auntyId} size={size} />
-      )}
+      </View>
     </View>
   );
 }
@@ -46,6 +56,9 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 2,
+  },
+  inner: {
     overflow: 'hidden',
   },
 });

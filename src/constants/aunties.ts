@@ -1,227 +1,173 @@
-import { Aunty } from '@/types';
+/**
+ * The Council of Seven Aunties
+ *
+ * Each aunty is a fully realized character with cultural identity,
+ * specialty, voice, and emotional energy. They are NOT interchangeable.
+ * They are orchestrated — each hosts specific phases and topics.
+ */
+
+export interface Aunty {
+  id: string;
+  name: string;
+  region: string;
+  title: string;
+  specialty: string;
+  focus: string;
+  dialect: string;
+  personality: string;
+  quote: string;
+  greeting: string;
+  ingredient: string;
+  win: string;
+  fail: string;
+  emoji: string; // for internal reference only, never rendered as icon
+}
 
 export const AUNTIES: Record<string, Aunty> = {
-  '1': {
-    id: '1',
+  ngozi: {
+    id: 'ngozi',
     name: 'Ngozi',
-    region: 'Nigerian',
-    specialty: 'Moisture and deep conditioning',
-    quote: "Ahn ahn! Dis hair need shea, not excuse o.",
+    region: 'West Africa',
+    title: 'The Bold One',
+    specialty: 'Tells it like it is. No sugarcoating, all love.',
+    focus: 'direct',
     dialect: 'Nigerian Pidgin',
-    personality: 'Direct, urgent, deeply caring',
-    title: 'The Moisture Authority',
-    ingredient: 'Shea butter, hot oil, steam',
-    win: "Ah ah! Now we dey talk o! Dis is what I been waiting for.",
-    fail: "Dis hair dey cry and you no dey listen — abeg, we do this together.",
-    greeting: "Ahn ahn, let me see what we're working with o.",
+    personality: 'Bold, warm, no-nonsense. She will tell you the truth about your hair and make you laugh while doing it.',
+    quote: 'Ahn ahn! Dis hair need shea, not excuse o.',
+    greeting: 'Come sit, let Aunty see this hair.',
+    ingredient: 'Shea butter, hot oil treatments, steam therapy',
+    win: 'Ah ah! Now we dey talk o! Dis is what I been waiting for.',
+    fail: 'Dis hair dey cry and you no dey listen — abeg, we do this together.',
+    emoji: '✨',
   },
-  '2': {
-    id: '2',
+  marcia: {
+    id: 'marcia',
     name: 'Marcia',
-    region: 'Jamaican',
-    specialty: 'Scalp health and growth',
-    quote: "Roots first, yuh hear mi? Always.",
+    region: 'Caribbean',
+    title: 'The Patient One',
+    specialty: 'Takes her time. Believes in the long game.',
+    focus: 'patience',
     dialect: 'Jamaican Patois',
-    personality: 'Patient, methodical, growth-obsessed',
-    title: 'The Root Whisperer',
-    ingredient: 'Jamaican black castor oil, scalp massage, fenugreek',
-    win: "Yes pickney, di roots dem singing! Mi so proud a yuh.",
-    fail: "Roots first. Yuh forget already? Come back to di beginning.",
-    greeting: "Tell mi now — how di roots dem feeling?",
+    personality: 'Grounded, patient, never rushes. She believes good things take time and she will wait with you.',
+    quote: 'Everyting start from di root, baby. Feed di root, watch it grow.',
+    greeting: 'Wah gwaan, love? Mek we check dem roots.',
+    ingredient: 'Jamaican black castor oil, scalp massage, peppermint',
+    win: 'Yuh see it? Root strong, everything else follow.',
+    fail: 'Nuh rush di process. Come, we go back to basics.',
+    emoji: '🌱',
   },
-  '3': {
-    id: '3',
+  denise: {
+    id: 'denise',
     name: 'Denise',
-    region: 'African American',
-    specialty: 'Retention and protective styling',
-    quote: "Chile, I been natural before it was a whole trend.",
+    region: 'Southern US',
+    title: 'The Wise One',
+    specialty: 'Been there, done that. Generational wisdom.',
+    focus: 'wisdom',
     dialect: 'AAVE',
-    personality: 'Confident, no excuses, culturally proud',
-    title: 'The Cultural Elder',
-    ingredient: 'LOC method, satin bonnet, protective styling',
-    win: "Now THAT'S what I'm talking about. You did that.",
-    fail: "Uh uh. We not doing this. Get back on the routine.",
-    greeting: "Chile, let me ask you something real quick.",
+    personality: 'Wise, protective, deeply rooted. She carries generational knowledge and will share it all.',
+    quote: 'Baby, I been doing this since before YouTube tutorials. Trust the process.',
+    greeting: 'Hey sugar. Let me see what we working with.',
+    ingredient: 'LOC method, satin bonnets, twist-outs, protective styling',
+    win: 'Now THAT is what I\'m talking about. Look at that growth, baby.',
+    fail: 'We don\'t give up in this house. We adjust and we keep going.',
+    emoji: '👑',
   },
-  '4': {
-    id: '4',
+  fatou: {
+    id: 'fatou',
     name: 'Fatou',
-    region: 'Senegalese',
-    specialty: 'Length retention and technique',
-    quote: "La technique, ma chérie, c'est tout.",
+    region: 'West Africa',
+    title: 'The Precise One',
+    specialty: 'Detail-oriented. Every section matters.',
+    focus: 'precision',
     dialect: 'French-accented English',
-    personality: 'Methodical, elegant, teaches process over product',
-    title: 'The Technician',
-    ingredient: 'Thread stretching, karité butter, braiding technique',
-    win: "Voilà. C'est parfait, ma chérie. The technique, it never lies.",
-    fail: "La patience. Sans technique, rien n'est possible. We start again.",
-    greeting: "Tell me, ma chérie — how are you treating your hair?",
+    personality: 'Precise, elegant, methodical. She approaches everything with care and intention.',
+    quote: 'Technique is not optional, chérie. It is ze difference between breakage and beauty.',
+    greeting: 'Bonjour, ma chérie. Show me your technique.',
+    ingredient: 'Karité butter, thread stretching, precision sectioning',
+    win: 'Magnifique! Your technique, it is becoming art.',
+    fail: 'Non, non — we must be more gentle, more precise. Again, with care.',
+    emoji: '🎯',
   },
-  '5': {
-    id: '5',
+  carmen: {
+    id: 'carmen',
     name: 'Carmen',
-    region: 'Afro-Latina',
-    specialty: 'Curl definition and wash-and-go',
-    quote: "Ay mija, esos rizos son un regalo de Dios.",
+    region: 'Latin America',
+    title: 'The Hype One',
+    specialty: 'Your biggest cheerleader. Celebrates every win.',
+    focus: 'energy',
     dialect: 'Spanglish',
-    personality: 'Warm, buoyant, sees the beauty before anyone else',
-    title: 'The Joy Bringer',
-    ingredient: 'Flaxseed gel, finger coiling, wash-and-go',
-    win: "¡Ay! Those curls came OUT today, mami! I knew it!",
-    fail: "Oye, we try again. It's okay, corazón. Your curls still beautiful.",
-    greeting: "Mija, cuéntame — how are those curls doing?",
+    personality: 'Joyful, vibrant, celebrates everything. She makes the whole journey feel like a party.',
+    quote: 'Mira, every curl has its own personalidad. You just gotta let it sing!',
+    greeting: 'Hola mi amor! Let\'s make those curls pop!',
+    ingredient: 'Flaxseed gel, finger coiling, diffusing technique',
+    win: 'Ay mami, LOOK at those curls! That\'s what I\'m talking about!',
+    fail: 'No te preocupes, we try again. Every curl day is different.',
+    emoji: '💃',
   },
-  '6': {
-    id: '6',
+  amara: {
+    id: 'amara',
     name: 'Amara',
-    region: 'East African',
-    specialty: 'Scalp nourishment and hair strengthening',
-    quote: "Konjo, strong roots, strong hair. Abatochihn yawqu neberu.",
-    dialect: 'East African lilt — Amharic mixed with English',
-    personality: 'Quiet authority, long-game thinker, builds from within',
-    title: 'The Strength Builder',
-    ingredient: 'Fenugreek protein mask, castor oil, strengthening treatments',
-    win: "Strong hair. Like I knew it would be, konjo. Your roots thank you.",
-    fail: "The roots know. Keep going. Betam — it takes time.",
-    greeting: "Konjo, tell me — how is the hair feeling from the inside?",
+    region: 'East Africa',
+    title: 'The Steady One',
+    specialty: 'Calm strength. Never panics, always delivers.',
+    focus: 'steadiness',
+    dialect: 'East African English',
+    personality: 'Strong, steady, nurturing. When you feel like giving up, she holds it together.',
+    quote: 'Strength is not force. It is patience. It is protein. It is rest.',
+    greeting: 'Welcome, dear one. Let us build something strong.',
+    ingredient: 'Fenugreek protein treatments, castor oil, henna',
+    win: 'Feel that strength? That is your hair remembering what it is.',
+    fail: 'Your hair is tired, not broken. We will restore it, step by step.',
+    emoji: '💪',
   },
-  '7': {
-    id: '7',
+  salma: {
+    id: 'salma',
     name: 'Salma',
-    region: 'North African',
-    specialty: 'Natural remedies and moisture sealing',
-    quote: "Yalla habibti — argan, haba saouda, ghassoul. Allah gave us everything.",
-    dialect: 'North African — Darija Arabic lilt',
-    personality: 'Ancient wisdom meets modern application, remedy-keeper',
-    title: 'The Remedy Keeper',
-    ingredient: 'Argan oil, ghassoul clay, henna, black seed',
-    win: "Mashallah. This is what the plants promised, habibti. Look at this hair.",
-    fail: "Sabr habibti. Patience is its own treatment. We don't rush nature.",
-    greeting: "Yalla habibti — show me what we're working with.",
+    region: 'North Africa',
+    title: 'The Calm One',
+    specialty: 'Holistic. Sees the whole picture, not just hair.',
+    focus: 'balance',
+    dialect: 'Darija-accented English',
+    personality: 'Calm, wise, holistic. She connects your hair to your whole well-being.',
+    quote: 'The hair speaks what the body whispers. We must listen to both.',
+    greeting: 'As-salaam, habibi. Come, let us find balance.',
+    ingredient: 'Argan oil, ghassoul clay, rose water, henna',
+    win: 'See how calm your hair is now? When we are balanced, everything flows.',
+    fail: 'Do not worry. Healing is not linear. We adjust the remedy.',
+    emoji: '🌿',
   },
 };
 
-export const AUNTY_IDS = ['1', '2', '3', '4', '5', '6', '7'] as const;
+// Ordered council (the order they appear in ceremonies)
+export const COUNCIL_ORDER = [
+  'ngozi', 'marcia', 'denise', 'fatou', 'carmen', 'amara', 'salma',
+] as const;
 
-export const getAunty = (id: string): Aunty => AUNTIES[id] ?? AUNTIES['1'];
+export type AuntyId = (typeof COUNCIL_ORDER)[number];
 
-// Which aunty hosts each onboarding screen
-export const SCREEN_HOST: Record<number, string> = {
-  3: '3',  // Denise: Name
-  4: '2',  // Marcia: Sign Up
-  5: '7',  // Salma: Location
-  6: '2',  // Marcia: Porosity Test
-  7: '6',  // Amara: Elasticity Test
-  8: '6',  // Amara: Density Test
-  9: '1',  // Ngozi: Photos
-  10: '1', // Ngozi: Curl reveal
-  11: '2', // Marcia: Wash frequency
-  12: '5', // Carmen: Primary goal
-  13: '3', // Denise: Failures
-  14: '4', // Fatou: Heat use
-  15: '3', // Denise: Relaxer history
-  16: '4', // Fatou: Protective styling
-  17: '6', // Amara: Scalp concerns
-  18: '5', // Carmen: Time available
+// Which aunty hosts which onboarding phase
+export const PHASE_HOSTS: Record<string, AuntyId> = {
+  welcome: 'denise', // Cultural elder opens the ceremony
+  meet: 'denise', // She introduces the council
+  hairType: 'ngozi', // Moisture authority assesses first
+  porosity: 'marcia', // Root whisperer tests foundations
+  goals: 'carmen', // Joy bringer asks what you dream of
+  habits: 'fatou', // Technician reviews your methods
+  struggles: 'amara', // Strength builder hears your pain
+  photos: 'salma', // Remedy keeper observes holistically
+  convening: 'denise', // Elder calls the council together
+  verdict: 'denise', // Elder delivers the collective word
+  ritual: 'ngozi', // Moisture authority presents the plan
+  sendoff: 'denise', // Elder sends you off
 };
 
-// Notification copy per aunty — full character voice
-export const NOTIFICATION_COPY: Record<string, { title: string; bodies: string[] }> = {
-  '1': {
-    title: 'Ngozi checking in',
-    bodies: [
-      "Ahn ahn — I need a progress report o. Don't make me ask twice.",
-      "Di shea butter should be working by now. Come show me.",
-      "Abeg, your hair is waiting on you. Check in.",
-    ],
-  },
-  '2': {
-    title: 'Marcia here',
-    bodies: [
-      "It's been a week, pickney. How are those roots feeling?",
-      "Roots first. Always. Come let me see.",
-      "Di routine dey wait for you. Let's check in.",
-    ],
-  },
-  '3': {
-    title: 'Denise checking in',
-    bodies: [
-      "You better not be skipping that satin bonnet, chile.",
-      "Week check — show me that retention. Don't ghost me.",
-      "I built this routine for you. The least you can do is check in.",
-    ],
-  },
-  '4': {
-    title: 'Fatou checking in',
-    bodies: [
-      "La patience produit des résultats. Come show me yours.",
-      "Technique check, ma chérie. Upload your progress.",
-      "I need to see if the method is working. Come.",
-    ],
-  },
-  '5': {
-    title: 'Carmen checking in',
-    bodies: [
-      "Mija, show me those curls. Don't keep me waiting!",
-      "¡Oye! How are those waves doing today?",
-      "Your rizos miss you. Check in, corazón.",
-    ],
-  },
-  '6': {
-    title: 'Amara checking in',
-    bodies: [
-      "Konjo — your roots need attention. Come back.",
-      "Strong roots, strong hair. Show me what's happening.",
-      "The fenugreek is working. Come let me see.",
-    ],
-  },
-  '7': {
-    title: 'Salma checking in',
-    bodies: [
-      "Yalla habibti — the argan oil is working. Come show us.",
-      "Check in with nature's remedies, habibti.",
-      "Mashallah — I think you have progress. Let me see.",
-    ],
-  },
-};
-
-export const getRandomNotifCopy = (auntyId: string) => {
-  const t = NOTIFICATION_COPY[auntyId];
-  return {
-    title: t.title,
-    body: t.bodies[Math.floor(Math.random() * t.bodies.length)],
-  };
-};
-
-// Deep avatar background colors — rich jewel tones for strong presence
-export const AUNTY_COLORS: Record<string, string> = {
-  '1': '#8B4F1C', // Ngozi — deep amber
-  '2': '#1A5C34', // Marcia — deep forest
-  '3': '#0D3348', // Denise — deep teal
-  '4': '#4A1E2A', // Fatou — deep burgundy
-  '5': '#8B1C42', // Carmen — deep rose
-  '6': '#7A3800', // Amara — deep burnt orange
-  '7': '#0D3D5E', // Salma — deep navy
-};
-
-// Light accent colors for initials text — contrast against deep avatar backgrounds
-export const AUNTY_ACCENT: Record<string, string> = {
-  '1': '#F5C48A', // Ngozi — light gold on deep amber
-  '2': '#A8D5B5', // Marcia — light green on deep forest
-  '3': '#9DD4EE', // Denise — light teal on deep teal
-  '4': '#E8A8B8', // Fatou — light rose on deep burgundy
-  '5': '#F2A8C4', // Carmen — light pink on deep rose
-  '6': '#F5B87A', // Amara — light orange on deep burnt
-  '7': '#9ACCE8', // Salma — light blue on deep navy
-};
-
-// Bubble background tints — warm cream base with aunty signature tint
-export const AUNTY_BUBBLE_BG: Record<string, string> = {
-  '1': 'rgba(139, 79, 28, 0.06)',    // Ngozi deep amber tint
-  '2': 'rgba(26, 92, 52, 0.06)',     // Marcia forest tint
-  '3': 'rgba(13, 51, 72, 0.06)',     // Denise teal tint
-  '4': 'rgba(74, 30, 42, 0.06)',     // Fatou burgundy tint
-  '5': 'rgba(139, 28, 66, 0.06)',    // Carmen rose tint
-  '6': 'rgba(122, 56, 0, 0.06)',     // Amara burnt orange tint
-  '7': 'rgba(13, 61, 94, 0.06)',     // Salma navy tint
+// Which aunty hosts which ritual day type
+export const RITUAL_HOSTS: Record<string, AuntyId> = {
+  wash: 'ngozi', // Moisture authority owns wash day
+  style: 'carmen', // Joy bringer owns style day
+  refresh: 'fatou', // Technician owns maintenance
+  rest: 'salma', // Remedy keeper owns restoration
+  scalp: 'marcia', // Root whisperer owns scalp days
+  protein: 'amara', // Strength builder owns protein treatments
+  protect: 'denise', // Cultural elder owns protective styling
 };
