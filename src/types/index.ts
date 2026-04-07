@@ -66,9 +66,13 @@ export type ProductBudget = 'under-30' | '30-60' | '60-100' | '100-plus';
 
 // ─── Onboarding State ────────────────────────────────────────────
 
+export type AgeRange = '18-24' | '25-34' | '35-44' | '45-54' | '55+';
+
 export interface OnboardingData {
   name: string;
   chosenAuntyId?: AuntyId;
+  ageRange?: AgeRange;
+  gender?: string;
   hairProfile: HairProfile;
   photos: {
     front?: string;

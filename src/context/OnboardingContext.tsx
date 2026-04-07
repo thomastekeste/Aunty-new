@@ -20,6 +20,7 @@ interface OnboardingState {
 type Action =
   | { type: 'SET_NAME'; payload: string }
   | { type: 'SET_CHOSEN_AUNTY'; payload: AuntyId }
+  | { type: 'SET_DEMOGRAPHICS'; payload: { ageRange?: string; gender?: string } }
   | { type: 'UPDATE_HAIR_PROFILE'; payload: Partial<HairProfile> }
   | { type: 'SET_PHOTOS'; payload: Partial<OnboardingData['photos']> }
   | { type: 'SET_COUNCIL_RESPONSE'; payload: CouncilResponse }
@@ -46,6 +47,8 @@ function reducer(state: OnboardingState, action: Action): OnboardingState {
       return { ...state, data: { ...state.data, name: action.payload } };
     case 'SET_CHOSEN_AUNTY':
       return { ...state, data: { ...state.data, chosenAuntyId: action.payload } };
+    case 'SET_DEMOGRAPHICS':
+      return { ...state, data: { ...state.data, ageRange: action.payload.ageRange as any, gender: action.payload.gender } };
     case 'UPDATE_HAIR_PROFILE':
       return {
         ...state,
@@ -94,6 +97,7 @@ interface ContextValue {
   state: OnboardingState;
   setName: (name: string) => void;
   setChosenAunty: (auntyId: AuntyId) => void;
+  setDemographics: (data: { ageRange?: string; gender?: string }) => void;
   updateHairProfile: (data: Partial<HairProfile>) => void;
   setPhotos: (photos: Partial<OnboardingData['photos']>) => void;
   setCouncilResponse: (response: CouncilResponse) => void;
@@ -148,6 +152,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     state,
     setName: useCallback((name) => dispatch({ type: 'SET_NAME', payload: name }), []),
     setChosenAunty: useCallback((auntyId: AuntyId) => dispatch({ type: 'SET_CHOSEN_AUNTY', payload: auntyId }), []),
+    setDemographics: useCallback((data: { ageRange?: string; gender?: string }) => dispatch({ type: 'SET_DEMOGRAPHICS', payload: data }), []),
     updateHairProfile: useCallback((data) => dispatch({ type: 'UPDATE_HAIR_PROFILE', payload: data }), []),
     setPhotos: useCallback((photos) => dispatch({ type: 'SET_PHOTOS', payload: photos }), []),
     setCouncilResponse: useCallback((r) => dispatch({ type: 'SET_COUNCIL_RESPONSE', payload: r }), []),
