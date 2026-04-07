@@ -12,7 +12,14 @@ import * as gemini from './src/services/gemini.js';
 import { sendPushNotification } from './src/services/notifications.js';
 
 const app = express();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Only images allowed'), false);
+  },
+});
 
 // ─── Rate Limiting ──────────────────────────────────────────────
 
@@ -45,7 +52,20 @@ const aiLimiter = rateLimit({
 
 // ─── Middleware ──────────────────────────────────────────────────
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:8081'],
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+// Security headers
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '0');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+});
 app.use(express.json({ limit: '1mb' })); // tightened from 10mb — photos go through multer
 app.use(sanitizeBody);
 app.use(generalLimiter);
@@ -90,7 +110,7 @@ app.post('/api/onboarding/intake', aiLimiter, authMiddleware, async (req, res) =
 
     res.json({ councilResponse, routine });
   } catch (err) {
-    console.error('Onboarding intake error:', err);
+    console.error('Onboarding intake error:', err.message || err);
     res.status(500).json({ error: 'Failed to process intake' });
   }
 });
@@ -103,8 +123,27 @@ app.post('/api/photos/analyze', aiLimiter, authMiddleware, upload.single('photo'
 
     let imageBase64;
     if (req.file) {
+      if (!req.file.mimetype.startsWith('image/')) {
+        return res.status(400).json({ error: 'Only image files allowed' });
+      }
+      const buf = req.file.buffer;
+      const isJpeg = buf[0] === 0xFF && buf[1] === 0xD8;
+      const isPng = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47;
+      const isWebp = buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46;
+      if (!isJpeg && !isPng && !isWebp) {
+        return res.status(400).json({ error: 'Invalid image format. Use JPEG, PNG, or WebP.' });
+      }
       imageBase64 = req.file.buffer.toString('base64');
     } else if (req.body.imageBase64) {
+      if (typeof req.body.imageBase64 !== 'string' || req.body.imageBase64.length > 3_000_000) {
+        return res.status(400).json({ error: 'Image too large or invalid' });
+      }
+      const buf = Buffer.from(req.body.imageBase64, 'base64');
+      const isJpeg = buf[0] === 0xFF && buf[1] === 0xD8;
+      const isPng = buf[0] === 0x89 && buf[1] === 0x50;
+      if (!isJpeg && !isPng) {
+        return res.status(400).json({ error: 'Invalid image data' });
+      }
       imageBase64 = req.body.imageBase64;
     } else {
       return res.status(400).json({ error: 'No image provided' });
@@ -127,7 +166,7 @@ app.post('/api/photos/analyze', aiLimiter, authMiddleware, upload.single('photo'
 
     res.json({ analysis, photoId, storagePath });
   } catch (err) {
-    console.error('Photo analysis error:', err);
+    console.error('Photo analysis error:', err.message || err);
     res.status(500).json({ error: 'Failed to analyze photo' });
   }
 });
@@ -147,7 +186,7 @@ app.post('/api/council/generate', aiLimiter, authMiddleware, async (req, res) =>
 
     res.json(councilResponse);
   } catch (err) {
-    console.error('Council generation error:', err);
+    console.error('Council generation error:', err.message || err);
     res.status(500).json({ error: 'Failed to generate council response' });
   }
 });
@@ -169,7 +208,7 @@ app.post('/api/routine/generate', aiLimiter, authMiddleware, async (req, res) =>
 
     res.json(routine);
   } catch (err) {
-    console.error('Routine generation error:', err);
+    console.error('Routine generation error:', err.message || err);
     res.status(500).json({ error: 'Failed to generate routine' });
   }
 });
@@ -201,7 +240,7 @@ app.post('/api/checkin/submit', aiLimiter, authMiddleware, async (req, res) => {
 
     res.json({ checkin, auntyResponse });
   } catch (err) {
-    console.error('Check-in submission error:', err);
+    console.error('Check-in submission error:', err.message || err);
     res.status(500).json({ error: 'Failed to submit check-in' });
   }
 });
@@ -220,7 +259,7 @@ app.post('/api/notifications/register', authMiddleware, async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('Notification registration error:', err);
+    console.error('Notification registration error:', err.message || err);
     res.status(500).json({ error: 'Failed to register push token' });
   }
 });
@@ -239,7 +278,7 @@ app.get('/api/user/profile', authMiddleware, async (req, res) => {
 
     res.json({ user, hairProfile, routine, checkins });
   } catch (err) {
-    console.error('Get profile error:', err);
+    console.error('Get profile error:', err.message || err);
     res.status(500).json({ error: 'Failed to get profile' });
   }
 });

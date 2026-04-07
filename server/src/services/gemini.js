@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import config from '../config.js';
+import { sanitizeForPrompt, sanitizeProfileForPrompt } from '../middleware/promptSanitize.js';
 
 const genAI = new GoogleGenerativeAI(config.geminiApiKey);
 
@@ -137,22 +138,25 @@ export async function generateCouncilResponse(hairProfile, userName) {
 ${a.name} MUST speak in her authentic ${a.dialect} voice. Her response should feel like a real ${a.region} aunty talking — not a clinical AI. She should reference her specific expertise (${a.specialty}) and recommend from her ingredient/method toolkit (${a.ingredient}). She is opinionated, caring, and culturally grounded.`;
   }).join('\n');
 
+  const safe = sanitizeProfileForPrompt(hairProfile);
+  const safeName = sanitizeForPrompt(userName, 50);
+
   const profileSummary = `
-- Name: ${userName || 'the user'}
-- Curl type: ${hairProfile.curlType || 'not specified'}
-- Porosity: ${hairProfile.porosity || 'not specified'}
-- Elasticity: ${hairProfile.elasticity || 'not specified'}
-- Density: ${hairProfile.density || 'not specified'}
-- Primary goal: ${hairProfile.primaryGoal || 'not specified'}
-- Secondary goals: ${(hairProfile.secondaryGoals || []).join(', ') || 'none'}
-- Wash frequency: ${hairProfile.washFrequency || 'not specified'}
-- Heat use: ${hairProfile.heatUse || 'not specified'}
+- Name: ${safeName}
+- Curl type: ${safe.curlType}
+- Porosity: ${safe.porosity}
+- Elasticity: ${safe.elasticity}
+- Density: ${safe.density}
+- Primary goal: ${safe.primaryGoal}
+- Secondary goals: ${(hairProfile.secondaryGoals || []).map(g => sanitizeForPrompt(g, 30)).join(', ') || 'none'}
+- Wash frequency: ${safe.washFrequency}
+- Heat use: ${safe.heatUse}
 - Relaxer history: ${hairProfile.relaxerHistory ? 'yes' : 'no'}
 - Color treated: ${hairProfile.colorTreated ? 'yes' : 'no'}
 - Protective styling: ${hairProfile.protectiveStyling ? 'yes' : 'no'}
-- Scalp concerns: ${(hairProfile.scalpConcerns || []).join(', ') || 'none'}
-- Time available: ${hairProfile.timeAvailable || 'not specified'}
-- Failed attempts / frustrations: ${(hairProfile.failedAttempts || []).join(', ') || 'none'}`;
+- Scalp concerns: ${safe.scalpConcerns.join(', ') || 'none'}
+- Time available: ${sanitizeForPrompt(hairProfile.timeAvailable, 20)}
+- Failed attempts / frustrations: ${safe.failedAttempts.join(', ') || 'none'}`;
 
   const systemPrompt = `You are the Aunty Curl Council — a council of seven Black and Brown women elders from the African diaspora, each with deep expertise in natural hair care. They have gathered for a sacred ceremony to assess a new member's hair and give their collective wisdom.
 
@@ -231,18 +235,20 @@ export async function generateRoutine(hairProfile, councilResponse) {
     })
     .join('\n');
 
+  const safeR = sanitizeProfileForPrompt(hairProfile);
+
   const prompt = `You are generating a personalized weekly hair care ritual for a user of the Aunty Curl Council app.
 
 ## Hair Profile
-- Curl type: ${hairProfile.curlType || 'unknown'}
-- Porosity: ${hairProfile.porosity || 'unknown'}
-- Elasticity: ${hairProfile.elasticity || 'unknown'}
-- Density: ${hairProfile.density || 'unknown'}
-- Primary goal: ${hairProfile.primaryGoal || 'general care'}
-- Wash frequency: ${hairProfile.washFrequency || 'weekly'}
-- Heat use: ${hairProfile.heatUse || 'rarely'}
-- Time available per session: ${hairProfile.timeAvailable || '30min'}
-- Scalp concerns: ${(hairProfile.scalpConcerns || []).join(', ') || 'none'}
+- Curl type: ${safeR.curlType}
+- Porosity: ${safeR.porosity}
+- Elasticity: ${safeR.elasticity}
+- Density: ${safeR.density}
+- Primary goal: ${safeR.primaryGoal}
+- Wash frequency: ${safeR.washFrequency}
+- Heat use: ${safeR.heatUse}
+- Time available per session: ${sanitizeForPrompt(hairProfile.timeAvailable, 20)}
+- Scalp concerns: ${safeR.scalpConcerns.join(', ') || 'none'}
 - Protective styling: ${hairProfile.protectiveStyling ? 'yes' : 'no'}
 
 ## Council Key Findings
@@ -316,7 +322,7 @@ export async function analyzePhoto(imageBase64, hairProfile) {
 
 Analyze this hair photo and provide a detailed assessment.
 
-${hairProfile ? `The user has reported: curl type ${hairProfile.curlType}, ${hairProfile.porosity} porosity, ${hairProfile.density} density, primary goal: ${hairProfile.primaryGoal}.` : ''}
+${hairProfile ? `The user has reported: curl type ${sanitizeForPrompt(hairProfile.curlType, 5)}, ${sanitizeForPrompt(hairProfile.porosity, 10)} porosity, ${sanitizeForPrompt(hairProfile.density, 10)} density, primary goal: ${sanitizeForPrompt(hairProfile.primaryGoal, 30)}.` : ''}
 
 Return a JSON object with:
 {
@@ -373,13 +379,13 @@ export async function generateCheckinResponse(checkinData, hairProfile, hostingA
 
 ## User's Check-in
 - Week: ${checkinData.weekNumber || 1}
-- Mood: ${checkinData.mood || 'not specified'}
-- Notes: ${checkinData.notes || 'no notes'}
+- Mood: ${sanitizeForPrompt(checkinData.mood, 20)}
+- Notes: ${sanitizeForPrompt(checkinData.notes, 500)}
 
 ## User's Hair Profile
-- Curl type: ${hairProfile?.curlType || 'unknown'}
-- Porosity: ${hairProfile?.porosity || 'unknown'}
-- Primary goal: ${hairProfile?.primaryGoal || 'general care'}
+- Curl type: ${sanitizeForPrompt(hairProfile?.curlType, 5)}
+- Porosity: ${sanitizeForPrompt(hairProfile?.porosity, 10)}
+- Primary goal: ${sanitizeForPrompt(hairProfile?.primaryGoal, 30)}
 
 ## Instructions
 Respond as ${aunty.name} in 2-4 sentences, speaking in your authentic ${aunty.dialect} voice. Be warm, encouraging, and specific to their mood and progress. If they're struggling, be compassionate but motivating. If they're doing well, celebrate with them.
