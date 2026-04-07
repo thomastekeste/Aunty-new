@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 
 import config from './src/config.js';
 import authMiddleware from './src/middleware/auth.js';
+import { sanitizeBody } from './src/middleware/sanitize.js';
 import * as db from './src/services/supabase.js';
 import * as gemini from './src/services/gemini.js';
 import { sendPushNotification } from './src/services/notifications.js';
@@ -45,7 +46,8 @@ const aiLimiter = rateLimit({
 // ─── Middleware ──────────────────────────────────────────────────
 
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '1mb' })); // tightened from 10mb — photos go through multer
+app.use(sanitizeBody);
 app.use(generalLimiter);
 
 // ─── Health Check ───────────────────────────────────────────────
