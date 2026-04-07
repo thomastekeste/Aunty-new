@@ -81,7 +81,7 @@ export default function PorosityTestScreen() {
       auntyId={auntyId}
       question="Time to test your hair. Drop a strand in a glass of water. What happened?"
       step={3}
-      totalSteps={8}
+      totalSteps={7}
       ctaLabel="Next"
       ctaDisabled={!selected}
       onCtaPress={handleContinue}

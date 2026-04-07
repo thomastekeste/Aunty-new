@@ -1,13 +1,13 @@
 /**
- * WordReveal — Word-by-word text reveal using a ref-based timer.
+ * WordReveal — Word-by-word text reveal.
  *
- * Avoids per-word re-renders by using a ref for the timer
- * and only updating state when a new word is ready.
- * Renders the full text but only shows words up to the current count.
+ * Words appear one at a time. The latest word fades in slightly
+ * while previous words are fully visible. Feels like someone
+ * is speaking, not a teleprometer scrolling.
  */
 
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { Text } from 'react-native';
+import React, { useState, useEffect, useRef, memo } from 'react';
+import { Text, Animated as RNAnimated } from 'react-native';
 import { colors, fonts, fontSize as fs } from '../constants/theme';
 
 interface Props {
@@ -17,11 +17,12 @@ interface Props {
   style?: any;
 }
 
-export const WordReveal = memo(function WordReveal({ text, stagger = 70, onComplete, style }: Props) {
+export const WordReveal = memo(function WordReveal({ text, stagger = 85, onComplete, style }: Props) {
   const words = useRef(text.split(' ')).current;
   const [count, setCount] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const calledComplete = useRef(false);
+  const fadeAnim = useRef(new RNAnimated.Value(0)).current;
 
   useEffect(() => {
     calledComplete.current = false;
@@ -32,6 +33,13 @@ export const WordReveal = memo(function WordReveal({ text, stagger = 70, onCompl
       i++;
       if (i <= words.length) {
         setCount(i);
+        // Fade in the newest word
+        fadeAnim.setValue(0);
+        RNAnimated.timing(fadeAnim, {
+          toValue: 1,
+          duration: stagger * 0.8,
+          useNativeDriver: true,
+        }).start();
         timerRef.current = setTimeout(tick, stagger);
       } else if (!calledComplete.current) {
         calledComplete.current = true;
@@ -40,15 +48,17 @@ export const WordReveal = memo(function WordReveal({ text, stagger = 70, onCompl
     };
 
     timerRef.current = setTimeout(tick, stagger);
-
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [text, stagger]);
+
+  // Split into revealed words and the latest word
+  const revealed = words.slice(0, Math.max(0, count - 1)).join(' ');
+  const latest = count > 0 ? words[count - 1] : '';
 
   return (
     <Text style={[baseStyle, style]}>
-      {words.slice(0, count).join(' ')}
+      {revealed}{revealed ? ' ' : ''}
+      <RNAnimated.Text style={{ opacity: fadeAnim }}>{latest}</RNAnimated.Text>
     </Text>
   );
 });

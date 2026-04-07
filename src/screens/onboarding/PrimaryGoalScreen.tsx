@@ -54,7 +54,7 @@ export default function PrimaryGoalScreen() {
       auntyId={auntyId}
       question="What would change everything for your hair? Pick the one that speaks to you most."
       step={4}
-      totalSteps={8}
+      totalSteps={7}
       ctaLabel="That's my dream"
       ctaDisabled={!selected}
       onCtaPress={handleContinue}

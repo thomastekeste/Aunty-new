@@ -155,7 +155,7 @@ export default function CurlTypeScreen() {
       auntyId={auntyId}
       question="Let Aunty see your pattern. Which one looks like you?"
       step={2}
-      totalSteps={8}
+      totalSteps={7}
       ctaLabel="That's my curl"
       ctaDisabled={!selected}
       onCtaPress={handleContinue}

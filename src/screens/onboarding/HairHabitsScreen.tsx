@@ -101,7 +101,7 @@ export default function HairHabitsScreen() {
       auntyId={auntyId}
       question={questions[subStep]}
       step={5}
-      totalSteps={8}
+      totalSteps={7}
       ctaLabel={subStep === 0 ? 'Next' : 'Continue'}
       ctaDisabled={!canContinue}
       onCtaPress={handleContinue}

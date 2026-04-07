@@ -46,7 +46,7 @@ export default function NameEntryScreen() {
       auntyId={auntyId}
       question={aunty.greeting}
       step={1}
-      totalSteps={8}
+      totalSteps={7}
       ctaLabel="That's me"
       ctaDisabled={!isValid}
       onCtaPress={handleContinue}

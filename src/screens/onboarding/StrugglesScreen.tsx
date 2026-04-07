@@ -74,7 +74,7 @@ export default function StrugglesScreen() {
       auntyId={auntyId}
       question="Tell me where it hurts. Select everything that resonates."
       step={6}
-      totalSteps={8}
+      totalSteps={7}
       ctaLabel={`Continue${selected.size > 0 ? ` (${selected.size} selected)` : ''}`}
       ctaDisabled={selected.size === 0}
       onCtaPress={handleContinue}

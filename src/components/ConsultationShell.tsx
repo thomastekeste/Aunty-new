@@ -105,26 +105,25 @@ export function ConsultationShell({
         </Text>
       </Animated.View>
 
-      {/* Top row: back + question */}
-      <View style={styles.topRow}>
-        {showBack ? (
-          <Pressable
-            onPress={handleBack}
-            style={styles.backButton}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <Text style={styles.backArrow}>{'\u2190'}</Text>
-          </Pressable>
-        ) : <View style={styles.backSpacer} />}
-      </View>
+      {/* Back button */}
+      {showBack && (
+        <Pressable
+          onPress={handleBack}
+          style={styles.backButton}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <Text style={styles.backArrow}>{'\u2190'}</Text>
+        </Pressable>
+      )}
 
-      {/* Question — big, direct, no bubble */}
-      <Text
-        style={[styles.question, { color: colors.dark.text }]}
-        accessibilityRole="header"
-      >
+      {/* Aunty + question */}
+      <View style={styles.questionRow}>
+        <AuntyAvatar auntyId={auntyId} size={32} showRing />
+        <Text style={[styles.questionText, { color: ac.accent }]}>{aunty.name}</Text>
+      </View>
+      <Text style={styles.question} accessibilityRole="header">
         {question}
       </Text>
 
@@ -207,32 +206,38 @@ const styles = StyleSheet.create({
     color: colors.dark.textMuted,
     letterSpacing: letterSpacing.wide,
   },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-  },
   backButton: {
-    width: 44,
-    height: 40,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+    alignSelf: 'flex-start',
+    minWidth: 44,
+    minHeight: 36,
     justifyContent: 'center',
-  },
-  backSpacer: {
-    width: 44,
-    height: 40,
   },
   backArrow: {
     fontFamily: fonts.body,
     fontSize: fontSize.xl,
     color: colors.dark.text,
   },
+  questionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  questionText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+  },
   question: {
     fontFamily: fonts.display,
     fontSize: fontSize.xl,
     lineHeight: fontSize.xl * 1.25,
     letterSpacing: letterSpacing.tight,
+    color: colors.dark.text,
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
