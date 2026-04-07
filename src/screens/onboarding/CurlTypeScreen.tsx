@@ -147,7 +147,7 @@ export default function CurlTypeScreen() {
   const handleContinue = () => {
     if (!selected) return;
     updateHairProfile({ curlType: selected });
-    navigation.navigate('PorosityTest');
+    navigation.navigate('Validation1');
   };
 
   return (

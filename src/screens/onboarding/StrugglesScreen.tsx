@@ -66,7 +66,7 @@ export default function StrugglesScreen() {
   const handleContinue = () => {
     if (selected.size === 0) return;
     updateHairProfile({ failedAttempts: Array.from(selected) });
-    navigation.navigate('BudgetQuestion');
+    navigation.navigate('Validation3');
   };
 
   return (

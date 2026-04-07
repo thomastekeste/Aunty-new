@@ -151,10 +151,13 @@ export type OnboardingStackParamList = {
   ValuePreview: undefined;
   NameEntry: undefined;
   CurlType: undefined;
+  Validation1: undefined;
   PorosityTest: undefined;
   PrimaryGoal: undefined;
+  Validation2: undefined;
   HairHabits: undefined;
   Struggles: undefined;
+  Validation3: undefined;
   BudgetQuestion: undefined;
   CouncilConvening: undefined;
   CouncilVerdict: undefined;

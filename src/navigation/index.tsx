@@ -35,6 +35,9 @@ import CouncilVerdictScreen from '../screens/onboarding/CouncilVerdictScreen';
 import ValuePreviewScreen from '../screens/onboarding/ValuePreviewScreen';
 import ProductRevealScreen from '../screens/onboarding/ProductRevealScreen';
 import SendOffScreen from '../screens/onboarding/SendOffScreen';
+import ValidationOneScreen from '../screens/onboarding/ValidationOneScreen';
+import ValidationTwoScreen from '../screens/onboarding/ValidationTwoScreen';
+import ValidationThreeScreen from '../screens/onboarding/ValidationThreeScreen';
 
 // App screens
 import HomeScreen from '../screens/app/HomeScreen';
@@ -94,10 +97,13 @@ function OnboardingNavigator() {
       <OnboardingStack.Screen name="ValuePreview" component={ValuePreviewScreen} />
       <OnboardingStack.Screen name="NameEntry" component={NameEntryScreen} />
       <OnboardingStack.Screen name="CurlType" component={CurlTypeScreen} />
+      <OnboardingStack.Screen name="Validation1" component={ValidationOneScreen} />
       <OnboardingStack.Screen name="PorosityTest" component={PorosityTestScreen} />
       <OnboardingStack.Screen name="PrimaryGoal" component={PrimaryGoalScreen} />
+      <OnboardingStack.Screen name="Validation2" component={ValidationTwoScreen} />
       <OnboardingStack.Screen name="HairHabits" component={HairHabitsScreen} />
       <OnboardingStack.Screen name="Struggles" component={StrugglesScreen} />
+      <OnboardingStack.Screen name="Validation3" component={ValidationThreeScreen} />
       <OnboardingStack.Screen name="BudgetQuestion" component={BudgetQuestionScreen} />
       <OnboardingStack.Screen name="CouncilConvening" component={CouncilConveningScreen} />
       <OnboardingStack.Screen name="CouncilVerdict" component={CouncilVerdictScreen} />

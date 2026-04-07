@@ -46,7 +46,7 @@ export default function PrimaryGoalScreen() {
   const handleContinue = () => {
     if (!selected) return;
     updateHairProfile({ primaryGoal: selected });
-    navigation.navigate('HairHabits');
+    navigation.navigate('Validation2');
   };
 
   return (

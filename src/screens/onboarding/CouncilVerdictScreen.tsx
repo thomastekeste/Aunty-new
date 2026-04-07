@@ -71,24 +71,23 @@ export default function CouncilVerdictScreen() {
   const [showButton, setShowButton] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => { setStep(0); setVisible(true); }, 500);
+    const t = setTimeout(() => { setStep(0); setVisible(true); }, 900); // match SendOff initial delay
     return () => clearTimeout(t);
   }, []);
 
   const handleDone = () => {
     if (step < findings.length - 1) {
-      // Next finding — SendOff rhythm
+      // Same rhythm as SendOff: 900ms hold, then advance
       setTimeout(() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setVisible(false);
-        setTimeout(() => { setStep((s) => s + 1); setVisible(true); }, 300);
-      }, 900);
+        setTimeout(() => { setStep((s) => s + 1); setVisible(true); }, 200); // quick crossfade
+      }, 900); // 900ms hold — matches SendOff
     } else {
-      // Last finding done — button
       setTimeout(() => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setShowButton(true);
-      }, 700);
+      }, 700); // 700ms — matches SendOff final line
     }
   };
 
