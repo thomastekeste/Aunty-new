@@ -15,7 +15,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { Button } from '../../components/Button';
-import { AUNTIES } from '../../constants/aunties';
+import { AUNTIES, getAuntyQuoteForSession } from '../../constants/aunties';
 import type { AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
 import {
@@ -38,6 +38,10 @@ export default function JourneyScreen() {
   const ac = auntyColors[auntyId];
 
   const [weekNumber, setWeekNumber] = useState(1);
+  const [checkInCount, setCheckInCount] = useState(0);
+  const [ritualCount, setRitualCount] = useState(0);
+  const [streakCount, setStreakCount] = useState(0);
+
   useEffect(() => {
     (async () => {
       try {
@@ -45,6 +49,34 @@ export default function JourneyScreen() {
         if (d) {
           const diff = Date.now() - new Date(d).getTime();
           setWeekNumber(Math.max(1, Math.ceil(diff / (7 * 24 * 60 * 60 * 1000))));
+        }
+
+        // Count check-ins and rituals from AsyncStorage
+        const allKeys = (await AsyncStorage.getAllKeys()) || [];
+        const checkInKeys = allKeys.filter((k) => k.startsWith('checkin_week_'));
+        const ritualKeys = allKeys.filter((k) => k.startsWith('ritual_completed_'));
+        setCheckInCount(checkInKeys.length);
+        setRitualCount(ritualKeys.length);
+
+        // Calculate streak: consecutive days with ritual completions (last N days)
+        // Use local date to match how ritual keys are stored
+        if (ritualKeys.length > 0) {
+          const today = new Date();
+          let streak = 0;
+          for (let i = 0; i < 30; i++) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const key = `ritual_completed_${yyyy}-${mm}-${dd}`;
+            if (ritualKeys.includes(key)) {
+              streak++;
+            } else if (i > 0) {
+              break; // streak broken
+            }
+          }
+          setStreakCount(streak);
         }
       } catch {}
     })();
@@ -65,9 +97,9 @@ export default function JourneyScreen() {
         <Animated.View entering={FadeInDown.delay(200)} style={styles.stats}>
           {[
             { num: `${weekNumber}`, label: 'Weeks' },
-            { num: '0', label: 'Check-ins' },
-            { num: '0', label: 'Rituals' },
-            { num: '0', label: 'Streak' },
+            { num: `${checkInCount}`, label: 'Check-ins' },
+            { num: `${ritualCount}`, label: 'Rituals' },
+            { num: `${streakCount}`, label: 'Streak' },
           ].map((s, i) => (
             <View key={i} style={styles.statItem}>
               <Text style={[styles.statNum, { color: ac.accent }]}>{s.num}</Text>
@@ -121,7 +153,7 @@ export default function JourneyScreen() {
 
         {/* Aunty quote */}
         <Animated.View entering={FadeInDown.delay(600)} style={[styles.quoteCard, { borderColor: ac.accent + '30' }]}>
-          <Text style={[styles.quote, { color: ac.accent }]}>"{aunty.quote}"</Text>
+          <Text style={[styles.quote, { color: ac.accent }]}>"{getAuntyQuoteForSession(auntyId)}"</Text>
           <Text style={styles.quoteAttrib}>— {aunty.name}</Text>
         </Animated.View>
       </ScrollView>

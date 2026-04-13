@@ -7,6 +7,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -41,13 +42,15 @@ export default function ValidationThreeScreen() {
   const [phase, setPhase] = useState(1); // 1=line1, 2=line2
 
   const handleLineOneComplete = useCallback(() => {
-    setTimeout(() => setPhase(2), 900);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setTimeout(() => setPhase(2), 400);
   }, []);
 
   const handleLineTwoComplete = useCallback(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setTimeout(() => {
       navigation.replace('BudgetQuestion');
-    }, 1500);
+    }, 800);
   }, [navigation]);
 
   return (
@@ -63,7 +66,7 @@ export default function ValidationThreeScreen() {
         <View style={styles.lines}>
           <WordReveal
             text="You've been carrying this alone."
-            stagger={85}
+            stagger={55}
             onComplete={handleLineOneComplete}
             style={styles.line}
           />
@@ -72,7 +75,7 @@ export default function ValidationThreeScreen() {
             <Animated.View entering={FadeIn.duration(250)} style={{ marginTop: spacing.lg }}>
               <WordReveal
                 text="That stops today."
-                stagger={85}
+                stagger={55}
                 onComplete={handleLineTwoComplete}
                 style={styles.line}
               />

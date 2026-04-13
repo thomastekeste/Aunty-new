@@ -38,10 +38,18 @@ type Feature =
   | 'progress_comparison'
   | 'seasonal_updates';
 
+// Features available on the free tier
+const FREE_FEATURES: Set<Feature> = new Set([
+  'full_chat',
+  'product_recommendations',
+  'unlimited_checkins',
+]);
+
 interface SubscriptionContextValue {
   tier: Tier;
   isActive: boolean;
   isLoading: boolean;
+  error: string | null;
   customerInfo: CustomerInfo | null;
   currentOffering: PurchasesOffering | null;
   canAccess: (feature: Feature) => boolean;
@@ -59,6 +67,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [currentOffering, setCurrentOffering] = useState<PurchasesOffering | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Derive tier from entitlements
   const isActive = customerInfo?.entitlements?.active?.[ENTITLEMENT_ID]?.isActive ?? false;
@@ -67,6 +76,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   // Initialize RevenueCat (skip in Expo Go — native module not available)
   useEffect(() => {
     async function init() {
+      if (!RC_API_KEY) {
+        console.log('[RevenueCat] No API key — skipping (set EXPO_PUBLIC_REVENUECAT_API_KEY)');
+        setIsLoading(false);
+        return;
+      }
+
       try {
         if (__DEV__) {
           Purchases.setLogLevel(LOG_LEVEL.DEBUG);
@@ -83,7 +98,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         }
       } catch (e: any) {
         // Gracefully handle Expo Go (no native store available)
-        console.warn('[RevenueCat] Skipping — likely running in Expo Go:', e.message || e);
+        const msg = e.message || String(e);
+        console.warn('[RevenueCat] Skipping — likely running in Expo Go:', msg);
+        setError(msg);
       } finally {
         setIsLoading(false);
       }
@@ -126,17 +143,17 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  // Feature gating
+  // Feature gating — free tier gets chat, product recs, and check-ins
   const canAccess = useCallback((feature: Feature): boolean => {
     if (tier === 'premium') return true;
-    // Free tier gets nothing gated
-    return false;
+    return FREE_FEATURES.has(feature);
   }, [tier]);
 
   const value: SubscriptionContextValue = {
     tier,
     isActive,
     isLoading,
+    error,
     customerInfo,
     currentOffering,
     canAccess,

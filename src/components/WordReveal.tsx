@@ -1,12 +1,19 @@
 /**
- * WordReveal — Clean word-by-word text reveal.
+ * WordReveal — Ultra-smooth spring-physics word reveal.
  *
- * One timer chain. One state update per word. No animation library.
- * The text simply grows word by word. Clean and reliable.
+ * Each word springs into place with real mass + damping.
+ * withSpring feels alive. withTiming feels mechanical.
  */
 
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useEffect, memo } from 'react';
 import { Text } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withDelay,
+  runOnJS,
+} from 'react-native-reanimated';
 import { colors, fonts, fontSize as fs } from '../constants/theme';
 
 interface Props {
@@ -16,57 +23,78 @@ interface Props {
   style?: any;
 }
 
-export const WordReveal = memo(function WordReveal({ text, stagger = 85, onComplete, style }: Props) {
-  const [count, setCount] = useState(0);
-  const wordsRef = useRef<string[]>([]);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onCompleteRef = useRef(onComplete);
-  const mountedRef = useRef(true);
+// Spring config: quick settle, no bounce, very natural
+const SPRING = {
+  damping: 18,
+  stiffness: 130,
+  mass: 0.4,
+  overshootClamping: false,
+};
 
-  // Keep onComplete ref fresh
-  onCompleteRef.current = onComplete;
+const FadeWord = memo(function FadeWord({
+  word,
+  delay,
+  isLast,
+  onComplete,
+}: {
+  word: string;
+  delay: number;
+  isLast: boolean;
+  onComplete?: () => void;
+}) {
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(10);
 
-  // Parse words when text changes
   useEffect(() => {
-    wordsRef.current = text.split(' ');
-    setCount(0);
-    mountedRef.current = true;
+    opacity.value = withDelay(delay, withSpring(1, SPRING));
+    translateY.value = withDelay(
+      delay,
+      withSpring(0, SPRING, (finished) => {
+        'worklet';
+        if (finished && isLast && onComplete) {
+          runOnJS(onComplete)();
+        }
+      }),
+    );
+  }, []);
 
-    let i = 0;
-    const total = wordsRef.current.length;
+  const style = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
 
-    const tick = () => {
-      i++;
-      if (!mountedRef.current) return;
+  return <Animated.Text style={style}>{word} </Animated.Text>;
+});
 
-      if (i <= total) {
-        setCount(i);
-        timerRef.current = setTimeout(tick, stagger);
-      } else {
-        onCompleteRef.current?.();
-      }
-    };
-
-    timerRef.current = setTimeout(tick, stagger);
-
-    return () => {
-      mountedRef.current = false;
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [text, stagger]);
-
-  const visible = wordsRef.current.slice(0, count).join(' ');
+export const WordReveal = memo(function WordReveal({
+  text,
+  stagger = 65,
+  onComplete,
+  style,
+}: Props) {
+  const words = text.split(' ');
 
   return (
-    <Text style={[baseStyle, style]}>
-      {visible}
+    <Text
+      style={[
+        {
+          fontFamily: fonts.body,
+          fontSize: fs.base,
+          color: colors.dark.text,
+          lineHeight: fs.base * 1.6,
+        },
+        style,
+      ]}
+    >
+      {words.map((word, i) => (
+        <FadeWord
+          key={`${word}-${i}`}
+          word={word}
+          delay={i * stagger}
+          isLast={i === words.length - 1}
+          onComplete={onComplete}
+        />
+      ))}
     </Text>
   );
 });
-
-const baseStyle = {
-  fontFamily: fonts.body,
-  fontSize: fs.base,
-  color: colors.dark.text,
-  lineHeight: fs.base * 1.6,
-};

@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -64,7 +65,7 @@ export default function ValuePreviewScreen() {
 
   // Start line reveal after avatar entrance
   useEffect(() => {
-    const t = setTimeout(() => setPhase(1), 800);
+    const t = setTimeout(() => setPhase(1), 500);
     return () => clearTimeout(t);
   }, []);
 
@@ -73,12 +74,13 @@ export default function ValuePreviewScreen() {
     if (phase === 4) {
       const t = setTimeout(() => {
         navigation.navigate('NameEntry');
-      }, 4000);
+      }, 3000);
       return () => clearTimeout(t);
     }
   }, [phase, navigation]);
 
   const showButton = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     btnOpacity.value = withTiming(1, { duration: 400 });
     setPhase(4);
   };
@@ -105,8 +107,8 @@ export default function ValuePreviewScreen() {
             <WordReveal
               key="line1"
               text={LINES[0]}
-              stagger={85}
-              onComplete={() => setTimeout(() => setPhase(2), 900)}
+              stagger={55}
+              onComplete={() => setTimeout(() => setPhase(2), 500)}
               style={styles.line}
             />
           )}
@@ -116,8 +118,8 @@ export default function ValuePreviewScreen() {
               <WordReveal
                 key="line2"
                 text={LINES[1]}
-                stagger={85}
-                onComplete={() => setTimeout(() => setPhase(3), 900)}
+                stagger={55}
+                onComplete={() => setTimeout(() => setPhase(3), 500)}
                 style={[styles.line, { color: ac.accent }]}
               />
             </Animated.View>
@@ -128,8 +130,8 @@ export default function ValuePreviewScreen() {
               <WordReveal
                 key="line3"
                 text={LINES[2]}
-                stagger={90}
-                onComplete={() => setTimeout(showButton, 700)}
+                stagger={55}
+                onComplete={() => setTimeout(showButton, 400)}
                 style={styles.line}
               />
             </Animated.View>

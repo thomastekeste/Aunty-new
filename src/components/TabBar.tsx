@@ -115,30 +115,19 @@ const TABS: TabDef[] = [
     ),
   },
   {
-    key: 'Journey',
-    label: 'Journey',
+    key: 'Learn',
+    label: 'Learn',
     icon: (color: string) => (
       <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
         <Path
-          d="M12 21C12 21 3 14.5 3 8.5C3 5.46243 5.46243 3 8.5 3C10.2817 3 11.8578 3.88213 12.8066 5.22022"
+          d="M2 4C2 4 5 2 12 2C19 2 22 4 22 4V20C22 20 19 18 12 18C5 18 2 20 2 20V4Z"
           stroke={color}
           strokeWidth={2}
           strokeLinecap="round"
+          strokeLinejoin="round"
         />
         <Path
-          d="M12 21C12 21 21 14.5 21 8.5C21 5.46243 18.5376 3 15.5 3C13.7183 3 12.1422 3.88213 11.1934 5.22022"
-          stroke={color}
-          strokeWidth={2}
-          strokeLinecap="round"
-        />
-        <Path
-          d="M12 8V14"
-          stroke={color}
-          strokeWidth={2}
-          strokeLinecap="round"
-        />
-        <Path
-          d="M9 11H15"
+          d="M12 2V18"
           stroke={color}
           strokeWidth={2}
           strokeLinecap="round"

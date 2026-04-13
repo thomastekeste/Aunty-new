@@ -191,6 +191,38 @@ app.post('/api/council/generate', aiLimiter, authMiddleware, async (req, res) =>
   }
 });
 
+// ─── 1-on-1 Chat ───────────────────────────────────────────────
+
+app.post('/api/chat/message', aiLimiter, authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { message, auntyId, conversationHistory } = req.body;
+
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return res.status(400).json({ error: 'message is required' });
+    }
+
+    // Fetch user + hair profile from DB
+    const [user, hairProfile] = await Promise.all([
+      db.getUser(userId),
+      db.getHairProfile(userId),
+    ]);
+
+    const response = await gemini.generateChatResponse(
+      message.trim(),
+      hairProfile || {},
+      auntyId || 'denise',
+      conversationHistory || [],
+      user?.name || 'Queen',
+    );
+
+    res.json({ response });
+  } catch (err) {
+    console.error('Chat message error:', err.message || err);
+    res.status(500).json({ error: 'Failed to generate response' });
+  }
+});
+
 // ─── Routine Generation ─────────────────────────────────────────
 
 app.post('/api/routine/generate', aiLimiter, authMiddleware, async (req, res) => {

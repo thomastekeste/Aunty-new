@@ -62,11 +62,11 @@ function getAuntyResponse(aunty: typeof AUNTIES[AuntyId], mood: Mood): string {
   }
 }
 
-function getWeekNumber(): number {
+function getWeekNumber(onboardingDate?: string): number {
   const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 1);
+  const start = onboardingDate ? new Date(onboardingDate) : now;
   const diff = now.getTime() - start.getTime();
-  return Math.ceil(diff / (7 * 24 * 60 * 60 * 1000));
+  return Math.max(1, Math.ceil(diff / (7 * 24 * 60 * 60 * 1000)));
 }
 
 export default function CheckInScreen() {
@@ -81,8 +81,15 @@ export default function CheckInScreen() {
   const [notes, setNotes] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [auntyResponse, setAuntyResponse] = useState('');
+  const [onboardingDate, setOnboardingDate] = useState<string | undefined>();
 
-  const weekNumber = getWeekNumber();
+  useEffect(() => {
+    AsyncStorage.getItem('onboarding_completed_at').then((d) => {
+      if (d) setOnboardingDate(d);
+    }).catch(() => {});
+  }, []);
+
+  const weekNumber = getWeekNumber(onboardingDate);
 
   const handleSelectMood = useCallback((mood: Mood) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -130,6 +137,7 @@ export default function CheckInScreen() {
           </Animated.Text>
           <Animated.View entering={FadeInDown.delay(200).duration(400)} style={[styles.responseBubble, { borderLeftColor: ac.accent, backgroundColor: ac.bgDark }]}>
             <Text style={[styles.responseAuntyName, { color: ac.accent }]}>{aunty.name}</Text>
+            <Text style={styles.aiDisclosure}>AI-powered response</Text>
             <Text style={styles.responseText}>{auntyResponse}</Text>
           </Animated.View>
           <Animated.View entering={FadeInDown.delay(300).duration(400)} style={styles.doneWrap}>
@@ -346,6 +354,13 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.xs,
     letterSpacing: letterSpacing.wide,
+    marginBottom: spacing.xs,
+  },
+  aiDisclosure: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    marginTop: 2,
     marginBottom: spacing.xs,
   },
   responseText: {

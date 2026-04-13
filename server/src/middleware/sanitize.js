@@ -50,6 +50,7 @@ const ENUMS = {
   mood: ['great', 'good', 'okay', 'struggling'],
   productScope: ['basics', 'routine', 'full', 'everything'],
   productBudget: ['under-30', '30-60', '60-100', '100-plus'],
+  auntyId: ['denise', 'pat', 'carol', 'lorraine', 'doreen', 'beverly', 'sandra'],
 };
 
 function validateEnum(val, field) {
@@ -121,6 +122,41 @@ export function sanitizeBody(req, res, next) {
     // Validate notes
     if (req.body.notes !== undefined) {
       req.body.notes = cleanString(req.body.notes, 2000);
+    }
+
+    // Validate auntyId / hostingAuntyId
+    if (req.body.auntyId !== undefined) {
+      req.body.auntyId = validateEnum(req.body.auntyId, 'auntyId');
+      if (!req.body.auntyId) {
+        return res.status(400).json({ error: 'Invalid auntyId' });
+      }
+    }
+    if (req.body.hostingAuntyId !== undefined) {
+      req.body.hostingAuntyId = validateEnum(req.body.hostingAuntyId, 'auntyId');
+      if (!req.body.hostingAuntyId) {
+        return res.status(400).json({ error: 'Invalid hostingAuntyId' });
+      }
+    }
+
+    // Validate conversationHistory (array of {sender, text} objects, max 20)
+    if (req.body.conversationHistory !== undefined) {
+      if (!Array.isArray(req.body.conversationHistory)) {
+        req.body.conversationHistory = [];
+      } else {
+        req.body.conversationHistory = req.body.conversationHistory
+          .slice(-20)
+          .filter(
+            (m) =>
+              m &&
+              typeof m === 'object' &&
+              typeof m.text === 'string' &&
+              (m.sender === 'user' || m.sender === 'aunty')
+          )
+          .map((m) => ({
+            sender: m.sender,
+            text: cleanString(m.text, 2000),
+          }));
+      }
     }
 
     // Validate message (for chat)

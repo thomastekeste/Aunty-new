@@ -23,6 +23,8 @@ export function sanitizeProfileForPrompt(profile) {
     primaryGoal: sanitizeForPrompt(profile.primaryGoal, 30),
     washFrequency: sanitizeForPrompt(profile.washFrequency, 20),
     heatUse: sanitizeForPrompt(profile.heatUse, 10),
+    productBudget: sanitizeForPrompt(profile.productBudget, 20),
+    productScope: sanitizeForPrompt(profile.productScope, 20),
     scalpConcerns: Array.isArray(profile.scalpConcerns)
       ? profile.scalpConcerns.map(s => sanitizeForPrompt(s, 50)).slice(0, 5)
       : [],

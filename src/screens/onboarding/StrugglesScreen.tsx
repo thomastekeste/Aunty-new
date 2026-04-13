@@ -83,7 +83,7 @@ export default function StrugglesScreen() {
         <Text style={styles.multiHint}>Select all that apply</Text>
       </Animated.View>
 
-      <View style={styles.options}>
+      <View style={styles.options} accessibilityRole="list" accessibilityLabel="Hair struggles, select all that apply">
         {STRUGGLES.map((struggle, index) => (
           <OptionCard
             key={struggle.id}

@@ -118,7 +118,7 @@ function CurlCard({
         >
           <CurlPatternIcon
             type={option.type}
-            size={36}
+            size={42}
             color={selected ? ac.accent : 'rgba(254, 248, 236, 0.4)'}
           />
           <Text style={[styles.cardLabel, selected && { color: colors.dark.text }]}>
@@ -212,22 +212,22 @@ const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
     backgroundColor: colors.dark.surfaceLight,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1.5,
     borderColor: colors.dark.border,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.md + 4,
     paddingHorizontal: spacing.sm,
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   cardLabel: {
     fontFamily: fonts.bodyBold,
-    fontSize: fontSize.md,
+    fontSize: fontSize.lg,
     color: colors.dark.textMuted,
   },
   cardDesc: {
     fontFamily: fonts.body,
-    fontSize: fontSize.xs,
+    fontSize: fontSize.sm,
     color: 'rgba(254, 248, 236, 0.4)',
     textAlign: 'center',
   },

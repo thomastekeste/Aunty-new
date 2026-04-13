@@ -5,7 +5,7 @@
  * Aunty guides you through each step with encouraging messages.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,17 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  withDelay,
+  withSpring,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 
@@ -98,6 +108,82 @@ const TYPE_STEPS: Record<RitualDayType, StepDetail[]> = {
   ],
 };
 
+// ─── Celebration Components ─────────────────────────────────────
+
+function SparkleParticle({ index, color }: { index: number; color: string }) {
+  const angle = (index / 10) * Math.PI * 2;
+  const distance = 50 + Math.random() * 30;
+  const tx = useSharedValue(0);
+  const ty = useSharedValue(0);
+  const opacity = useSharedValue(1);
+  const scale = useSharedValue(0);
+
+  useEffect(() => {
+    const delay = index * 30;
+    tx.value = withDelay(delay, withSpring(Math.cos(angle) * distance, { damping: 15 }));
+    ty.value = withDelay(delay, withSpring(Math.sin(angle) * distance, { damping: 15 }));
+    scale.value = withDelay(delay, withSequence(
+      withTiming(1, { duration: 200 }),
+      withTiming(0, { duration: 600 }),
+    ));
+    opacity.value = withDelay(delay + 400, withTiming(0, { duration: 400 }));
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  const size = 6 + Math.random() * 4;
+  return (
+    <Animated.View
+      style={[{
+        position: 'absolute',
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: color,
+      }, style]}
+    />
+  );
+}
+
+function RingPulse({ color }: { color: string }) {
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(0.4);
+
+  useEffect(() => {
+    scale.value = withSequence(
+      withTiming(1.3, { duration: 500 }),
+      withTiming(1.3, { duration: 200 }),
+      withTiming(1.5, { duration: 500 }),
+    );
+    opacity.value = withSequence(
+      withTiming(0.2, { duration: 500 }),
+      withTiming(0.15, { duration: 200 }),
+      withTiming(0, { duration: 500 }),
+    );
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View
+      style={[{
+        position: 'absolute',
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        borderWidth: 2,
+        borderColor: color,
+      }, style]}
+    />
+  );
+}
+
 export default function RitualStepScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
@@ -115,15 +201,36 @@ export default function RitualStepScreen() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
 
+  // Animated progress bar
+  const progress = useSharedValue(1 / totalSteps);
+  const progressStyle = useAnimatedStyle(() => ({
+    width: `${progress.value * 100}%`,
+  }));
+
+  useEffect(() => {
+    progress.value = withTiming((currentStep + 1) / totalSteps, { duration: 400 });
+  }, [currentStep, totalSteps]);
+
   const handleCompleteStep = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Two-tap haptic rhythm for mid-steps
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 100);
+
     if (currentStep < totalSteps - 1) {
       setCurrentStep((s) => s + 1);
     } else {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 200);
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 500);
       setIsComplete(true);
+      // Persist completion
+      const dateKey = new Date().toISOString().split('T')[0];
+      AsyncStorage.setItem(`ritual_completed_${dateKey}`, JSON.stringify({
+        type: today.type,
+        label: today.label,
+        completedAt: new Date().toISOString(),
+      })).catch(() => {});
     }
-  }, [currentStep, totalSteps]);
+  }, [currentStep, totalSteps, today]);
 
   const handleDone = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -136,10 +243,19 @@ export default function RitualStepScreen() {
     return (
       <View style={[styles.container, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg }]}>
         <View style={styles.completeContent}>
-          <Animated.View entering={FadeIn.duration(400)} style={styles.completeAvatarWrap}>
-            <AuntyAvatar auntyId={auntyId} size={80} showRing glowing />
-          </Animated.View>
-          <Animated.Text entering={FadeInDown.delay(100).duration(400)} style={styles.completeTitle}>
+          {/* Avatar with sparkle burst */}
+          <View style={styles.completeAvatarWrap}>
+            {/* Sparkle particles */}
+            {Array.from({ length: 10 }).map((_, i) => (
+              <SparkleParticle key={i} index={i} color={todayColor} />
+            ))}
+            {/* Gold ring pulse */}
+            <RingPulse color={colors.primary} />
+            <Animated.View entering={FadeIn.duration(400)}>
+              <AuntyAvatar auntyId={auntyId} size={80} showRing glowing />
+            </Animated.View>
+          </View>
+          <Animated.Text entering={FadeInDown.delay(100).springify().damping(12).stiffness(180)} style={styles.completeTitle}>
             Ritual Complete!
           </Animated.Text>
           <Animated.Text entering={FadeInDown.delay(200).duration(400)} style={[styles.completeLabel, { color: todayColor }]}>
@@ -177,7 +293,8 @@ export default function RitualStepScreen() {
         <Animated.View
           style={[
             styles.progressBarFill,
-            { width: `${((currentStep + 1) / totalSteps) * 100}%`, backgroundColor: todayColor },
+            progressStyle,
+            { backgroundColor: todayColor },
           ]}
         />
       </View>

@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ConsultationShell } from '../../components/ConsultationShell';
 import { OptionCard } from '../../components/OptionCard';
 import { useOnboarding } from '../../context/OnboardingContext';
@@ -59,7 +60,12 @@ export default function PrimaryGoalScreen() {
       ctaDisabled={!selected}
       onCtaPress={handleContinue}
     >
-      <View style={styles.options}>
+      <Animated.View
+        entering={FadeInDown.duration(400)}
+        style={styles.options}
+        accessibilityRole="radiogroup"
+        accessibilityLabel="Primary hair goal options"
+      >
         {GOAL_OPTIONS.map((goal, index) => (
           <OptionCard
             key={goal.value}
@@ -72,7 +78,7 @@ export default function PrimaryGoalScreen() {
             index={index}
           />
         ))}
-      </View>
+      </Animated.View>
     </ConsultationShell>
   );
 }

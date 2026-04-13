@@ -358,6 +358,12 @@ export default function CouncilConveningScreen() {
       >
         {aunty.name}. Your hair. Her expertise.
       </Animated.Text>
+      <Animated.Text
+        entering={FadeIn.delay(1300).duration(500)}
+        style={styles.aiNote}
+      >
+        Personalized with AI
+      </Animated.Text>
     </View>
   );
 }
@@ -462,6 +468,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 80,
     fontStyle: 'italic',
+    letterSpacing: letterSpacing.wide,
+  },
+  aiNote: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.dark.textMuted,
+    textAlign: 'center',
+    position: 'absolute',
+    bottom: 52,
+    alignSelf: 'center',
     letterSpacing: letterSpacing.wide,
   },
 });

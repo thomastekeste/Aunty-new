@@ -47,6 +47,10 @@ export const colors = {
   warning: '#D4A04A',
   info: '#3D5A99',
 
+  // ─── Skeleton Loading ─────────────────────────────────────────
+  skeleton: '#F0E8D8', // warm bone for skeleton base
+  skeletonHighlight: '#F8F0E0', // lighter pulse highlight
+
   // ─── Dark Mode (consultation shell) ────────────────────────────
   dark: {
     bg: '#1A0F08', // deep warm black

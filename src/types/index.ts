@@ -174,7 +174,7 @@ export type AppTabParamList = {
   Ritual: undefined;
   Products: undefined;
   Chat: undefined;
-  Journey: undefined;
+  Learn: undefined;
 };
 
 export type AppStackParamList = {

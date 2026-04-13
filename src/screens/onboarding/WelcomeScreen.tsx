@@ -10,7 +10,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInUp, Layout } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -83,7 +83,7 @@ export function WelcomeScreen() {
   // Hook done → pause → show scroll
   useEffect(() => {
     if (hookDone && phase === 0) {
-      setTimeout(() => setPhase(1), 900); // same rhythm as SendOff
+      setTimeout(() => setPhase(1), 300);
     }
   }, [hookDone]);
 
@@ -91,15 +91,15 @@ export function WelcomeScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedId(id);
     setChosenAunty(id);
-    setTimeout(() => { setPhase(2); setIntroLine(0); }, 700); // let selection register visually
+    setTimeout(() => { setPhase(2); setIntroLine(0); }, 400);
   };
 
   const handleLineDone = () => {
     const lines = selectedId ? INTROS[selectedId] : [];
     if (introLine < lines.length - 1) {
-      setTimeout(() => setIntroLine((l) => l + 1), 900); // SendOff rhythm
+      setTimeout(() => setIntroLine((l) => l + 1), 500);
     } else {
-      setTimeout(() => { setAllDone(true); setPhase(3); }, 700);
+      setTimeout(() => { setAllDone(true); setPhase(3); }, 400);
     }
   };
 
@@ -113,17 +113,17 @@ export function WelcomeScreen() {
         {/* ─── PHASE 0+1: Hook + Pick ─────────────────── */}
         {phase <= 1 && (
           <View style={styles.pickSection}>
-            <View style={styles.hookWrap}>
+            <Animated.View layout={Layout.springify().damping(20).stiffness(120)} style={styles.hookWrap}>
               <WordReveal
                 text="Every curl needs an aunty."
-                stagger={90}
+                stagger={55}
                 onComplete={() => setHookDone(true)}
                 style={styles.hookText}
               />
-            </View>
+            </Animated.View>
 
             {phase >= 1 && (
-              <Animated.View entering={FadeInUp.duration(400)}>
+              <Animated.View entering={FadeIn.duration(400)}>
                 <Text style={styles.pickLabel}>Pick yours.</Text>
                 <ScrollView
                   horizontal
@@ -175,7 +175,7 @@ export function WelcomeScreen() {
                     {isActive ? (
                       <WordReveal
                         text={line}
-                        stagger={isFirst ? 90 : 85}
+                        stagger={55}
                         onComplete={handleLineDone}
                         style={[
                           styles.lineText,

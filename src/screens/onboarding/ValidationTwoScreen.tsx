@@ -8,6 +8,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -57,13 +58,15 @@ export default function ValidationTwoScreen() {
   const [phase, setPhase] = useState(1); // 1=line1, 2=line2
 
   const handleLineOneComplete = useCallback(() => {
-    setTimeout(() => setPhase(2), 900);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setTimeout(() => setPhase(2), 500);
   }, []);
 
   const handleLineTwoComplete = useCallback(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setTimeout(() => {
       navigation.replace('HairHabits');
-    }, 1500);
+    }, 800);
   }, [navigation]);
 
   return (
@@ -79,7 +82,7 @@ export default function ValidationTwoScreen() {
         <View style={styles.lines}>
           <WordReveal
             text={lineOne}
-            stagger={85}
+            stagger={55}
             onComplete={handleLineOneComplete}
             style={styles.line}
           />
@@ -88,7 +91,7 @@ export default function ValidationTwoScreen() {
             <Animated.View entering={FadeIn.duration(250)} style={{ marginTop: spacing.lg }}>
               <WordReveal
                 text={LINE_TWO}
-                stagger={85}
+                stagger={55}
                 onComplete={handleLineTwoComplete}
                 style={styles.line}
               />

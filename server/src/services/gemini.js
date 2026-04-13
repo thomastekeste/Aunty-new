@@ -83,8 +83,8 @@ const AUNTIES = {
   },
   amara: {
     id: 'amara',
-    name: 'Amara',
-    region: 'East African',
+    name: 'Selam',
+    region: 'Ethiopian-Eritrean',
     title: 'The Strength Builder',
     specialty: 'Protein balance & hair strengthening',
     focus: 'strength',
@@ -92,13 +92,13 @@ const AUNTIES = {
     personality:
       "Strong, steady, nurturing. She builds your hair's resilience from the inside out.",
     quote: 'Strength is not force. It is patience. It is protein. It is rest.',
-    greeting: 'Welcome, dear one. Let us build something strong.',
+    greeting: 'Selam, dear one. Let us build something strong.',
     ingredient: 'Fenugreek protein treatments, castor oil, henna',
   },
   salma: {
     id: 'salma',
     name: 'Salma',
-    region: 'North African',
+    region: 'Moroccan',
     title: 'The Remedy Keeper',
     specialty: 'Natural remedies & holistic restoration',
     focus: 'restoration',
@@ -135,7 +135,7 @@ export async function generateCouncilResponse(hairProfile, userName) {
 - **Greeting style:** "${a.greeting}"
 - **Preferred ingredients/methods:** ${a.ingredient}
 
-${a.name} MUST speak in her authentic ${a.dialect} voice. Her response should feel like a real ${a.region} aunty talking — not a clinical AI. She should reference her specific expertise (${a.specialty}) and recommend from her ingredient/method toolkit (${a.ingredient}). She is opinionated, caring, and culturally grounded.`;
+${a.name} MUST speak in her authentic ${a.dialect} voice. Her response should feel warm, personal, and culturally grounded — not clinical or generic. She should reference her specific expertise (${a.specialty}) and recommend from her ingredient/method toolkit (${a.ingredient}). She is opinionated, caring, and culturally grounded.`;
   }).join('\n');
 
   const safe = sanitizeProfileForPrompt(hairProfile);
@@ -158,7 +158,7 @@ ${a.name} MUST speak in her authentic ${a.dialect} voice. Her response should fe
 - Time available: ${sanitizeForPrompt(hairProfile.timeAvailable, 20)}
 - Failed attempts / frustrations: ${safe.failedAttempts.join(', ') || 'none'}`;
 
-  const systemPrompt = `You are the Aunty Curl Council — a council of seven Black and Brown women elders from the African diaspora, each with deep expertise in natural hair care. They have gathered for a sacred ceremony to assess a new member's hair and give their collective wisdom.
+  const systemPrompt = `You are the Aunty Curl Council — a council of seven Black and Brown women elders from the African diaspora, each with deep expertise in natural hair care. They have gathered for a consultation to assess a new member's hair and give their collective wisdom.
 
 This is NOT a generic AI response. Each aunty is a DISTINCT PERSON with her own cultural voice, dialect, opinions, and expertise. They sometimes agree, sometimes gently disagree, and always bring their unique perspective.
 
@@ -178,7 +178,7 @@ Generate a JSON response with this exact structure:
     "denise": "Denise's 2-4 sentence response IN AAVE with cultural wisdom about protection/retention...",
     "fatou": "Fatou's 2-4 sentence response IN FRENCH-ACCENTED ENGLISH about technique...",
     "carmen": "Carmen's 2-4 sentence response IN SPANGLISH about curl definition/joy...",
-    "amara": "Amara's 2-4 sentence response IN EAST AFRICAN ENGLISH about protein/strength...",
+    "amara": "Selam's 2-4 sentence response IN EAST AFRICAN ENGLISH about protein/strength...",
     "salma": "Salma's 2-4 sentence response IN DARIJA-ACCENTED ENGLISH about holistic balance..."
   },
   "consensus": "A 2-3 sentence summary of what all aunties agree on — the collective verdict for this user's hair. Written as if Denise (the elder) is delivering the group's conclusion.",
@@ -355,6 +355,93 @@ Return ONLY valid JSON, no markdown code fences.`;
     console.error('Failed to parse photo analysis JSON:', err.message);
     throw new Error('Photo analysis response was not valid JSON');
   }
+}
+
+// ─── Check-in Response ──────────────────────────────────────────
+
+/**
+ * Generate a personalized response from a hosting aunty
+ * based on a user's check-in data.
+ */
+// ─── 1-on-1 Chat Response ──────────────────────────────────────
+
+/**
+ * Generate a personalized 1-on-1 chat response from the user's
+ * chosen aunty, informed by their complete hair profile and
+ * recent conversation history.
+ */
+export async function generateChatResponse(message, hairProfile, auntyId, conversationHistory, userName) {
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+  const aunty = AUNTIES[auntyId] || AUNTIES.denise;
+  const safe = sanitizeProfileForPrompt(hairProfile);
+  const safeName = sanitizeForPrompt(userName, 50);
+  const safeMessage = sanitizeForPrompt(message, 500);
+
+  // Build recent conversation context (last 10 messages max)
+  const recentMessages = (conversationHistory || [])
+    .slice(-10)
+    .map((m) => `${m.sender === 'user' ? safeName : aunty.name}: ${sanitizeForPrompt(m.text, 300)}`)
+    .join('\n');
+
+  const prompt = `You are ${aunty.name}, "${aunty.title}" from the Aunty Curl Council — a council of seven Black and Brown women elders from the African diaspora who specialize in natural hair care.
+
+## Your Character
+- Name: ${aunty.name}
+- Region: ${aunty.region}
+- Title: ${aunty.title}
+- Specialty: ${aunty.specialty}
+- Focus area: ${aunty.focus}
+- Dialect/voice: ${aunty.dialect}
+- Personality: ${aunty.personality}
+- Signature quote: "${aunty.quote}"
+- Greeting style: "${aunty.greeting}"
+- Preferred ingredients/methods: ${aunty.ingredient}
+
+You MUST speak in your authentic ${aunty.dialect} voice at all times. You are playing the character of ${aunty.name}, a ${aunty.region} aunty who deeply cares about this person's hair journey. Stay fully in character.
+
+## Who You're Talking To
+- Name: ${safeName}
+- Curl type: ${safe.curlType}
+- Porosity: ${safe.porosity}
+- Elasticity: ${safe.elasticity}
+- Density: ${safe.density}
+- Primary goal: ${safe.primaryGoal}
+- Secondary goals: ${(hairProfile?.secondaryGoals || []).map(g => sanitizeForPrompt(g, 30)).join(', ') || 'none'}
+- Wash frequency: ${safe.washFrequency}
+- Heat use: ${safe.heatUse}
+- Relaxer history: ${hairProfile?.relaxerHistory ? 'yes' : 'no'}
+- Color treated: ${hairProfile?.colorTreated ? 'yes' : 'no'}
+- Protective styling: ${hairProfile?.protectiveStyling ? 'yes' : 'no'}
+- Scalp concerns: ${safe.scalpConcerns.join(', ') || 'none'}
+- Product budget: ${sanitizeForPrompt(hairProfile?.productBudget, 20)}
+- Product scope: ${sanitizeForPrompt(hairProfile?.productScope, 20)}
+
+## Conversation So Far
+${recentMessages || '(This is the start of the conversation)'}
+
+## ${safeName}'s New Message
+${safeMessage}
+
+## Instructions
+Respond as ${aunty.name} in 2-5 sentences. Be:
+- **Personal**: Reference their specific hair type, porosity, goals, or concerns when relevant.
+- **Authentic**: Speak in your ${aunty.dialect} voice. Use your cultural expressions naturally.
+- **Knowledgeable**: Draw from your specialty (${aunty.specialty}) and preferred methods (${aunty.ingredient}).
+- **Warm but opinionated**: You have strong views about hair care. Share them with love.
+- **Contextual**: If they asked about products, consider their budget (${sanitizeForPrompt(hairProfile?.productBudget, 20)}). If they asked about routines, consider their time and wash frequency.
+- **Conversational**: This is a chat, not a lecture. Ask follow-up questions sometimes. React to what they said.
+
+Do NOT:
+- Break character
+- Give generic advice that ignores their hair profile
+- Use clinical/medical language
+- Repeat the same advice if the conversation history shows you already covered it
+- Make medical diagnoses or recommend prescription treatments
+
+Return ONLY the response text, no JSON, no quotes around it.`;
+
+  const result = await model.generateContent(prompt);
+  return result.response.text().trim();
 }
 
 // ─── Check-in Response ──────────────────────────────────────────

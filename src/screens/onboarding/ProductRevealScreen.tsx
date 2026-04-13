@@ -89,7 +89,7 @@ export default function ProductRevealScreen() {
           </Animated.View>
 
           {/* Category preview */}
-          <Animated.View entering={FadeInDown.delay(500)} style={styles.categoryPreview}>
+          <Animated.View entering={FadeInDown.delay(350)} style={styles.categoryPreview}>
             <Text style={styles.previewTitle}>YOUR PRODUCT CATEGORIES</Text>
             {tabs.map((cat) => (
               <View key={cat} style={styles.categoryRow}>
@@ -101,7 +101,7 @@ export default function ProductRevealScreen() {
           </Animated.View>
 
           {/* CTA */}
-          <Animated.View entering={FadeInDown.delay(800)} style={styles.ctaSection}>
+          <Animated.View entering={FadeInDown.delay(550)} style={styles.ctaSection}>
             <Button
               label="See My Products"
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowPaywall(true); }}

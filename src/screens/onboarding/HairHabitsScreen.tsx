@@ -129,7 +129,7 @@ export default function HairHabitsScreen() {
       </View>
 
       {subStep === 0 ? (
-        <Animated.View key="wash" entering={FadeInDown.duration(400)} style={styles.options}>
+        <Animated.View key="wash" entering={FadeInDown.duration(400)} style={styles.options} accessibilityRole="radiogroup" accessibilityLabel="Wash frequency options">
           {WASH_OPTIONS.map((option, index) => (
             <OptionCard
               key={option.value}
@@ -143,7 +143,7 @@ export default function HairHabitsScreen() {
           ))}
         </Animated.View>
       ) : (
-        <Animated.View key="heat" entering={FadeInDown.duration(400)} style={styles.options}>
+        <Animated.View key="heat" entering={FadeInDown.duration(400)} style={styles.options} accessibilityRole="radiogroup" accessibilityLabel="Heat usage options">
           {HEAT_OPTIONS.map((option, index) => (
             <OptionCard
               key={option.value}

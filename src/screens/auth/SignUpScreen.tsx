@@ -96,7 +96,7 @@ export default function SignUpScreen() {
           </Animated.View>
 
           {/* Form */}
-          <Animated.View entering={FadeInDown.delay(500).duration(500)} style={styles.form}>
+          <Animated.View entering={FadeInDown.delay(350).duration(400)} style={styles.form}>
             {/* Name Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>YOUR NAME</Text>
@@ -170,7 +170,7 @@ export default function SignUpScreen() {
           </Animated.View>
 
           {/* CTA */}
-          <Animated.View entering={FadeInDown.delay(800).duration(500)} style={styles.ctaArea}>
+          <Animated.View entering={FadeInDown.delay(550).duration(400)} style={styles.ctaArea}>
             <Button
               label="Create Account"
               onPress={handleSignUp}
@@ -182,7 +182,7 @@ export default function SignUpScreen() {
           </Animated.View>
 
           {/* Sign In Link */}
-          <Animated.View entering={FadeIn.delay(1000).duration(400)}>
+          <Animated.View entering={FadeIn.delay(700).duration(400)}>
             <Pressable
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

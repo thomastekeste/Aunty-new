@@ -120,7 +120,7 @@ export function ConsultationShell({
 
       {/* Aunty + question */}
       <View style={styles.questionRow}>
-        <AuntyAvatar auntyId={auntyId} size={32} showRing />
+        <AuntyAvatar auntyId={auntyId} size={40} showRing />
         <Text style={[styles.questionText, { color: ac.accent }]}>{aunty.name}</Text>
       </View>
       <Text style={styles.question} accessibilityRole="header">
@@ -228,16 +228,16 @@ const styles = StyleSheet.create({
   },
   questionText: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
   },
   question: {
     fontFamily: fonts.display,
-    fontSize: fontSize.xl,
-    lineHeight: fontSize.xl * 1.25,
+    fontSize: fontSize.xxl,
+    lineHeight: fontSize.xxl * 1.2,
     letterSpacing: letterSpacing.tight,
     color: colors.dark.text,
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,

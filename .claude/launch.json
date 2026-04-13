@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "expo-web",
+      "runtimeExecutable": "/opt/homebrew/opt/node@20/bin/node",
+      "runtimeArgs": ["/Users/thomastekeste/aunty-curl-council/.claude/worktrees/festive-ardinghelli/node_modules/.bin/expo", "start", "--web", "--port", "8081"],
+      "port": 8081,
+      "autoPort": false
+    }
+  ]
+}

@@ -8,6 +8,7 @@
 
 import React, { useCallback } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -58,9 +59,10 @@ export default function ValidationOneScreen() {
   const message = getTextureMessage(curlType);
 
   const handleComplete = useCallback(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setTimeout(() => {
       navigation.replace('PorosityTest');
-    }, 1500);
+    }, 800);
   }, [navigation]);
 
   return (
@@ -76,7 +78,7 @@ export default function ValidationOneScreen() {
         <View style={styles.lines}>
           <WordReveal
             text={message}
-            stagger={85}
+            stagger={55}
             onComplete={handleComplete}
             style={styles.line}
           />

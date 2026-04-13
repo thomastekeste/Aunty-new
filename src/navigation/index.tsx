@@ -44,10 +44,12 @@ import HomeScreen from '../screens/app/HomeScreen';
 import RitualScreen from '../screens/app/RitualScreen';
 import CouncilScreen from '../screens/app/CouncilScreen';
 import JourneyScreen from '../screens/app/JourneyScreen';
+import LearnScreen from '../screens/app/LearnScreen';
 import ProductsScreen from '../screens/app/ProductsScreen';
 import SettingsScreen from '../screens/app/SettingsScreen';
 import RitualStepScreen from '../screens/app/RitualStepScreen';
-import CheckInScreen from '../screens/app/CheckInScreen';
+import CheckInScreen from '../screens/app/CheckinScreen';
+import HairProfileScreen from '../screens/app/HairProfileScreen';
 
 import type {
   RootStackParamList,
@@ -127,7 +129,7 @@ function TabNavigator() {
       <AppTab.Screen name="Ritual" component={RitualScreen} />
       <AppTab.Screen name="Products" component={ProductsScreen} />
       <AppTab.Screen name="Chat" component={CouncilScreen} />
-      <AppTab.Screen name="Journey" component={JourneyScreen} />
+      <AppTab.Screen name="Learn" component={LearnScreen} />
     </AppTab.Navigator>
   );
 }
@@ -141,21 +143,12 @@ function AppNavigator() {
     <AppStack.Navigator screenOptions={{ headerShown: false }}>
       <AppStack.Screen name="Tabs" component={TabNavigator} />
       <AppStack.Group screenOptions={{ presentation: 'modal', animation: 'slide_from_bottom' }}>
-        <AppStack.Screen name="HairProfile" component={PlaceholderScreen} />
+        <AppStack.Screen name="HairProfile" component={HairProfileScreen} />
         <AppStack.Screen name="Settings" component={SettingsScreen} />
         <AppStack.Screen name="RitualSteps" component={RitualStepScreen} />
         <AppStack.Screen name="CheckIn" component={CheckInScreen} />
       </AppStack.Group>
     </AppStack.Navigator>
-  );
-}
-
-// Placeholder for screens not yet built
-function PlaceholderScreen() {
-  return (
-    <View style={loadingStyles.container}>
-      <ActivityIndicator color={colors.primary} size="large" />
-    </View>
   );
 }
 

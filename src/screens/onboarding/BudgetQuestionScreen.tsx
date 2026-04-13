@@ -95,7 +95,7 @@ export default function BudgetQuestionScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setScope(key);
     // Auto-advance to budget after a beat
-    setTimeout(() => setStep(2), 600);
+    setTimeout(() => setStep(2), 400);
   };
 
   const handleBudgetSelect = (key: string) => {
@@ -128,7 +128,7 @@ export default function BudgetQuestionScreen() {
             {SCOPE_OPTIONS.map((opt, i) => {
               const selected = scope === opt.key;
               return (
-                <Animated.View key={opt.key} entering={FadeInDown.delay(100 + i * 80)}>
+                <Animated.View key={opt.key} entering={FadeInDown.delay(80 + i * 50)}>
                   <Pressable
                     onPress={() => handleScopeSelect(opt.key)}
                     style={[
@@ -175,7 +175,7 @@ export default function BudgetQuestionScreen() {
             {BUDGET_OPTIONS.map((opt, i) => {
               const selected = budget === opt.key;
               return (
-                <Animated.View key={opt.key} entering={FadeInDown.delay(100 + i * 80)}>
+                <Animated.View key={opt.key} entering={FadeInDown.delay(80 + i * 50)}>
                   <Pressable
                     onPress={() => handleBudgetSelect(opt.key)}
                     style={[

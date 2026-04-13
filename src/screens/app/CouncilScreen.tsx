@@ -6,7 +6,7 @@
  * Calls Gemini API or falls back to local personality-based responses.
  */
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -90,10 +90,15 @@ export default function CouncilScreen() {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const isSendingRef = useRef(false);
+
+  // Cap conversation history to last 50 messages to prevent unbounded growth
+  const MAX_MESSAGES = 50;
 
   const handleSend = useCallback(async () => {
     const trimmed = inputText.trim();
-    if (!trimmed) return;
+    if (!trimmed || isSendingRef.current) return;
+    isSendingRef.current = true;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     const userMsg: Message = {
@@ -102,41 +107,52 @@ export default function CouncilScreen() {
       sender: 'user',
       timestamp: getTimestamp(),
     };
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg].slice(-MAX_MESSAGES));
     setInputText('');
     setIsTyping(true);
 
     let responseText: string;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
 
     try {
-      const res = await fetch(`${API_URL}/api/council/generate`, {
+      // Send last 20 messages for AI context (keeps payload small)
+      const history = [...messages, userMsg].slice(-20).map((m) => ({
+        sender: m.sender,
+        text: m.text,
+      }));
+
+      const res = await fetch(`${API_URL}/api/chat/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: trimmed,
-          name,
-          hairProfile,
           auntyId,
+          conversationHistory: history,
         }),
+        signal: controller.signal,
       });
 
       if (!res.ok) throw new Error(`API ${res.status}`);
 
       const data = await res.json();
-      responseText = data.response || data.message || generateFallbackResponse(aunty, trimmed);
+      responseText = data.response || generateFallbackResponse(aunty, trimmed);
     } catch {
       responseText = generateFallbackResponse(aunty, trimmed);
+    } finally {
+      clearTimeout(timeout);
     }
 
     setIsTyping(false);
+    isSendingRef.current = false;
     const auntyMsg: Message = {
       id: (Date.now() + 1).toString(),
       text: responseText,
       sender: 'aunty',
       timestamp: getTimestamp(),
     };
-    setMessages((prev) => [...prev, auntyMsg]);
-  }, [inputText, auntyId, aunty, name, hairProfile]);
+    setMessages((prev) => [...prev, auntyMsg].slice(-MAX_MESSAGES));
+  }, [inputText, auntyId, aunty, name, hairProfile, messages]);
 
   const renderMessage = ({ item }: { item: Message }) => {
     if (item.sender === 'user') {
@@ -179,6 +195,7 @@ export default function CouncilScreen() {
           <View style={styles.headerText}>
             <Text style={[typography.h3]}>{aunty.name}</Text>
             <Text style={[typography.caption, { color: ac.accent }]}>{aunty.title}</Text>
+            <Text style={styles.aiDisclosure}>AI-powered character</Text>
           </View>
         </View>
       </View>
@@ -263,6 +280,12 @@ const styles = StyleSheet.create({
   },
   headerText: {
     flex: 1,
+  },
+  aiDisclosure: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    marginTop: 2,
   },
   messageList: {
     paddingHorizontal: spacing.lg,

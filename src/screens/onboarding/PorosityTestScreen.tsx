@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   },
   instructionTitle: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.base,
     color: colors.dark.text,
     marginBottom: 4,
   },
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
     color: colors.dark.textMuted,
-    lineHeight: fontSize.sm * 1.5,
+    lineHeight: fontSize.sm * 1.6,
   },
   options: {
     gap: spacing.xs,
@@ -176,9 +176,9 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontFamily: fonts.body,
-    fontSize: fontSize.md,
+    fontSize: fontSize.base,
     color: colors.dark.text,
-    lineHeight: fontSize.md * 1.5,
+    lineHeight: fontSize.base * 1.5,
   },
   marciaNote: {
     fontFamily: fonts.bodySemiBold,

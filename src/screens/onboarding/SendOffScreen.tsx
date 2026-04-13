@@ -57,7 +57,7 @@ export default function SendOffScreen() {
   }));
 
   useEffect(() => {
-    const t = setTimeout(() => setPhase(1), 1200);
+    const t = setTimeout(() => setPhase(1), 600);
     return () => clearTimeout(t);
   }, []);
 
@@ -97,8 +97,8 @@ export default function SendOffScreen() {
             <WordReveal
               key="line1"
               text={`${name}, your crown was never broken.`}
-              stagger={85}
-              onComplete={() => setTimeout(() => setPhase(2), 900)}
+              stagger={55}
+              onComplete={() => setTimeout(() => setPhase(2), 500)}
               style={styles.line}
             />
           )}
@@ -108,8 +108,8 @@ export default function SendOffScreen() {
               <WordReveal
                 key="line2"
                 text="It just needed someone who speaks its language."
-                stagger={85}
-                onComplete={() => setTimeout(() => setPhase(3), 700)}
+                stagger={55}
+                onComplete={() => setTimeout(() => setPhase(3), 450)}
                 style={[styles.line, { color: ac.accent }]}
               />
             </Animated.View>
@@ -120,8 +120,8 @@ export default function SendOffScreen() {
               <WordReveal
                 key="line3"
                 text="Now go wear it like you mean it."
-                stagger={90}
-                onComplete={() => setTimeout(showButton, 600)}
+                stagger={55}
+                onComplete={() => setTimeout(showButton, 350)}
                 style={styles.line}
               />
             </Animated.View>

@@ -210,11 +210,13 @@ export default function SettingsScreen() {
         <Animated.View entering={FadeInDown.delay(200).duration(400)}>
           <SectionHeader title="Preferences" />
           <View style={[styles.card, shadows.sm]}>
-            <ListRow
-              label="Your Aunty"
-              value={`${aunty.name} — ${aunty.title}`}
-              showChevron={false}
-            />
+            <View style={styles.auntyRow}>
+              <AuntyAvatar auntyId={auntyId} size={44} showRing />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.auntyRowName}>{aunty.name}</Text>
+                <Text style={styles.auntyRowTitle}>{aunty.title} — {aunty.region}</Text>
+              </View>
+            </View>
             <View style={styles.divider} />
             <ListRow
               label="Notifications"
@@ -369,6 +371,25 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.borderLight,
     marginHorizontal: spacing.lg,
+  },
+  auntyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    minHeight: 52,
+  },
+  auntyRowName: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.base,
+    color: colors.ink,
+  },
+  auntyRowTitle: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.muted,
+    marginTop: 1,
   },
   version: {
     fontFamily: fonts.body,

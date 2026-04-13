@@ -71,7 +71,7 @@ export default function CouncilVerdictScreen() {
   const [showButton, setShowButton] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => { setStep(0); setVisible(true); }, 900); // match SendOff initial delay
+    const t = setTimeout(() => { setStep(0); setVisible(true); }, 500);
     return () => clearTimeout(t);
   }, []);
 
@@ -82,12 +82,12 @@ export default function CouncilVerdictScreen() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setVisible(false);
         setTimeout(() => { setStep((s) => s + 1); setVisible(true); }, 200); // quick crossfade
-      }, 900); // 900ms hold — matches SendOff
+      }, 500);
     } else {
       setTimeout(() => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setShowButton(true);
-      }, 700); // 700ms — matches SendOff final line
+      }, 400);
     }
   };
 
@@ -119,7 +119,7 @@ export default function CouncilVerdictScreen() {
         >
           <WordReveal
             text={findings[step]}
-            stagger={85}
+            stagger={55}
             onComplete={handleDone}
             style={styles.findingText}
           />
