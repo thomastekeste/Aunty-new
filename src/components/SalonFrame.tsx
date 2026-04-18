@@ -175,7 +175,7 @@ export function SalonFrame({
       </View>
 
       <Animated.View entering={FadeIn.duration(400)} style={styles.auntyHeader}>
-        <AuntyAvatar auntyId={auntyId} size={64} showRing glowing />
+        <AuntyAvatar auntyId={auntyId} size={48} showRing glowing />
         <View style={styles.auntyText}>
           <Text style={[styles.auntyName, { color: ac.accent }]} numberOfLines={1}>
             {aunty.name}
@@ -197,7 +197,7 @@ export function SalonFrame({
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 120 },
+          { paddingBottom: insets.bottom + 110 },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -206,9 +206,9 @@ export function SalonFrame({
       </ScrollView>
 
       {/* Glass footer */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.xs }]}>
         <LinearGradient
-          colors={['rgba(26, 15, 8, 0)', 'rgba(26, 15, 8, 0.9)', colors.dark.bg]}
+          colors={['rgba(26, 15, 8, 0)', 'rgba(26, 15, 8, 0.85)', colors.dark.bg]}
           style={styles.footerFade}
           pointerEvents="none"
         />
@@ -218,7 +218,7 @@ export function SalonFrame({
             onPress={onCtaPress}
             disabled={ctaDisabled}
             loading={ctaLoading}
-            size="lg"
+            size="md"
           />
         </View>
       </View>
@@ -258,12 +258,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
@@ -312,34 +312,34 @@ const styles = StyleSheet.create({
   auntyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
     paddingHorizontal: spacing.lg,
-    marginTop: spacing.sm,
-    marginBottom: spacing.lg,
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
   },
   auntyText: { flexShrink: 1 },
   auntyName: {
     fontFamily: fonts.serifSemiBold,
-    fontSize: fontSize.xl,
+    fontSize: fontSize.lg,
     letterSpacing: -0.2,
-    lineHeight: fontSize.xl * 1.05,
+    lineHeight: fontSize.lg * 1.1,
   },
   auntyVerb: {
     fontFamily: fonts.serifItalic,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.dark.textMuted,
-    marginTop: 2,
+    marginTop: 1,
     letterSpacing: 0.1,
   },
 
   question: {
     fontFamily: fonts.displayMedium,
-    fontSize: fontSize.xxl,
-    lineHeight: fontSize.xxl * 1.18,
-    letterSpacing: -0.5,
+    fontSize: fontSize.xl,
+    lineHeight: fontSize.xl * 1.2,
+    letterSpacing: -0.4,
     color: colors.dark.text,
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
 
   scrollContent: { paddingHorizontal: spacing.lg },
@@ -352,14 +352,14 @@ const styles = StyleSheet.create({
   },
   footerFade: {
     position: 'absolute',
-    top: -48,
+    top: -40,
     left: 0,
     right: 0,
-    height: 48,
+    height: 40,
   },
   footerInner: {
     backgroundColor: colors.dark.bg,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.xs,
   },
 });

@@ -103,9 +103,9 @@ export default function BudgetQuestionScreen() {
   const canContinue = scope !== null && budget !== null;
 
   return (
-    <LinearGradient colors={[...gradients.ceremony]} style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
+    <LinearGradient colors={[...gradients.ceremony]} style={[styles.container, { paddingTop: insets.top + spacing.md }]}>
       <Animated.View entering={FadeIn.delay(200)} style={styles.auntyHeader}>
-        <AuntyAvatar auntyId={auntyId} size={64} showRing glowing />
+        <AuntyAvatar auntyId={auntyId} size={48} showRing glowing />
         <View style={{ flexShrink: 1 }}>
           <Text style={[styles.auntyName, { color: ac.accent }]}>{aunty.name}</Text>
           <Text style={styles.auntyMessage}>
@@ -250,57 +250,57 @@ export default function BudgetQuestionScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
-  auntyHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.xl },
-  auntyName: { fontFamily: fonts.serifSemiBold, fontSize: fontSize.xl, letterSpacing: -0.2, lineHeight: fontSize.xl * 1.05 },
-  auntyMessage: { fontFamily: fonts.serifItalic, fontSize: fontSize.sm, color: colors.dark.textMuted, marginTop: 2, letterSpacing: 0.1 },
+  auntyHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
+  auntyName: { fontFamily: fonts.serifSemiBold, fontSize: fontSize.lg, letterSpacing: -0.2, lineHeight: fontSize.lg * 1.1 },
+  auntyMessage: { fontFamily: fonts.serifItalic, fontSize: fontSize.xs, color: colors.dark.textMuted, marginTop: 1, letterSpacing: 0.1 },
 
   optionsContainer: { flex: 1, paddingHorizontal: spacing.lg },
-  question: { fontFamily: fonts.display, fontSize: fontSize.xxl, color: colors.dark.text, letterSpacing: -0.4, marginBottom: spacing.xs },
-  hint: { fontFamily: fonts.serifItalic, fontSize: fontSize.sm, color: colors.dark.textMuted, marginTop: spacing.xs, marginBottom: spacing.lg },
+  question: { fontFamily: fonts.display, fontSize: fontSize.xl, color: colors.dark.text, letterSpacing: -0.4, marginBottom: spacing.xs },
+  hint: { fontFamily: fonts.serifItalic, fontSize: fontSize.xs, color: colors.dark.textMuted, marginTop: 2, marginBottom: spacing.md },
 
   // Scope cards
-  scopeGrid: { gap: spacing.sm },
+  scopeGrid: { gap: spacing.xs },
   scopeCard: {
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: 'rgba(254, 248, 236, 0.10)',
     backgroundColor: 'rgba(255, 250, 240, 0.04)',
-    padding: spacing.md,
-    paddingLeft: spacing.md + 6,
+    padding: spacing.sm,
+    paddingLeft: spacing.sm + 6,
     position: 'relative',
     overflow: 'hidden',
   },
-  scopeTag: { position: 'absolute', top: -1, right: spacing.md, paddingHorizontal: spacing.sm, paddingVertical: 3, borderBottomLeftRadius: radius.sm, borderBottomRightRadius: radius.sm },
-  scopeTagText: { fontFamily: fonts.bodySemiBold, fontSize: 10, color: '#fff', letterSpacing: 1.4 },
-  scopeLabel: { fontFamily: fonts.serifSemiBold, fontSize: fontSize.lg, color: colors.dark.text, marginBottom: spacing.sm, letterSpacing: -0.2 },
-  scopeItems: { gap: 4 },
-  scopeItemRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  scopeItemDot: { width: 5, height: 5, borderRadius: 2.5 },
-  scopeItemText: { fontFamily: fonts.serifItalic, fontSize: fontSize.sm, color: colors.dark.textMuted },
-  checkCircle: { position: 'absolute', top: spacing.md, right: spacing.md, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  checkText: { fontFamily: fonts.bodyBold, fontSize: 12, color: '#fff' },
+  scopeTag: { position: 'absolute', top: -1, right: spacing.sm, paddingHorizontal: spacing.xs, paddingVertical: 2, borderBottomLeftRadius: radius.sm, borderBottomRightRadius: radius.sm },
+  scopeTagText: { fontFamily: fonts.bodySemiBold, fontSize: 9, color: '#fff', letterSpacing: 1.4 },
+  scopeLabel: { fontFamily: fonts.serifSemiBold, fontSize: fontSize.md, color: colors.dark.text, marginBottom: spacing.xs, letterSpacing: -0.2 },
+  scopeItems: { gap: 2 },
+  scopeItemRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  scopeItemDot: { width: 4, height: 4, borderRadius: 2 },
+  scopeItemText: { fontFamily: fonts.serifItalic, fontSize: fontSize.xs, color: colors.dark.textMuted },
+  checkCircle: { position: 'absolute', top: spacing.sm, right: spacing.sm, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  checkText: { fontFamily: fonts.bodyBold, fontSize: 11, color: '#fff' },
 
   // Budget cards
-  budgetGrid: { gap: spacing.sm },
+  budgetGrid: { gap: spacing.xs },
   budgetCard: {
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: 'rgba(254, 248, 236, 0.10)',
     backgroundColor: 'rgba(255, 250, 240, 0.04)',
-    padding: spacing.md,
-    paddingLeft: spacing.md + 6,
+    padding: spacing.sm,
+    paddingLeft: spacing.sm + 6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 60,
+    minHeight: 56,
   },
-  budgetLabel: { fontFamily: fonts.serifSemiBold, fontSize: fontSize.lg, color: colors.dark.text, letterSpacing: -0.2 },
-  budgetSub: { fontFamily: fonts.serifItalic, fontSize: fontSize.sm, color: colors.dark.textMuted, marginTop: 2 },
-  budgetCheck: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  budgetLabel: { fontFamily: fonts.serifSemiBold, fontSize: fontSize.md, color: colors.dark.text, letterSpacing: -0.2 },
+  budgetSub: { fontFamily: fonts.serifItalic, fontSize: fontSize.xs, color: colors.dark.textMuted, marginTop: 1 },
+  budgetCheck: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
 
-  backLink: { marginTop: spacing.lg, paddingVertical: spacing.sm, alignSelf: 'flex-start' },
-  backText: { fontFamily: fonts.serifMedium, fontSize: fontSize.sm, letterSpacing: 0.2 },
+  backLink: { marginTop: spacing.md, paddingVertical: spacing.xs, alignSelf: 'flex-start' },
+  backText: { fontFamily: fonts.serifMedium, fontSize: fontSize.xs, letterSpacing: 0.2 },
 
-  footer: { paddingHorizontal: spacing.lg, gap: spacing.sm },
-  progress: { fontFamily: fonts.serifItalic, fontSize: fontSize.xs, color: colors.dark.textMuted, textAlign: 'center', marginTop: spacing.xs },
+  footer: { paddingHorizontal: spacing.lg, gap: spacing.xs },
+  progress: { fontFamily: fonts.serifItalic, fontSize: fontSize.xs, color: colors.dark.textMuted, textAlign: 'center', marginTop: 2 },
 });

@@ -115,11 +115,6 @@ function CurlCard({
     opacity: 0.86 + selectedLift.value * 0.14,
   }));
 
-  const iconAura = useAnimatedStyle(() => ({
-    opacity: selectedLift.value * 0.26,
-    transform: [{ scale: 1 + selectedLift.value * 0.12 }],
-  }));
-
   return (
     <Animated.View entering={FadeInDown.delay(60 * index).duration(400)}>
       <PressableScale
@@ -139,14 +134,14 @@ function CurlCard({
         <Animated.View style={[styles.iconWrap, iconMotion]}>
           <CurlPatternIcon
             type={option.type}
-            size={44}
+            size={36}
             color={selected ? ac.accent : 'rgba(254, 248, 236, 0.65)'}
           />
         </Animated.View>
         <Text style={[styles.cardLabel, selected && { color: colors.dark.text }]}>
           {option.label}
         </Text>
-        <Text style={styles.cardDesc}>{option.description}</Text>
+        <Text style={styles.cardDesc} numberOfLines={1}>{option.description}</Text>
       </PressableScale>
     </Animated.View>
   );
@@ -220,7 +215,7 @@ export default function CurlTypeScreen() {
 
 const styles = StyleSheet.create({
   category: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   categoryLabel: {
     fontFamily: fonts.bodySemiBold,
@@ -228,7 +223,7 @@ const styles = StyleSheet.create({
     color: colors.dark.textMuted,
     letterSpacing: letterSpacing.wider,
     textTransform: 'uppercase',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   row: {
     flexDirection: 'row',
@@ -240,27 +235,27 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: 'rgba(254, 248, 236, 0.10)',
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
-    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.xs,
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 4,
   },
   cardLabel: {
     fontFamily: fonts.serifBold,
-    fontSize: fontSize.lg,
+    fontSize: fontSize.md,
     color: colors.dark.textMuted,
     letterSpacing: -0.2,
   },
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 54,
+    minHeight: 40,
     width: '100%',
   },
   cardDesc: {
     fontFamily: fonts.serifItalic,
-    fontSize: fontSize.sm,
+    fontSize: 11,
     color: colors.dark.textMuted,
     textAlign: 'center',
   },
@@ -268,13 +263,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 250, 240, 0.05)',
     borderRadius: radius.md,
     borderLeftWidth: 3,
-    padding: spacing.md,
-    marginTop: spacing.sm,
+    padding: spacing.sm,
+    marginTop: spacing.xs,
   },
   selectedHintText: {
     fontFamily: fonts.serifItalic,
-    fontSize: fontSize.md,
+    fontSize: fontSize.sm,
     textAlign: 'center',
-    lineHeight: fontSize.md * 1.55,
+    lineHeight: fontSize.sm * 1.5,
   },
 });
