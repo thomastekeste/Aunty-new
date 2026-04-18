@@ -119,26 +119,22 @@ export const auntyColors: Record<
 };
 
 // ─── Typography ──────────────────────────────────────────────────
-// Two-font system:
-//   Editorial serif (Fraunces) — aunty names, screen titles, pull-quotes
-//   UI sans (Plus Jakarta Sans) — buttons, body, labels, captions
+// Single family: Plus Jakarta Sans across the board.
+// `serif*` and `display*` tokens are kept so screens that adopted
+// the editorial naming continue to compile — they just resolve to
+// Jakarta weights now (no Fraunces).
 export const fonts = {
-  // Editorial serif
-  serif: 'Fraunces_400Regular',
-  serifMedium: 'Fraunces_500Medium',
-  serifSemiBold: 'Fraunces_600SemiBold',
-  serifBold: 'Fraunces_700Bold',
-  serifItalic: 'Fraunces_400Regular_Italic',
-  serifItalicBold: 'Fraunces_600SemiBold_Italic',
+  serif: 'PlusJakartaSans_400Regular',
+  serifMedium: 'PlusJakartaSans_500Medium',
+  serifSemiBold: 'PlusJakartaSans_600SemiBold',
+  serifBold: 'PlusJakartaSans_700Bold',
+  serifItalic: 'PlusJakartaSans_400Regular',
+  serifItalicBold: 'PlusJakartaSans_600SemiBold',
 
-  // Display = serif (was sans bold). This swap is intentional —
-  // every reference to `fonts.display` in headers/aunty names now
-  // renders in editorial serif automatically.
-  display: 'Fraunces_700Bold',
-  displayMedium: 'Fraunces_600SemiBold',
-  displayItalic: 'Fraunces_600SemiBold_Italic',
+  display: 'PlusJakartaSans_700Bold',
+  displayMedium: 'PlusJakartaSans_600SemiBold',
+  displayItalic: 'PlusJakartaSans_600SemiBold',
 
-  // UI sans
   body: 'PlusJakartaSans_400Regular',
   bodyMedium: 'PlusJakartaSans_500Medium',
   bodySemiBold: 'PlusJakartaSans_600SemiBold',

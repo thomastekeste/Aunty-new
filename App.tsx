@@ -16,14 +16,6 @@ import {
   PlusJakartaSans_600SemiBold,
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
-import {
-  Fraunces_400Regular,
-  Fraunces_500Medium,
-  Fraunces_600SemiBold,
-  Fraunces_700Bold,
-  Fraunces_400Regular_Italic,
-  Fraunces_600SemiBold_Italic,
-} from '@expo-google-fonts/fraunces';
 
 import { AuthProvider } from './src/context/AuthContext';
 import { OnboardingProvider } from './src/context/OnboardingContext';
@@ -37,12 +29,6 @@ export default function App() {
     PlusJakartaSans_500Medium,
     PlusJakartaSans_600SemiBold,
     PlusJakartaSans_700Bold,
-    Fraunces_400Regular,
-    Fraunces_500Medium,
-    Fraunces_600SemiBold,
-    Fraunces_700Bold,
-    Fraunces_400Regular_Italic,
-    Fraunces_600SemiBold_Italic,
   });
 
   if (!fontsLoaded) {
