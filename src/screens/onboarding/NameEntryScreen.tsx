@@ -6,12 +6,12 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { View, TextInput, Text, StyleSheet, Pressable } from 'react-native';
+import { View, TextInput, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
 import { ConsultationShell } from '../../components/ConsultationShell';
+import { PressableScale } from '../../components/PressableScale';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
 import type { OnboardingStackParamList } from '../../types';
@@ -83,38 +83,58 @@ export default function NameEntryScreen() {
         </View>
       </Animated.View>
 
-      {/* Age range — appears after name is entered */}
       {isValid && (
         <Animated.View entering={FadeInDown.duration(300)} style={styles.section}>
           <Text style={styles.label}>AGE RANGE</Text>
           <View style={styles.pills}>
-            {AGE_OPTIONS.map((opt) => (
-              <Pressable
-                key={opt}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setAge(age === opt ? null : opt); }}
-                style={[styles.pill, age === opt && { borderColor: ac.accent, backgroundColor: ac.accent + '18' }]}
-              >
-                <Text style={[styles.pillText, age === opt && { color: colors.dark.text }]}>{opt}</Text>
-              </Pressable>
-            ))}
+            {AGE_OPTIONS.map((opt) => {
+              const selected = age === opt;
+              return (
+                <PressableScale
+                  key={opt}
+                  onPress={() => setAge(selected ? null : opt)}
+                  style={[
+                    styles.pill,
+                    selected && { borderColor: ac.accent, backgroundColor: ac.accent + '1F', borderWidth: 1.5 },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={`Age range ${opt}`}
+                >
+                  <Text style={[styles.pillText, selected && { color: colors.dark.text, fontFamily: fonts.bodySemiBold }]}>
+                    {opt}
+                  </Text>
+                </PressableScale>
+              );
+            })}
           </View>
         </Animated.View>
       )}
 
-      {/* Gender — appears after name */}
       {isValid && (
         <Animated.View entering={FadeInDown.delay(100).duration(300)} style={styles.section}>
           <Text style={styles.label}>I IDENTIFY AS</Text>
           <View style={styles.pills}>
-            {GENDER_OPTIONS.map((opt) => (
-              <Pressable
-                key={opt}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setGender(gender === opt ? null : opt); }}
-                style={[styles.pill, gender === opt && { borderColor: ac.accent, backgroundColor: ac.accent + '18' }]}
-              >
-                <Text style={[styles.pillText, gender === opt && { color: colors.dark.text }]}>{opt}</Text>
-              </Pressable>
-            ))}
+            {GENDER_OPTIONS.map((opt) => {
+              const selected = gender === opt;
+              return (
+                <PressableScale
+                  key={opt}
+                  onPress={() => setGender(selected ? null : opt)}
+                  style={[
+                    styles.pill,
+                    selected && { borderColor: ac.accent, backgroundColor: ac.accent + '1F', borderWidth: 1.5 },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={`Identify as ${opt}`}
+                >
+                  <Text style={[styles.pillText, selected && { color: colors.dark.text, fontFamily: fonts.bodySemiBold }]}>
+                    {opt}
+                  </Text>
+                </PressableScale>
+              );
+            })}
           </View>
         </Animated.View>
       )}
@@ -147,9 +167,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md + 4,
     paddingVertical: spacing.sm + 2,
     borderRadius: radius.full,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.dark.border,
-    minHeight: 42,
+    backgroundColor: colors.dark.surfaceLight,
+    minHeight: 44,
     justifyContent: 'center',
   },
   pillText: {

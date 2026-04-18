@@ -8,22 +8,23 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeIn, FadeInUp, Layout } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
+import Animated, { FadeIn, Layout } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { WordReveal } from '../../components/WordReveal';
 import { Button } from '../../components/Button';
+import { PressableScale } from '../../components/PressableScale';
 import { AUNTIES, COUNCIL_ORDER } from '../../constants/aunties';
 import type { AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
 import {
   colors, auntyColors, fonts, fontSize, spacing, radius, gradients, letterSpacing,
 } from '../../constants/theme';
+import { onboardingMotion } from '../../constants/onboardingMotion';
 import type { OnboardingStackParamList } from '../../types';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'Welcome'>;
@@ -83,23 +84,22 @@ export function WelcomeScreen() {
   // Hook done → pause → show scroll
   useEffect(() => {
     if (hookDone && phase === 0) {
-      setTimeout(() => setPhase(1), 300);
+      setTimeout(() => setPhase(1), onboardingMotion.shortPauseMs);
     }
   }, [hookDone]);
 
   const handleSelect = (id: AuntyId) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedId(id);
     setChosenAunty(id);
-    setTimeout(() => { setPhase(2); setIntroLine(0); }, 400);
+    setTimeout(() => { setPhase(2); setIntroLine(0); }, onboardingMotion.shortPauseMs);
   };
 
   const handleLineDone = () => {
     const lines = selectedId ? INTROS[selectedId] : [];
     if (introLine < lines.length - 1) {
-      setTimeout(() => setIntroLine((l) => l + 1), 500);
+      setTimeout(() => setIntroLine((l) => l + 1), onboardingMotion.linePauseMs);
     } else {
-      setTimeout(() => { setAllDone(true); setPhase(3); }, 400);
+      setTimeout(() => { setAllDone(true); setPhase(3); }, onboardingMotion.shortPauseMs);
     }
   };
 
@@ -116,7 +116,7 @@ export function WelcomeScreen() {
             <Animated.View layout={Layout.springify().damping(20).stiffness(120)} style={styles.hookWrap}>
               <WordReveal
                 text="Every curl needs an aunty."
-                stagger={55}
+                stagger={onboardingMotion.wordStaggerMs}
                 onComplete={() => setHookDone(true)}
                 style={styles.hookText}
               />
@@ -138,14 +138,27 @@ export function WelcomeScreen() {
                     const sel = selectedId === id;
                     return (
                       <Animated.View key={id} entering={FadeIn.delay(i * 60).duration(250)}>
-                        <Pressable
+                        <PressableScale
                           onPress={() => handleSelect(id)}
-                          style={[styles.card, sel && { borderColor: c.accent, borderWidth: 2 }]}
+                          haptic="medium"
+                          scaleTo={0.96}
+                          style={[
+                            styles.card,
+                            sel && {
+                              borderColor: c.accent,
+                              borderWidth: 1.5,
+                              backgroundColor: c.accent + '1F',
+                            },
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: sel }}
+                          accessibilityLabel={`${a.name}, ${a.region}`}
+                          accessibilityHint={`Tap to choose ${a.name} as your aunty`}
                         >
                           <AuntyAvatar auntyId={id} size={48} showRing={sel} glowing={sel} />
                           <Text style={[styles.cardName, sel && { color: c.accent }]}>{a.name}</Text>
                           <Text style={styles.cardRegion}>{a.region}</Text>
-                        </Pressable>
+                        </PressableScale>
                       </Animated.View>
                     );
                   })}
@@ -175,7 +188,7 @@ export function WelcomeScreen() {
                     {isActive ? (
                       <WordReveal
                         text={line}
-                        stagger={55}
+                        stagger={onboardingMotion.wordStaggerMs}
                         onComplete={handleLineDone}
                         style={[
                           styles.lineText,
@@ -242,9 +255,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: colors.dark.surfaceLight,
+    borderWidth: 1.5,
+    borderColor: colors.dark.border,
     gap: spacing.xs,
   },
   cardName: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.sm, color: colors.dark.text },

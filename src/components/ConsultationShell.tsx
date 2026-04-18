@@ -105,11 +105,10 @@ export function ConsultationShell({
         </Text>
       </Animated.View>
 
-      {/* Back button */}
       {showBack && (
         <Pressable
           onPress={handleBack}
-          style={styles.backButton}
+          style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel="Go back"
@@ -207,12 +206,16 @@ const styles = StyleSheet.create({
     letterSpacing: letterSpacing.wide,
   },
   backButton: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xs,
-    alignSelf: 'flex-start',
-    minWidth: 44,
-    minHeight: 36,
+    marginLeft: spacing.md,
+    marginTop: spacing.xs,
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
+    alignItems: 'center',
     justifyContent: 'center',
+  },
+  backButtonPressed: {
+    backgroundColor: colors.dark.surfaceLight,
   },
   backArrow: {
     fontFamily: fonts.body,
@@ -233,11 +236,11 @@ const styles = StyleSheet.create({
   question: {
     fontFamily: fonts.display,
     fontSize: fontSize.xxl,
-    lineHeight: fontSize.xxl * 1.2,
+    lineHeight: fontSize.xxl * 1.18,
     letterSpacing: letterSpacing.tight,
     color: colors.dark.text,
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,

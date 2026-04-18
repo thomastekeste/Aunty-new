@@ -11,6 +11,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withSpring,
   FadeInDown,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -21,8 +22,6 @@ import {
   fontSize,
   spacing,
   radius,
-  animation,
-  letterSpacing,
 } from '../constants/theme';
 import type { AuntyId } from '../constants/aunties';
 
@@ -49,17 +48,21 @@ export function OptionCard({
 }: Props) {
   const ac = auntyColors[auntyId];
   const opacity = useSharedValue(1);
+  const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
+    transform: [{ scale: scale.value }],
   }));
 
   const handlePressIn = useCallback(() => {
-    opacity.value = withTiming(0.6, { duration: 80 });
+    opacity.value = withTiming(0.85, { duration: 90 });
+    scale.value = withSpring(0.985, { damping: 16, stiffness: 220, mass: 0.35 });
   }, []);
 
   const handlePressOut = useCallback(() => {
-    opacity.value = withTiming(1, { duration: 120 });
+    opacity.value = withTiming(1, { duration: 140 });
+    scale.value = withSpring(1, { damping: 16, stiffness: 220, mass: 0.35 });
   }, []);
 
   const handlePress = useCallback(() => {
@@ -84,7 +87,7 @@ export function OptionCard({
             styles.card,
             selected && {
               borderColor: ac.accent,
-              backgroundColor: ac.accent + '18',
+              backgroundColor: ac.accent + '1F',
             },
           ]}
         >
@@ -165,7 +168,7 @@ const styles = StyleSheet.create({
   description: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
-    color: 'rgba(254, 248, 236, 0.4)',
+    color: colors.dark.textMuted,
     marginTop: 2,
     lineHeight: fontSize.sm * 1.4,
   },

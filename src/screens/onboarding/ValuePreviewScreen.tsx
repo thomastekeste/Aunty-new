@@ -35,6 +35,7 @@ import {
   gradients,
   letterSpacing,
 } from '../../constants/theme';
+import { onboardingMotion } from '../../constants/onboardingMotion';
 import type { OnboardingStackParamList } from '../../types';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'ValuePreview'>;
@@ -65,7 +66,7 @@ export default function ValuePreviewScreen() {
 
   // Start line reveal after avatar entrance
   useEffect(() => {
-    const t = setTimeout(() => setPhase(1), 500);
+    const t = setTimeout(() => setPhase(1), onboardingMotion.linePauseMs);
     return () => clearTimeout(t);
   }, []);
 
@@ -74,7 +75,7 @@ export default function ValuePreviewScreen() {
     if (phase === 4) {
       const t = setTimeout(() => {
         navigation.navigate('NameEntry');
-      }, 3000);
+      }, 2800);
       return () => clearTimeout(t);
     }
   }, [phase, navigation]);
@@ -107,8 +108,8 @@ export default function ValuePreviewScreen() {
             <WordReveal
               key="line1"
               text={LINES[0]}
-              stagger={55}
-              onComplete={() => setTimeout(() => setPhase(2), 500)}
+              stagger={onboardingMotion.wordStaggerMs}
+              onComplete={() => setTimeout(() => setPhase(2), onboardingMotion.linePauseMs)}
               style={styles.line}
             />
           )}
@@ -118,8 +119,8 @@ export default function ValuePreviewScreen() {
               <WordReveal
                 key="line2"
                 text={LINES[1]}
-                stagger={55}
-                onComplete={() => setTimeout(() => setPhase(3), 500)}
+                stagger={onboardingMotion.wordStaggerMs}
+                onComplete={() => setTimeout(() => setPhase(3), onboardingMotion.linePauseMs)}
                 style={[styles.line, { color: ac.accent }]}
               />
             </Animated.View>
@@ -130,8 +131,8 @@ export default function ValuePreviewScreen() {
               <WordReveal
                 key="line3"
                 text={LINES[2]}
-                stagger={55}
-                onComplete={() => setTimeout(showButton, 400)}
+                stagger={onboardingMotion.wordStaggerMs}
+                onComplete={() => setTimeout(showButton, onboardingMotion.shortPauseMs)}
                 style={styles.line}
               />
             </Animated.View>

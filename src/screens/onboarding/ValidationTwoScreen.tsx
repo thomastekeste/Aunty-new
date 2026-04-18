@@ -17,7 +17,6 @@ import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { WordReveal } from '../../components/WordReveal';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { AUNTIES } from '../../constants/aunties';
 import type { AuntyId } from '../../constants/aunties';
 import {
   colors,
@@ -28,6 +27,7 @@ import {
   gradients,
   letterSpacing,
 } from '../../constants/theme';
+import { onboardingMotion } from '../../constants/onboardingMotion';
 import type { OnboardingStackParamList, PrimaryGoal } from '../../types';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'Validation2'>;
@@ -59,14 +59,14 @@ export default function ValidationTwoScreen() {
 
   const handleLineOneComplete = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setTimeout(() => setPhase(2), 500);
+    setTimeout(() => setPhase(2), onboardingMotion.linePauseMs);
   }, []);
 
   const handleLineTwoComplete = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setTimeout(() => {
       navigation.replace('HairHabits');
-    }, 800);
+    }, onboardingMotion.autoAdvanceMs);
   }, [navigation]);
 
   return (
@@ -82,7 +82,7 @@ export default function ValidationTwoScreen() {
         <View style={styles.lines}>
           <WordReveal
             text={lineOne}
-            stagger={55}
+            stagger={onboardingMotion.wordStaggerMs}
             onComplete={handleLineOneComplete}
             style={styles.line}
           />
@@ -91,7 +91,7 @@ export default function ValidationTwoScreen() {
             <Animated.View entering={FadeIn.duration(250)} style={{ marginTop: spacing.lg }}>
               <WordReveal
                 text={LINE_TWO}
-                stagger={55}
+                stagger={onboardingMotion.wordStaggerMs}
                 onComplete={handleLineTwoComplete}
                 style={styles.line}
               />

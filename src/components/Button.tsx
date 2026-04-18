@@ -40,18 +40,29 @@ export function Button({
   fullWidth = true,
 }: Props) {
   const opacity = useSharedValue(1);
+  const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
+    transform: [{ scale: scale.value }],
   }));
 
   const handlePressIn = useCallback(() => {
-    opacity.value = withTiming(0.7, { duration: 100 });
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    opacity.value = withTiming(0.84, { duration: animation.fast });
+    scale.value = withSpring(0.985, {
+      damping: 16,
+      stiffness: 220,
+      mass: 0.35,
+    });
   }, []);
 
   const handlePressOut = useCallback(() => {
-    opacity.value = withTiming(1, { duration: 150 });
+    opacity.value = withTiming(1, { duration: animation.normal });
+    scale.value = withSpring(1, {
+      damping: 16,
+      stiffness: 220,
+      mass: 0.35,
+    });
   }, []);
 
   const handlePress = useCallback(() => {

@@ -6,17 +6,12 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Animated, {
-  FadeInDown,
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-} from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ConsultationShell } from '../../components/ConsultationShell';
+import { PressableScale } from '../../components/PressableScale';
 import { CurlPatternIcon } from '../../components/CurlPatternIcon';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
@@ -28,7 +23,7 @@ import {
   fontSize,
   spacing,
   radius,
-  animation,
+  letterSpacing,
 } from '../../constants/theme';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'CurlType'>;
@@ -75,58 +70,33 @@ function CurlCard({
   accentColors: { accent: string; bg: string; bgDark: string; text: string; gradient: [string, string] };
 }) {
   const ac = accentColors;
-  const opacity = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
-  const handlePressIn = () => {
-    opacity.value = withTiming(0.6, { duration: 80 });
-  };
-
-  const handlePressOut = () => {
-    opacity.value = withTiming(1, { duration: 120 });
-  };
-
-  const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onPress();
-  };
-
-  const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
   return (
     <Animated.View entering={FadeInDown.delay(60 * index).duration(400)}>
-      <AnimatedPressable
-        onPress={handlePress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        style={animatedStyle}
+      <PressableScale
+        onPress={onPress}
+        scaleTo={0.96}
+        style={[
+          styles.card,
+          selected && {
+            borderColor: ac.accent,
+            backgroundColor: ac.accent + '1F',
+          },
+        ]}
         accessibilityRole="button"
         accessibilityState={{ selected }}
         accessibilityLabel={`${option.label}: ${option.description}`}
       >
-        <View
-          style={[
-            styles.card,
-            selected && {
-              borderColor: ac.accent,
-              backgroundColor: ac.accent + '20',
-            },
-          ]}
-        >
-          <CurlPatternIcon
-            type={option.type}
-            size={42}
-            color={selected ? ac.accent : 'rgba(254, 248, 236, 0.4)'}
-          />
-          <Text style={[styles.cardLabel, selected && { color: colors.dark.text }]}>
-            {option.label}
-          </Text>
-          <Text style={styles.cardDesc}>{option.description}</Text>
-        </View>
-      </AnimatedPressable>
+        <CurlPatternIcon
+          type={option.type}
+          size={42}
+          color={selected ? ac.accent : 'rgba(254, 248, 236, 0.4)'}
+        />
+        <Text style={[styles.cardLabel, selected && { color: colors.dark.text }]}>
+          {option.label}
+        </Text>
+        <Text style={styles.cardDesc}>{option.description}</Text>
+      </PressableScale>
     </Animated.View>
   );
 }
@@ -201,7 +171,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.xs,
     color: colors.dark.textMuted,
-    letterSpacing: 2,
+    letterSpacing: letterSpacing.wider,
     textTransform: 'uppercase',
     marginBottom: spacing.sm,
   },
@@ -228,7 +198,7 @@ const styles = StyleSheet.create({
   cardDesc: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
-    color: 'rgba(254, 248, 236, 0.4)',
+    color: colors.dark.textMuted,
     textAlign: 'center',
   },
   selectedHint: {

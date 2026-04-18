@@ -22,6 +22,7 @@ import type { AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
 import type { OnboardingStackParamList } from '../../types';
 import { colors, auntyColors, fonts, fontSize, spacing, gradients, letterSpacing } from '../../constants/theme';
+import { onboardingMotion } from '../../constants/onboardingMotion';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'CouncilVerdict'>;
 
@@ -71,7 +72,7 @@ export default function CouncilVerdictScreen() {
   const [showButton, setShowButton] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => { setStep(0); setVisible(true); }, 500);
+    const t = setTimeout(() => { setStep(0); setVisible(true); }, onboardingMotion.linePauseMs);
     return () => clearTimeout(t);
   }, []);
 
@@ -82,12 +83,12 @@ export default function CouncilVerdictScreen() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setVisible(false);
         setTimeout(() => { setStep((s) => s + 1); setVisible(true); }, 200); // quick crossfade
-      }, 500);
+      }, onboardingMotion.linePauseMs);
     } else {
       setTimeout(() => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setShowButton(true);
-      }, 400);
+      }, onboardingMotion.shortPauseMs);
     }
   };
 
@@ -119,7 +120,7 @@ export default function CouncilVerdictScreen() {
         >
           <WordReveal
             text={findings[step]}
-            stagger={55}
+            stagger={onboardingMotion.wordStaggerMs}
             onComplete={handleDone}
             style={styles.findingText}
           />

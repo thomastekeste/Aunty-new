@@ -12,10 +12,10 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { Button } from '../../components/Button';
+import { PressableScale } from '../../components/PressableScale';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
 import type { AuntyId } from '../../constants/aunties';
@@ -26,10 +26,10 @@ import {
   fontSize,
   spacing,
   radius,
-  shadows,
   gradients,
   letterSpacing,
 } from '../../constants/theme';
+import { onboardingMotion } from '../../constants/onboardingMotion';
 import type { OnboardingStackParamList } from '../../types';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'BudgetQuestion'>;
@@ -92,14 +92,11 @@ export default function BudgetQuestionScreen() {
   const [step, setStep] = useState<1 | 2>(1); // 1=scope, 2=budget
 
   const handleScopeSelect = (key: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setScope(key);
-    // Auto-advance to budget after a beat
-    setTimeout(() => setStep(2), 400);
+    setTimeout(() => setStep(2), onboardingMotion.shortPauseMs);
   };
 
   const handleBudgetSelect = (key: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setBudget(key);
   };
 
@@ -129,12 +126,17 @@ export default function BudgetQuestionScreen() {
               const selected = scope === opt.key;
               return (
                 <Animated.View key={opt.key} entering={FadeInDown.delay(80 + i * 50)}>
-                  <Pressable
+                  <PressableScale
                     onPress={() => handleScopeSelect(opt.key)}
+                    haptic="medium"
+                    scaleTo={0.985}
                     style={[
                       styles.scopeCard,
-                      selected && { borderColor: ac.accent, borderWidth: 2, backgroundColor: ac.accent + '12' },
+                      selected && { borderColor: ac.accent, borderWidth: 1.5, backgroundColor: ac.accent + '1F' },
                     ]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`${opt.label}: ${opt.items.join(', ')}`}
                   >
                     {opt.tag && (
                       <View style={[styles.scopeTag, { backgroundColor: opt.tag === 'RECOMMENDED' ? ac.accent : colors.primary }]}>
@@ -157,7 +159,7 @@ export default function BudgetQuestionScreen() {
                         <Text style={styles.checkText}>{'\u2713'}</Text>
                       </View>
                     )}
-                  </Pressable>
+                  </PressableScale>
                 </Animated.View>
               );
             })}
@@ -176,34 +178,48 @@ export default function BudgetQuestionScreen() {
               const selected = budget === opt.key;
               return (
                 <Animated.View key={opt.key} entering={FadeInDown.delay(80 + i * 50)}>
-                  <Pressable
+                  <PressableScale
                     onPress={() => handleBudgetSelect(opt.key)}
+                    haptic="medium"
+                    scaleTo={0.985}
                     style={[
                       styles.budgetCard,
-                      selected && { borderColor: ac.accent, borderWidth: 2, backgroundColor: ac.accent + '12' },
+                      selected && { borderColor: ac.accent, borderWidth: 1.5, backgroundColor: ac.accent + '1F' },
                     ]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`${opt.label}: ${opt.sub}`}
                   >
-                    <Text style={[styles.budgetLabel, selected && { color: colors.dark.text }]}>
-                      {opt.label}
-                    </Text>
-                    <Text style={[styles.budgetSub, selected && { color: ac.accent }]}>
-                      {opt.sub}
-                    </Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.budgetLabel, selected && { color: colors.dark.text }]}>
+                        {opt.label}
+                      </Text>
+                      <Text style={[styles.budgetSub, selected && { color: ac.accent }]}>
+                        {opt.sub}
+                      </Text>
+                    </View>
                     {selected && (
                       <View style={[styles.budgetCheck, { backgroundColor: ac.accent }]}>
                         <Text style={styles.checkText}>{'\u2713'}</Text>
                       </View>
                     )}
-                  </Pressable>
+                  </PressableScale>
                 </Animated.View>
               );
             })}
           </View>
 
-          {/* Back to scope */}
-          <Pressable onPress={() => setStep(1)} style={styles.backLink}>
+          <PressableScale
+            onPress={() => setStep(1)}
+            scaleTo={0.97}
+            opacityTo={0.6}
+            haptic="light"
+            style={styles.backLink}
+            accessibilityRole="button"
+            accessibilityLabel="Change scope selection"
+          >
             <Text style={styles.backText}>{'<'} Change selection</Text>
-          </Pressable>
+          </PressableScale>
         </Animated.View>
       )}
 
@@ -248,14 +264,14 @@ const styles = StyleSheet.create({
   scopeGrid: { gap: spacing.sm },
   scopeCard: {
     borderRadius: radius.lg,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.dark.border,
     backgroundColor: colors.dark.surfaceLight,
     padding: spacing.md,
     position: 'relative',
   },
   scopeTag: { position: 'absolute', top: -1, right: spacing.md, paddingHorizontal: spacing.sm, paddingVertical: 2, borderBottomLeftRadius: radius.sm, borderBottomRightRadius: radius.sm },
-  scopeTagText: { fontFamily: fonts.bodySemiBold, fontSize: 9, color: '#fff', letterSpacing: letterSpacing.wider },
+  scopeTagText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: '#fff', letterSpacing: letterSpacing.wider },
   scopeLabel: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.lg, color: colors.dark.text, marginBottom: spacing.sm },
   scopeItems: { gap: 4 },
   scopeItemRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -268,7 +284,7 @@ const styles = StyleSheet.create({
   budgetGrid: { gap: spacing.sm },
   budgetCard: {
     borderRadius: radius.lg,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.dark.border,
     backgroundColor: colors.dark.surfaceLight,
     padding: spacing.md,

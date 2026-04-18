@@ -21,6 +21,7 @@ interface Props {
   stagger?: number;
   onComplete?: () => void;
   style?: any;
+  wordStyle?: any;
 }
 
 // Spring config: quick settle, no bounce, very natural
@@ -36,11 +37,13 @@ const FadeWord = memo(function FadeWord({
   delay,
   isLast,
   onComplete,
+  wordStyle,
 }: {
   word: string;
   delay: number;
   isLast: boolean;
   onComplete?: () => void;
+  wordStyle?: any;
 }) {
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(10);
@@ -58,12 +61,12 @@ const FadeWord = memo(function FadeWord({
     );
   }, []);
 
-  const style = useAnimatedStyle(() => ({
+  const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [{ translateY: translateY.value }],
   }));
 
-  return <Animated.Text style={style}>{word} </Animated.Text>;
+  return <Animated.Text style={[animatedStyle, wordStyle]}>{word} </Animated.Text>;
 });
 
 export const WordReveal = memo(function WordReveal({
@@ -71,6 +74,7 @@ export const WordReveal = memo(function WordReveal({
   stagger = 65,
   onComplete,
   style,
+  wordStyle,
 }: Props) {
   const words = text.split(' ');
 
@@ -93,6 +97,7 @@ export const WordReveal = memo(function WordReveal({
           delay={i * stagger}
           isLast={i === words.length - 1}
           onComplete={onComplete}
+          wordStyle={wordStyle}
         />
       ))}
     </Text>

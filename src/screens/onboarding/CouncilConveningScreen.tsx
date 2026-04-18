@@ -8,7 +8,7 @@
  */
 
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,6 +27,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
+import { Button } from '../../components/Button';
 import { AUNTIES, COUNCIL_ORDER } from '../../constants/aunties';
 import type { AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
@@ -340,14 +341,15 @@ export default function CouncilConveningScreen() {
       {hasError && (
         <Animated.View entering={FadeIn.duration(300)} style={styles.retryContainer}>
           <Text style={styles.errorText}>Something went wrong.</Text>
-          <Pressable
-            onPress={handleRetry}
-            style={styles.retryButton}
-            accessibilityRole="button"
-            accessibilityLabel="Retry"
-          >
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </Pressable>
+          <View style={styles.retryButtonWrap}>
+            <Button
+              label="Retry"
+              onPress={handleRetry}
+              variant="primary"
+              size="md"
+              fullWidth={false}
+            />
+          </View>
         </Animated.View>
       )}
 
@@ -440,25 +442,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.lg,
   },
+  retryButtonWrap: {
+    minWidth: 160,
+  },
   errorText: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
     color: colors.error,
     textAlign: 'center',
     marginBottom: spacing.md,
-  },
-  retryButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: radius.full,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  retryButtonText: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.md,
-    color: colors.ink,
   },
   bottomText: {
     fontFamily: fonts.displayMedium,

@@ -26,6 +26,7 @@ import {
   gradients,
   letterSpacing,
 } from '../../constants/theme';
+import { onboardingMotion } from '../../constants/onboardingMotion';
 import type { OnboardingStackParamList } from '../../types';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'Validation3'>;
@@ -43,14 +44,14 @@ export default function ValidationThreeScreen() {
 
   const handleLineOneComplete = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setTimeout(() => setPhase(2), 400);
+    setTimeout(() => setPhase(2), onboardingMotion.shortPauseMs);
   }, []);
 
   const handleLineTwoComplete = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setTimeout(() => {
       navigation.replace('BudgetQuestion');
-    }, 800);
+    }, onboardingMotion.autoAdvanceMs);
   }, [navigation]);
 
   return (
@@ -66,7 +67,7 @@ export default function ValidationThreeScreen() {
         <View style={styles.lines}>
           <WordReveal
             text="You've been carrying this alone."
-            stagger={55}
+            stagger={onboardingMotion.wordStaggerMs}
             onComplete={handleLineOneComplete}
             style={styles.line}
           />
@@ -75,7 +76,7 @@ export default function ValidationThreeScreen() {
             <Animated.View entering={FadeIn.duration(250)} style={{ marginTop: spacing.lg }}>
               <WordReveal
                 text="That stops today."
-                stagger={55}
+                stagger={onboardingMotion.wordStaggerMs}
                 onComplete={handleLineTwoComplete}
                 style={styles.line}
               />

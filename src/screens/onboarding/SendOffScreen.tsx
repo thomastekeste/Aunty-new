@@ -35,8 +35,8 @@ import {
   spacing,
   gradients,
   letterSpacing,
-  animation,
 } from '../../constants/theme';
+import { onboardingMotion } from '../../constants/onboardingMotion';
 
 const { height: SCREEN_H } = Dimensions.get('window');
 
@@ -57,7 +57,7 @@ export default function SendOffScreen() {
   }));
 
   useEffect(() => {
-    const t = setTimeout(() => setPhase(1), 600);
+    const t = setTimeout(() => setPhase(1), onboardingMotion.linePauseMs);
     return () => clearTimeout(t);
   }, []);
 
@@ -97,8 +97,8 @@ export default function SendOffScreen() {
             <WordReveal
               key="line1"
               text={`${name}, your crown was never broken.`}
-              stagger={55}
-              onComplete={() => setTimeout(() => setPhase(2), 500)}
+              stagger={onboardingMotion.wordStaggerMs}
+              onComplete={() => setTimeout(() => setPhase(2), onboardingMotion.linePauseMs)}
               style={styles.line}
             />
           )}
@@ -108,8 +108,8 @@ export default function SendOffScreen() {
               <WordReveal
                 key="line2"
                 text="It just needed someone who speaks its language."
-                stagger={55}
-                onComplete={() => setTimeout(() => setPhase(3), 450)}
+                stagger={onboardingMotion.wordStaggerMs}
+                onComplete={() => setTimeout(() => setPhase(3), onboardingMotion.linePauseMs)}
                 style={[styles.line, { color: ac.accent }]}
               />
             </Animated.View>
@@ -120,8 +120,8 @@ export default function SendOffScreen() {
               <WordReveal
                 key="line3"
                 text="Now go wear it like you mean it."
-                stagger={55}
-                onComplete={() => setTimeout(showButton, 350)}
+                stagger={onboardingMotion.wordStaggerMs}
+                onComplete={() => setTimeout(showButton, onboardingMotion.shortPauseMs)}
                 style={styles.line}
               />
             </Animated.View>

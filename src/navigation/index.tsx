@@ -92,25 +92,55 @@ function OnboardingNavigator() {
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
+        animationDuration: 320,
         gestureEnabled: true,
+        contentStyle: { backgroundColor: colors.dark.bg },
       }}
     >
       <OnboardingStack.Screen name="Welcome" component={WelcomeScreen} />
-      <OnboardingStack.Screen name="ValuePreview" component={ValuePreviewScreen} />
+      <OnboardingStack.Screen
+        name="ValuePreview"
+        component={ValuePreviewScreen}
+        options={{ animation: 'fade', animationDuration: 360 }}
+      />
       <OnboardingStack.Screen name="NameEntry" component={NameEntryScreen} />
       <OnboardingStack.Screen name="CurlType" component={CurlTypeScreen} />
-      <OnboardingStack.Screen name="Validation1" component={ValidationOneScreen} />
+      <OnboardingStack.Screen
+        name="Validation1"
+        component={ValidationOneScreen}
+        options={{ animation: 'fade', animationDuration: 380 }}
+      />
       <OnboardingStack.Screen name="PorosityTest" component={PorosityTestScreen} />
       <OnboardingStack.Screen name="PrimaryGoal" component={PrimaryGoalScreen} />
-      <OnboardingStack.Screen name="Validation2" component={ValidationTwoScreen} />
+      <OnboardingStack.Screen
+        name="Validation2"
+        component={ValidationTwoScreen}
+        options={{ animation: 'fade', animationDuration: 380 }}
+      />
       <OnboardingStack.Screen name="HairHabits" component={HairHabitsScreen} />
       <OnboardingStack.Screen name="Struggles" component={StrugglesScreen} />
-      <OnboardingStack.Screen name="Validation3" component={ValidationThreeScreen} />
+      <OnboardingStack.Screen
+        name="Validation3"
+        component={ValidationThreeScreen}
+        options={{ animation: 'fade', animationDuration: 380 }}
+      />
       <OnboardingStack.Screen name="BudgetQuestion" component={BudgetQuestionScreen} />
-      <OnboardingStack.Screen name="CouncilConvening" component={CouncilConveningScreen} />
-      <OnboardingStack.Screen name="CouncilVerdict" component={CouncilVerdictScreen} />
+      <OnboardingStack.Screen
+        name="CouncilConvening"
+        component={CouncilConveningScreen}
+        options={{ animation: 'fade', animationDuration: 420 }}
+      />
+      <OnboardingStack.Screen
+        name="CouncilVerdict"
+        component={CouncilVerdictScreen}
+        options={{ animation: 'fade', animationDuration: 420 }}
+      />
       <OnboardingStack.Screen name="ProductReveal" component={ProductRevealScreen} />
-      <OnboardingStack.Screen name="SendOff" component={SendOffScreen} />
+      <OnboardingStack.Screen
+        name="SendOff"
+        component={SendOffScreen}
+        options={{ animation: 'fade', animationDuration: 420 }}
+      />
     </OnboardingStack.Navigator>
   );
 }

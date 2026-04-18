@@ -17,7 +17,6 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { WordReveal } from '../../components/WordReveal';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { AUNTIES } from '../../constants/aunties';
 import type { AuntyId } from '../../constants/aunties';
 import {
   colors,
@@ -28,6 +27,7 @@ import {
   gradients,
   letterSpacing,
 } from '../../constants/theme';
+import { onboardingMotion } from '../../constants/onboardingMotion';
 import type { OnboardingStackParamList } from '../../types';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'Validation1'>;
@@ -62,7 +62,7 @@ export default function ValidationOneScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setTimeout(() => {
       navigation.replace('PorosityTest');
-    }, 800);
+    }, onboardingMotion.autoAdvanceMs);
   }, [navigation]);
 
   return (
@@ -78,7 +78,7 @@ export default function ValidationOneScreen() {
         <View style={styles.lines}>
           <WordReveal
             text={message}
-            stagger={55}
+            stagger={onboardingMotion.wordStaggerMs}
             onComplete={handleComplete}
             style={styles.line}
           />

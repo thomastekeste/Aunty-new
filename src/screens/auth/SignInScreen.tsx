@@ -97,7 +97,7 @@ export default function SignInScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               navigation.goBack();
             }}
-            style={styles.backButton}
+            style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             accessibilityRole="button"
             accessibilityLabel="Go back to sign up"
@@ -115,7 +115,8 @@ export default function SignInScreen() {
           </Animated.View>
 
           {/* Form */}
-          <Animated.View entering={FadeInDown.delay(350).duration(400)} style={styles.form}>
+          <Animated.View entering={FadeInDown.delay(350).duration(400)} style={styles.formCard}>
+            <View style={styles.form}>
             {/* Email Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>EMAIL</Text>
@@ -162,7 +163,7 @@ export default function SignInScreen() {
             {/* Forgot Password */}
             <Pressable
               onPress={handleForgotPassword}
-              style={styles.forgotButton}
+              style={({ pressed }) => [styles.forgotButton, pressed && styles.pressed]}
               accessibilityRole="button"
               accessibilityLabel="Forgot password"
               accessibilityHint="Get help resetting your password"
@@ -176,6 +177,7 @@ export default function SignInScreen() {
                 {error}
               </Animated.Text>
             ) : null}
+            </View>
           </Animated.View>
 
           {/* CTA */}
@@ -197,7 +199,7 @@ export default function SignInScreen() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 navigation.goBack();
               }}
-              style={styles.linkButton}
+              style={({ pressed }) => [styles.linkButton, pressed && styles.pressed]}
               accessibilityRole="button"
               accessibilityLabel="Go to create account"
               accessibilityHint="Navigate to the sign up screen to create a new account"
@@ -265,6 +267,13 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: spacing.lg,
+  },
+  formCard: {
+    backgroundColor: 'rgba(26, 15, 8, 0.38)',
+    borderRadius: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+    padding: spacing.lg,
     marginBottom: spacing.xl,
   },
   inputGroup: {
@@ -327,5 +336,8 @@ const styles = StyleSheet.create({
   linkHighlight: {
     fontFamily: fonts.bodySemiBold,
     color: colors.primary,
+  },
+  pressed: {
+    opacity: 0.72,
   },
 });
