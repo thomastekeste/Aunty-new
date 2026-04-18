@@ -139,8 +139,8 @@ function CurlCard({
         <Animated.View style={[styles.iconWrap, iconMotion]}>
           <CurlPatternIcon
             type={option.type}
-            size={90}
-            color={selected ? ac.accent : 'rgba(254, 248, 236, 0.60)'}
+            size={44}
+            color={selected ? ac.accent : 'rgba(254, 248, 236, 0.65)'}
           />
         </Animated.View>
         <Text style={[styles.cardLabel, selected && { color: colors.dark.text }]}>
@@ -255,9 +255,8 @@ const styles = StyleSheet.create({
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 90,
+    minHeight: 54,
     width: '100%',
-    zIndex: 2,
   },
   cardDesc: {
     fontFamily: fonts.serifItalic,
