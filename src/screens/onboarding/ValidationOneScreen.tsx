@@ -1,13 +1,11 @@
 /**
  * ValidationOneScreen — After curl type selection.
  *
- * Acknowledges their texture. One WordReveal line based on curl type.
- * No buttons. No interaction. Just a moment.
- * Auto-advances to PorosityTest after the line completes.
+ * Single line that lands, lingers, and gives way.
  */
 
 import React, { useCallback } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { WordReveal } from '../../components/WordReveal';
+import { SpeechBubble } from '../../components/SpeechBubble';
 import { useOnboarding } from '../../context/OnboardingContext';
 import type { AuntyId } from '../../constants/aunties';
 import {
@@ -25,14 +23,10 @@ import {
   fontSize,
   spacing,
   gradients,
-  letterSpacing,
 } from '../../constants/theme';
-import { onboardingMotion } from '../../constants/onboardingMotion';
 import type { OnboardingStackParamList } from '../../types';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'Validation1'>;
-
-const { height: SCREEN_H } = Dimensions.get('window');
 
 function getTextureMessage(curlType?: string): string {
   if (!curlType) return "Your hair. Let's figure out exactly what it needs.";
@@ -41,7 +35,7 @@ function getTextureMessage(curlType?: string): string {
     case '2':
       return "Wavy hair. Most products aren't built for you. That changes.";
     case '3':
-      return 'Curly hair. Beautiful and complex. I know exactly what it needs.';
+      return 'Curly hair. Beautiful and complex. I know what it needs.';
     case '4':
       return 'Coily hair. The most misunderstood texture. I got you.';
     default:
@@ -55,32 +49,29 @@ export default function ValidationOneScreen() {
   const { state } = useOnboarding();
   const auntyId: AuntyId = state.data.chosenAuntyId || 'denise';
   const ac = auntyColors[auntyId];
-  const curlType = state.data.hairProfile.curlType;
-  const message = getTextureMessage(curlType);
+  const message = getTextureMessage(state.data.hairProfile.curlType);
 
   const handleComplete = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setTimeout(() => {
-      navigation.replace('PorosityTest');
-    }, onboardingMotion.autoAdvanceMs);
+    setTimeout(() => navigation.replace('PorosityTest'), 600);
   }, [navigation]);
 
   return (
     <LinearGradient colors={[...gradients.ceremony]} style={styles.container}>
       <View style={[styles.content, { paddingTop: insets.top + spacing.xxl }]}>
-        {/* Aunty avatar with glow */}
-        <Animated.View entering={FadeInUp.delay(200).duration(800)} style={styles.avatarWrap}>
+        <Animated.View entering={FadeInUp.delay(120).duration(700)} style={styles.avatarWrap}>
           <View style={[styles.glow, { backgroundColor: ac.accent }]} />
-          <AuntyAvatar auntyId={auntyId} size={56} showRing glowing />
+          <AuntyAvatar auntyId={auntyId} size={64} showRing glowing />
         </Animated.View>
 
-        {/* Single validation line */}
         <View style={styles.lines}>
-          <WordReveal
-            text={message}
-            stagger={onboardingMotion.wordStaggerMs}
+          <SpeechBubble
+            lines={[message]}
+            holdMs={2000}
+            fadeMs={420}
+            shimmer
+            textStyle={[styles.line, { color: colors.dark.text }]}
             onComplete={handleComplete}
-            style={styles.line}
           />
         </View>
       </View>
@@ -90,34 +81,16 @@ export default function ValidationOneScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    justifyContent: 'center',
-  },
-  avatarWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xxl,
-  },
-  glow: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    opacity: 0.18,
-  },
-  lines: {
-    width: '100%',
-    minHeight: SCREEN_H * 0.15,
-  },
+  content: { flex: 1, alignItems: 'center', paddingHorizontal: spacing.xl, justifyContent: 'center' },
+  avatarWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xxl },
+  glow: { position: 'absolute', width: 120, height: 120, borderRadius: 60, opacity: 0.18 },
+  lines: { width: '100%', minHeight: 160, justifyContent: 'center' },
   line: {
     fontFamily: fonts.display,
     fontSize: fontSize.xxl,
     color: colors.dark.text,
-    lineHeight: fontSize.xxl * 1.35,
-    letterSpacing: letterSpacing.tight,
+    lineHeight: fontSize.xxl * 1.3,
+    letterSpacing: -0.4,
     textAlign: 'center',
   },
 });

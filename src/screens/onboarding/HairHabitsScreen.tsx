@@ -10,8 +10,8 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ConsultationShell } from '../../components/ConsultationShell';
-import { OptionCard } from '../../components/OptionCard';
+import { SalonFrame } from '../../components/SalonFrame';
+import { EditorialCard } from '../../components/EditorialCard';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
 import type { OnboardingStackParamList, WashFrequency, HeatUse } from '../../types';
@@ -97,9 +97,10 @@ export default function HairHabitsScreen() {
   };
 
   return (
-    <ConsultationShell
+    <SalonFrame
       auntyId={auntyId}
       question={questions[subStep]}
+      speakerVerb={subStep === 0 ? 'is asking' : 'wants the truth'}
       step={5}
       totalSteps={7}
       ctaLabel={subStep === 0 ? 'Next' : 'Continue'}
@@ -131,7 +132,7 @@ export default function HairHabitsScreen() {
       {subStep === 0 ? (
         <Animated.View key="wash" entering={FadeInDown.duration(400)} style={styles.options} accessibilityRole="radiogroup" accessibilityLabel="Wash frequency options">
           {WASH_OPTIONS.map((option, index) => (
-            <OptionCard
+            <EditorialCard
               key={option.value}
               label={option.label}
               icon={option.icon}
@@ -145,7 +146,7 @@ export default function HairHabitsScreen() {
       ) : (
         <Animated.View key="heat" entering={FadeInDown.duration(400)} style={styles.options} accessibilityRole="radiogroup" accessibilityLabel="Heat usage options">
           {HEAT_OPTIONS.map((option, index) => (
-            <OptionCard
+            <EditorialCard
               key={option.value}
               label={option.label}
               description={option.description}
@@ -158,7 +159,7 @@ export default function HairHabitsScreen() {
           ))}
         </Animated.View>
       )}
-    </ConsultationShell>
+    </SalonFrame>
   );
 }
 

@@ -1,71 +1,69 @@
 /**
- * WelcomeScreen — Pick your aunty, then she talks to you.
+ * WelcomeScreen — Pick your aunty, then she introduces herself.
  *
- * Phase 0: Hook line types slowly
- * Phase 1: Aunty scroll appears
- * Phase 2: Chosen aunty introduces herself — slow, deliberate, personal
- * Phase 3: Button appears
+ * Phase 0: Hero hook (single editorial line, fades in)
+ * Phase 1: Aunty picker carousel
+ * Phase 2: Chosen aunty speaks — line-flip SpeechBubble (no typer)
+ * Phase 3: Ceremonial CTA
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeIn, Layout } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { WordReveal } from '../../components/WordReveal';
-import { Button } from '../../components/Button';
+import { SpeechBubble } from '../../components/SpeechBubble';
+import { CeremonialButton } from '../../components/CeremonialButton';
 import { PressableScale } from '../../components/PressableScale';
 import { AUNTIES, COUNCIL_ORDER } from '../../constants/aunties';
 import type { AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
 import {
-  colors, auntyColors, fonts, fontSize, spacing, radius, gradients, letterSpacing,
+  colors, auntyColors, fonts, fontSize, spacing, radius, gradients,
 } from '../../constants/theme';
-import { onboardingMotion } from '../../constants/onboardingMotion';
 import type { OnboardingStackParamList } from '../../types';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'Welcome'>;
-const CARD_W = 110;
-const CARD_GAP = 8;
+const CARD_W = 116;
+const CARD_GAP = 10;
 
-// Aunty intros — each one sounds DIFFERENT
 const INTROS: Record<AuntyId, string[]> = {
   ngozi: [
     "I'm Ngozi.",
-    "I know textured hair. The science, the culture, the struggle.",
+    'I know textured hair — the science, the culture, the struggle.',
     "Tell me about yours and I'll handle the rest.",
   ],
   marcia: [
     "I'm Marcia.",
-    "I know textured hair. The roots, the patience, the journey.",
+    'I know textured hair — the roots, the patience, the journey.',
     "Show me where you're at and we'll build from there.",
   ],
   denise: [
     "I'm Denise.",
-    "I know textured hair. Been in this game longer than most.",
+    "I know textured hair. I've been in this game longer than most.",
     "Tell me what's going on and I got you.",
   ],
   fatou: [
     "I'm Fatou.",
-    "I know textured hair. The technique, the precision, the care.",
+    'I know textured hair — the technique, the precision, the care.',
     "Walk me through yours and I'll design your plan.",
   ],
   carmen: [
     "I'm Carmen.",
-    "I know textured hair. The curls, the volume, the joy.",
+    'I know textured hair — the curls, the volume, the joy.',
     "Tell me about yours and let's make them shine.",
   ],
   amara: [
     "I'm Amara.",
-    "I know textured hair. The strength it takes, the patience it needs.",
+    'I know textured hair — the strength it takes, the patience it needs.',
     "Show me yours and we'll build something solid.",
   ],
   salma: [
     "I'm Salma.",
-    "I know textured hair. The balance, the remedies, the whole picture.",
+    'I know textured hair — the balance, the remedies, the whole picture.',
     "Tell me about yours and I'll find your path.",
   ],
 };
@@ -75,56 +73,52 @@ export function WelcomeScreen() {
   const navigation = useNavigation<Nav>();
   const { setChosenAunty } = useOnboarding();
 
-  const [phase, setPhase] = useState(0); // 0=hook, 1=scroll, 2=intro, 3=button
-  const [hookDone, setHookDone] = useState(false);
+  const [phase, setPhase] = useState<0 | 1 | 2 | 3>(0);
   const [selectedId, setSelectedId] = useState<AuntyId | null>(null);
-  const [introLine, setIntroLine] = useState(0);
-  const [allDone, setAllDone] = useState(false);
 
-  // Hook done → pause → show scroll
+  // Hero → picker after a beat (no typer to wait on)
   useEffect(() => {
-    if (hookDone && phase === 0) {
-      setTimeout(() => setPhase(1), onboardingMotion.shortPauseMs);
+    if (phase === 0) {
+      const t = setTimeout(() => setPhase(1), 900);
+      return () => clearTimeout(t);
     }
-  }, [hookDone]);
+  }, [phase]);
 
   const handleSelect = (id: AuntyId) => {
     setSelectedId(id);
     setChosenAunty(id);
-    setTimeout(() => { setPhase(2); setIntroLine(0); }, onboardingMotion.shortPauseMs);
+    setTimeout(() => setPhase(2), 320);
   };
 
-  const handleLineDone = () => {
-    const lines = selectedId ? INTROS[selectedId] : [];
-    if (introLine < lines.length - 1) {
-      setTimeout(() => setIntroLine((l) => l + 1), onboardingMotion.linePauseMs);
-    } else {
-      setTimeout(() => { setAllDone(true); setPhase(3); }, onboardingMotion.shortPauseMs);
-    }
-  };
+  const handleSpeechComplete = useCallback(() => {
+    setPhase(3);
+  }, []);
 
   const ac = selectedId ? auntyColors[selectedId] : null;
   const lines = selectedId ? INTROS[selectedId] : [];
 
   return (
     <LinearGradient colors={[...gradients.ceremony]} style={styles.container}>
-      <View style={[styles.content, { paddingTop: insets.top + spacing.xxl }]}>
+      {/* Aunty-color halo behind everything once chosen */}
+      {ac ? (
+        <View pointerEvents="none" style={[styles.halo, { backgroundColor: ac.accent }]} />
+      ) : null}
 
-        {/* ─── PHASE 0+1: Hook + Pick ─────────────────── */}
+      <View style={[styles.content, { paddingTop: insets.top + spacing.xxl }]}>
+        {/* ─── PHASE 0+1: Hero + Picker ────────────────── */}
         {phase <= 1 && (
           <View style={styles.pickSection}>
-            <Animated.View layout={Layout.springify().damping(20).stiffness(120)} style={styles.hookWrap}>
-              <WordReveal
-                text="Every curl needs an aunty."
-                stagger={onboardingMotion.wordStaggerMs}
-                onComplete={() => setHookDone(true)}
-                style={styles.hookText}
-              />
+            <Animated.View entering={FadeInDown.duration(700)} style={styles.heroWrap}>
+              <Text style={styles.eyebrow}>THE AUNTY CURL COUNCIL</Text>
+              <Text style={styles.hero}>
+                Every curl{'\n'}needs an{' '}
+                <Text style={styles.heroEm}>aunty.</Text>
+              </Text>
             </Animated.View>
 
             {phase >= 1 && (
-              <Animated.View entering={FadeIn.duration(400)}>
-                <Text style={styles.pickLabel}>Pick yours.</Text>
+              <Animated.View entering={FadeIn.delay(120).duration(500)}>
+                <Text style={styles.pickLabel}>Pick yours</Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -137,86 +131,71 @@ export function WelcomeScreen() {
                     const c = auntyColors[id];
                     const sel = selectedId === id;
                     return (
-                      <Animated.View key={id} entering={FadeIn.delay(i * 60).duration(250)}>
+                      <Animated.View key={id} entering={FadeIn.delay(i * 70).duration(280)}>
                         <PressableScale
                           onPress={() => handleSelect(id)}
                           haptic="medium"
-                          scaleTo={0.96}
+                          scaleTo={0.95}
                           style={[
                             styles.card,
                             sel && {
                               borderColor: c.accent,
-                              borderWidth: 1.5,
-                              backgroundColor: c.accent + '1F',
+                              backgroundColor: c.accent + '20',
                             },
                           ]}
                           accessibilityRole="button"
                           accessibilityState={{ selected: sel }}
                           accessibilityLabel={`${a.name}, ${a.region}`}
-                          accessibilityHint={`Tap to choose ${a.name} as your aunty`}
                         >
-                          <AuntyAvatar auntyId={id} size={48} showRing={sel} glowing={sel} />
-                          <Text style={[styles.cardName, sel && { color: c.accent }]}>{a.name}</Text>
-                          <Text style={styles.cardRegion}>{a.region}</Text>
+                          {/* aunty-tinted top bar */}
+                          <View style={[styles.cardBar, { backgroundColor: c.accent }]} />
+                          <View style={styles.cardInner}>
+                            <AuntyAvatar auntyId={id} size={52} showRing={sel} glowing={sel} />
+                            <Text style={[styles.cardName, sel && { color: c.accent }]}>
+                              {a.name}
+                            </Text>
+                            <Text style={styles.cardRegion}>{a.region}</Text>
+                          </View>
                         </PressableScale>
                       </Animated.View>
                     );
                   })}
                 </ScrollView>
+                <Text style={styles.hint}>swipe to see all 7</Text>
               </Animated.View>
             )}
           </View>
         )}
 
-        {/* ─── PHASE 2+3: Aunty speaks ────────────────── */}
-        {phase >= 2 && ac && (
-          <Animated.View entering={FadeIn.duration(500)} style={styles.introSection}>
-            {/* Avatar with glow */}
+        {/* ─── PHASE 2+3: Aunty introduces herself ──────── */}
+        {phase >= 2 && ac && selectedId && (
+          <Animated.View entering={FadeIn.duration(600)} style={styles.introSection}>
             <View style={styles.avatarWrap}>
-              <View style={[styles.glow, { backgroundColor: ac.accent }]} />
-              <AuntyAvatar auntyId={selectedId!} size={72} showRing glowing />
+              <View style={[styles.avatarGlow, { backgroundColor: ac.accent }]} />
+              <AuntyAvatar auntyId={selectedId} size={84} showRing glowing />
             </View>
 
-            {/* Lines stack up */}
-            <View style={styles.lines}>
-              {lines.map((line, i) => {
-                if (i > introLine) return null;
-                const isActive = i === introLine && !allDone;
-                const isFirst = i === 0;
-                return (
-                  <View key={i} style={styles.lineWrap}>
-                    {isActive ? (
-                      <WordReveal
-                        text={line}
-                        stagger={onboardingMotion.wordStaggerMs}
-                        onComplete={handleLineDone}
-                        style={[
-                          styles.lineText,
-                          isFirst && styles.lineFirst,
-                          isFirst && { color: ac.accent },
-                        ]}
-                      />
-                    ) : (
-                      <Text style={[
-                        styles.lineDone,
-                        isFirst && styles.lineFirst,
-                        isFirst && { color: ac.accent },
-                      ]}>
-                        {line}
-                      </Text>
-                    )}
-                  </View>
-                );
-              })}
+            <Text style={[styles.auntyName, { color: ac.accent }]}>
+              {AUNTIES[selectedId].name}
+            </Text>
+            <Text style={styles.auntyRegion}>{AUNTIES[selectedId].region}</Text>
+
+            <View style={styles.bubbleWrap}>
+              <SpeechBubble
+                lines={lines}
+                holdMs={1700}
+                fadeMs={360}
+                shimmer
+                textStyle={styles.bubbleText}
+                onComplete={handleSpeechComplete}
+              />
             </View>
 
-            {/* Button */}
             {phase >= 3 && (
-              <Animated.View entering={FadeIn.delay(400).duration(400)} style={styles.btnWrap}>
-                <Button
-                  label="Let's Go"
+              <Animated.View entering={FadeInDown.delay(150).duration(420)} style={styles.btnWrap}>
+                <CeremonialButton
+                  label="Begin"
                   onPress={() => navigation.navigate('ValuePreview')}
-                  variant="primary"
                   size="lg"
                 />
               </Animated.View>
@@ -232,19 +211,40 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1 },
 
+  halo: {
+    position: 'absolute',
+    width: 500,
+    height: 500,
+    borderRadius: 250,
+    opacity: 0.07,
+    top: -150,
+    alignSelf: 'center',
+  },
+
   // Pick phase
   pickSection: { flex: 1, justifyContent: 'center' },
-  hookWrap: { paddingHorizontal: spacing.xl, marginBottom: spacing.xl },
-  hookText: {
+  heroWrap: { paddingHorizontal: spacing.xl, marginBottom: spacing.xxl },
+  eyebrow: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    letterSpacing: 3,
+    marginBottom: spacing.md,
+  },
+  hero: {
     fontFamily: fonts.display,
-    fontSize: fontSize.xxxl,
+    fontSize: fontSize.display,
     color: colors.dark.text,
-    lineHeight: fontSize.xxxl * 1.15,
-    letterSpacing: letterSpacing.tight,
+    lineHeight: fontSize.display * 1.05,
+    letterSpacing: -1.5,
+  },
+  heroEm: {
+    fontFamily: fonts.serifItalicBold,
+    color: colors.primary,
   },
   pickLabel: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: fontSize.md,
+    fontFamily: fonts.serifItalic,
+    fontSize: fontSize.lg,
     color: colors.dark.textMuted,
     paddingHorizontal: spacing.xl,
     marginBottom: spacing.lg,
@@ -252,39 +252,90 @@ const styles = StyleSheet.create({
   scrollRow: { paddingHorizontal: spacing.lg, gap: CARD_GAP },
   card: {
     width: CARD_W,
+    borderRadius: radius.lg,
+    backgroundColor: 'rgba(255, 250, 240, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(254, 248, 236, 0.10)',
+    overflow: 'hidden',
+  },
+  cardBar: {
+    height: 3,
+    width: '100%',
+    opacity: 0.7,
+  },
+  cardInner: {
     alignItems: 'center',
     paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: colors.dark.surfaceLight,
-    borderWidth: 1.5,
-    borderColor: colors.dark.border,
-    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    gap: 6,
   },
-  cardName: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.sm, color: colors.dark.text },
-  cardRegion: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.dark.textMuted },
+  cardName: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: fontSize.md,
+    color: colors.dark.text,
+    marginTop: 2,
+  },
+  cardRegion: {
+    fontFamily: fonts.serifItalic,
+    fontSize: 11,
+    color: colors.dark.textMuted,
+  },
+  hint: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 11,
+    color: 'rgba(254, 248, 236, 0.35)',
+    letterSpacing: 1.4,
+    textAlign: 'center',
+    marginTop: spacing.md,
+    textTransform: 'uppercase',
+  },
 
   // Intro phase
-  introSection: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
-  avatarWrap: { alignItems: 'center', marginBottom: spacing.xxl },
-  glow: { position: 'absolute', width: 120, height: 120, borderRadius: 60, opacity: 0.15 },
-  lines: { gap: spacing.lg },
-  lineWrap: {},
-  lineText: {
-    fontFamily: fonts.body,
+  introSection: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+    alignItems: 'center',
+    paddingTop: spacing.lg,
+  },
+  avatarWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
+  avatarGlow: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    opacity: 0.18,
+  },
+  auntyName: {
+    fontFamily: fonts.serifBold,
+    fontSize: fontSize.xxl,
+    letterSpacing: -0.5,
+  },
+  auntyRegion: {
+    fontFamily: fonts.serifItalic,
+    fontSize: fontSize.md,
+    color: colors.dark.textMuted,
+    marginTop: 2,
+    marginBottom: spacing.xl,
+  },
+  bubbleWrap: {
+    width: '100%',
+    minHeight: 130,
+    justifyContent: 'center',
+  },
+  bubbleText: {
+    fontFamily: fonts.serifMedium,
     fontSize: fontSize.xl,
     color: colors.dark.text,
     lineHeight: fontSize.xl * 1.4,
+    textAlign: 'center',
+    letterSpacing: -0.2,
   },
-  lineFirst: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.xxl,
-    lineHeight: fontSize.xxl * 1.2,
+  btnWrap: {
+    width: '100%',
+    marginTop: spacing.xl,
   },
-  lineDone: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xl,
-    color: 'rgba(254,248,236,0.4)',
-    lineHeight: fontSize.xl * 1.4,
-  },
-  btnWrap: { marginTop: spacing.xxl },
 });

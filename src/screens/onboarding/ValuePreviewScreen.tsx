@@ -1,28 +1,22 @@
 /**
- * ValuePreviewScreen — Quick value preview before consultation begins.
+ * ValuePreviewScreen — The promise. Three lines, then the CTA.
  *
- * Shows what the user is working toward. Dark ceremony background.
- * Chosen aunty avatar at top. Three lines with staggered word reveal.
- * Auto-advances to NameEntry after all lines appear, or user taps CTA.
+ * Cinematic open: aunty enters from below with a glow,
+ * her name fades in, then her three-line promise flips through
+ * via SpeechBubble. The CeremonialButton appears at the close.
  */
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  FadeIn,
-  FadeInUp,
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { WordReveal } from '../../components/WordReveal';
-import { Button } from '../../components/Button';
+import { SpeechBubble } from '../../components/SpeechBubble';
+import { CeremonialButton } from '../../components/CeremonialButton';
 import { AUNTIES } from '../../constants/aunties';
 import type { AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
@@ -33,128 +27,77 @@ import {
   fontSize,
   spacing,
   gradients,
-  letterSpacing,
 } from '../../constants/theme';
-import { onboardingMotion } from '../../constants/onboardingMotion';
 import type { OnboardingStackParamList } from '../../types';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'ValuePreview'>;
-const { height: SCREEN_H } = Dimensions.get('window');
 
 const LINES = [
-  'In 4 weeks, you\'ll see what routine and intention can do.',
-  'No more guessing. No more wasting money.',
-  'Let\'s build your plan.',
+  "In four weeks, you'll see what intention can do.",
+  'No more guessing. No more wasted money.',
+  "Let's build your plan.",
 ];
 
 export default function ValuePreviewScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const { state } = useOnboarding();
-
   const auntyId: AuntyId = state.data.chosenAuntyId || 'denise';
   const aunty = AUNTIES[auntyId];
   const ac = auntyColors[auntyId];
 
-  // 0=avatar entrance, 1=line1, 2=line2, 3=line3, 4=button visible
-  const [phase, setPhase] = useState(0);
+  const [showButton, setShowButton] = useState(false);
 
-  const btnOpacity = useSharedValue(0);
-  const btnStyle = useAnimatedStyle(() => ({
-    opacity: btnOpacity.value,
-  }));
-
-  // Start line reveal after avatar entrance
-  useEffect(() => {
-    const t = setTimeout(() => setPhase(1), onboardingMotion.linePauseMs);
-    return () => clearTimeout(t);
+  const handleComplete = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowButton(true);
   }, []);
 
-  // Auto-advance after button appears
-  useEffect(() => {
-    if (phase === 4) {
-      const t = setTimeout(() => {
-        navigation.navigate('NameEntry');
-      }, 2800);
-      return () => clearTimeout(t);
-    }
-  }, [phase, navigation]);
-
-  const showButton = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    btnOpacity.value = withTiming(1, { duration: 400 });
-    setPhase(4);
-  };
+  const handleLineLanded = useCallback((i: number) => {
+    if (i === 1) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
 
   return (
-    <LinearGradient
-      colors={[...gradients.ceremony]}
-      style={[styles.container, { paddingTop: insets.top }]}
-    >
+    <LinearGradient colors={[...gradients.ceremony]} style={[styles.container, { paddingTop: insets.top }]}>
       <View style={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}>
-        {/* Aunty avatar with glow */}
-        <Animated.View entering={FadeInUp.delay(200).duration(800)} style={styles.avatarWrap}>
+        <Animated.View entering={FadeInUp.delay(120).duration(700)} style={styles.avatarWrap}>
           <View style={[styles.glow, { backgroundColor: ac.accent }]} />
-          <AuntyAvatar auntyId={auntyId} size={80} showRing glowing />
+          <AuntyAvatar auntyId={auntyId} size={88} showRing glowing />
         </Animated.View>
 
-        <Animated.Text entering={FadeIn.delay(600)} style={[styles.label, { color: ac.accent }]}>
-          {aunty.name.toUpperCase()}
+        <Animated.Text
+          entering={FadeIn.delay(400).duration(500)}
+          style={[styles.name, { color: ac.accent }]}
+        >
+          {aunty.name}
+        </Animated.Text>
+        <Animated.Text entering={FadeIn.delay(500).duration(500)} style={styles.region}>
+          {aunty.region}
         </Animated.Text>
 
-        {/* Three lines — word by word, staggered */}
-        <View style={styles.monologue}>
-          {phase >= 1 && (
-            <WordReveal
-              key="line1"
-              text={LINES[0]}
-              stagger={onboardingMotion.wordStaggerMs}
-              onComplete={() => setTimeout(() => setPhase(2), onboardingMotion.linePauseMs)}
-              style={styles.line}
-            />
-          )}
-
-          {phase >= 2 && (
-            <Animated.View entering={FadeIn.duration(250)} style={{ marginTop: spacing.lg }}>
-              <WordReveal
-                key="line2"
-                text={LINES[1]}
-                stagger={onboardingMotion.wordStaggerMs}
-                onComplete={() => setTimeout(() => setPhase(3), onboardingMotion.linePauseMs)}
-                style={[styles.line, { color: ac.accent }]}
-              />
-            </Animated.View>
-          )}
-
-          {phase >= 3 && (
-            <Animated.View entering={FadeIn.duration(250)} style={{ marginTop: spacing.lg }}>
-              <WordReveal
-                key="line3"
-                text={LINES[2]}
-                stagger={onboardingMotion.wordStaggerMs}
-                onComplete={() => setTimeout(showButton, onboardingMotion.shortPauseMs)}
-                style={styles.line}
-              />
-            </Animated.View>
-          )}
+        <View style={styles.bubbleWrap}>
+          <SpeechBubble
+            lines={LINES}
+            holdMs={1700}
+            fadeMs={400}
+            shimmer
+            textStyle={[styles.line, { color: colors.dark.text }]}
+            onComplete={handleComplete}
+            onLineLanded={handleLineLanded}
+          />
         </View>
-
-        {/* Gold accent rule */}
-        {phase >= 3 && (
-          <Animated.View entering={FadeIn.delay(300)} style={[styles.rule, { backgroundColor: ac.accent }]} />
-        )}
 
         <View style={{ flex: 1 }} />
 
-        {/* CTA button */}
-        <Animated.View style={[styles.btnWrap, btnStyle]}>
-          <Button
-            label="Let's Start"
-            onPress={() => navigation.navigate('NameEntry')}
-            variant="primary"
-            size="lg"
-          />
-        </Animated.View>
+        {showButton && (
+          <Animated.View entering={FadeInDown.duration(420)} style={styles.btnWrap}>
+            <CeremonialButton
+              label="Begin"
+              onPress={() => navigation.navigate('NameEntry')}
+              size="lg"
+            />
+          </Animated.View>
+        )}
       </View>
     </LinearGradient>
   );
@@ -162,54 +105,28 @@ export default function ValuePreviewScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    justifyContent: 'center',
+  content: { flex: 1, alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xxl },
+  avatarWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg },
+  glow: { position: 'absolute', width: 160, height: 160, borderRadius: 80, opacity: 0.18 },
+  name: {
+    fontFamily: fonts.serifBold,
+    fontSize: fontSize.xxl,
+    letterSpacing: -0.4,
   },
-
-  avatarWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
+  region: {
+    fontFamily: fonts.serifItalic,
+    fontSize: fontSize.md,
+    color: colors.dark.textMuted,
+    marginBottom: spacing.xl,
   },
-  glow: {
-    position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    opacity: 0.18,
-  },
-  label: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.xs,
-    letterSpacing: letterSpacing.widest,
-    marginBottom: spacing.xxl,
-  },
-
-  monologue: {
-    width: '100%',
-    minHeight: SCREEN_H * 0.28,
-  },
+  bubbleWrap: { width: '100%', minHeight: 180, justifyContent: 'center' },
   line: {
     fontFamily: fonts.display,
     fontSize: fontSize.xxl,
     color: colors.dark.text,
-    lineHeight: fontSize.xxl * 1.35,
-    letterSpacing: letterSpacing.tight,
+    lineHeight: fontSize.xxl * 1.3,
+    letterSpacing: -0.4,
+    textAlign: 'center',
   },
-
-  rule: {
-    width: 32,
-    height: 2,
-    opacity: 0.5,
-    borderRadius: 1,
-    marginTop: spacing.xl,
-  },
-
-  btnWrap: {
-    width: '100%',
-    marginBottom: spacing.md,
-  },
+  btnWrap: { width: '100%', marginBottom: spacing.md },
 });

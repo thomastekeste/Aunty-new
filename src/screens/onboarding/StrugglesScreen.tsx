@@ -10,8 +10,8 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ConsultationShell } from '../../components/ConsultationShell';
-import { OptionCard } from '../../components/OptionCard';
+import { SalonFrame } from '../../components/SalonFrame';
+import { EditorialCard } from '../../components/EditorialCard';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
 import type { OnboardingStackParamList } from '../../types';
@@ -70,12 +70,13 @@ export default function StrugglesScreen() {
   };
 
   return (
-    <ConsultationShell
+    <SalonFrame
       auntyId={auntyId}
-      question="Tell me where it hurts. Select everything that resonates."
+      question="Tell me where it hurts."
+      speakerVerb="is listening"
       step={6}
       totalSteps={7}
-      ctaLabel={`Continue${selected.size > 0 ? ` (${selected.size} selected)` : ''}`}
+      ctaLabel={selected.size > 0 ? `Continue · ${selected.size}` : 'Pick at least one'}
       ctaDisabled={selected.size === 0}
       onCtaPress={handleContinue}
     >
@@ -85,7 +86,7 @@ export default function StrugglesScreen() {
 
       <View style={styles.options} accessibilityRole="list" accessibilityLabel="Hair struggles, select all that apply">
         {STRUGGLES.map((struggle, index) => (
-          <OptionCard
+          <EditorialCard
             key={struggle.id}
             label={struggle.label}
             description={struggle.description}
@@ -101,11 +102,11 @@ export default function StrugglesScreen() {
       {selected.size >= 3 && (
         <Animated.View entering={FadeInDown.duration(400)} style={styles.empathy}>
           <Text style={styles.empathyText}>
-            That's a lot to carry alone. This is exactly why we're here. Every single one of these — we address it.
+            That's a lot to carry alone. This is exactly why we're here — every single one, we address it.
           </Text>
         </Animated.View>
       )}
-    </ConsultationShell>
+    </SalonFrame>
   );
 }
 
@@ -128,11 +129,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   empathyText: {
-    fontFamily: fonts.displayMedium,
+    fontFamily: fonts.serifItalic,
     fontSize: fontSize.md,
     color: colors.primary,
-    fontStyle: 'italic',
-    lineHeight: fontSize.md * 1.5,
+    lineHeight: fontSize.md * 1.55,
     textAlign: 'center',
+    letterSpacing: -0.1,
   },
 });

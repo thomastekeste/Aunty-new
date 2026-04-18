@@ -1,21 +1,19 @@
 /**
  * ValidationTwoScreen — After goal selection.
  *
- * Reflects their primary goal back with two WordReveal lines.
- * No buttons. No interaction. Just a moment.
- * Auto-advances to HairHabits after line 2 completes.
+ * Two lines that flip in place. No stacking, no typer.
  */
 
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { WordReveal } from '../../components/WordReveal';
+import { SpeechBubble } from '../../components/SpeechBubble';
 import { useOnboarding } from '../../context/OnboardingContext';
 import type { AuntyId } from '../../constants/aunties';
 import {
@@ -25,21 +23,17 @@ import {
   fontSize,
   spacing,
   gradients,
-  letterSpacing,
 } from '../../constants/theme';
-import { onboardingMotion } from '../../constants/onboardingMotion';
 import type { OnboardingStackParamList, PrimaryGoal } from '../../types';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'Validation2'>;
-
-const { height: SCREEN_H } = Dimensions.get('window');
 
 const GOAL_LINES: Record<PrimaryGoal, string> = {
   moisture: "Moisture. That's your priority.",
   growth: "Growth. That's what you're after.",
   definition: 'Definition. You want curls that pop.',
   'damage-repair': 'Repair. Your hair needs healing.',
-  'scalp-health': 'Scalp health. Smart. Everything starts there.',
+  'scalp-health': 'Scalp health. Smart — everything starts there.',
   'simplify-routine': 'Simplify. Less chaos, more results.',
   transition: 'Transitioning. A new chapter.',
 };
@@ -53,50 +47,35 @@ export default function ValidationTwoScreen() {
   const auntyId: AuntyId = state.data.chosenAuntyId || 'denise';
   const ac = auntyColors[auntyId];
   const primaryGoal = state.data.hairProfile.primaryGoal;
-  const lineOne = primaryGoal ? GOAL_LINES[primaryGoal] : "Your goal. I hear you.";
+  const lineOne = primaryGoal ? GOAL_LINES[primaryGoal] : 'Your goal. I hear you.';
 
-  const [phase, setPhase] = useState(1); // 1=line1, 2=line2
-
-  const handleLineOneComplete = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setTimeout(() => setPhase(2), onboardingMotion.linePauseMs);
-  }, []);
-
-  const handleLineTwoComplete = useCallback(() => {
+  const handleComplete = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setTimeout(() => {
-      navigation.replace('HairHabits');
-    }, onboardingMotion.autoAdvanceMs);
+    setTimeout(() => navigation.replace('HairHabits'), 600);
   }, [navigation]);
+
+  const handleLineLanded = useCallback((i: number) => {
+    if (i === 0) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
 
   return (
     <LinearGradient colors={[...gradients.ceremony]} style={styles.container}>
       <View style={[styles.content, { paddingTop: insets.top + spacing.xxl }]}>
-        {/* Aunty avatar with glow */}
-        <Animated.View entering={FadeInUp.delay(200).duration(800)} style={styles.avatarWrap}>
+        <Animated.View entering={FadeInUp.delay(120).duration(700)} style={styles.avatarWrap}>
           <View style={[styles.glow, { backgroundColor: ac.accent }]} />
-          <AuntyAvatar auntyId={auntyId} size={56} showRing glowing />
+          <AuntyAvatar auntyId={auntyId} size={64} showRing glowing />
         </Animated.View>
 
-        {/* Two validation lines */}
         <View style={styles.lines}>
-          <WordReveal
-            text={lineOne}
-            stagger={onboardingMotion.wordStaggerMs}
-            onComplete={handleLineOneComplete}
-            style={styles.line}
+          <SpeechBubble
+            lines={[lineOne, LINE_TWO]}
+            holdMs={1700}
+            fadeMs={400}
+            shimmer
+            textStyle={[styles.line, { color: colors.dark.text }]}
+            onComplete={handleComplete}
+            onLineLanded={handleLineLanded}
           />
-
-          {phase >= 2 && (
-            <Animated.View entering={FadeIn.duration(250)} style={{ marginTop: spacing.lg }}>
-              <WordReveal
-                text={LINE_TWO}
-                stagger={onboardingMotion.wordStaggerMs}
-                onComplete={handleLineTwoComplete}
-                style={styles.line}
-              />
-            </Animated.View>
-          )}
         </View>
       </View>
     </LinearGradient>
@@ -105,34 +84,16 @@ export default function ValidationTwoScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    justifyContent: 'center',
-  },
-  avatarWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xxl,
-  },
-  glow: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    opacity: 0.18,
-  },
-  lines: {
-    width: '100%',
-    minHeight: SCREEN_H * 0.22,
-  },
+  content: { flex: 1, alignItems: 'center', paddingHorizontal: spacing.xl, justifyContent: 'center' },
+  avatarWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xxl },
+  glow: { position: 'absolute', width: 120, height: 120, borderRadius: 60, opacity: 0.18 },
+  lines: { width: '100%', minHeight: 200, justifyContent: 'center' },
   line: {
     fontFamily: fonts.display,
     fontSize: fontSize.xxl,
     color: colors.dark.text,
-    lineHeight: fontSize.xxl * 1.35,
-    letterSpacing: letterSpacing.tight,
+    lineHeight: fontSize.xxl * 1.3,
+    letterSpacing: -0.4,
     textAlign: 'center',
   },
 });

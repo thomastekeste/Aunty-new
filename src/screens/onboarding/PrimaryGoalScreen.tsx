@@ -10,8 +10,8 @@ import { View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ConsultationShell } from '../../components/ConsultationShell';
-import { OptionCard } from '../../components/OptionCard';
+import { SalonFrame } from '../../components/SalonFrame';
+import { EditorialCard } from '../../components/EditorialCard';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
 import type { OnboardingStackParamList, PrimaryGoal } from '../../types';
@@ -51,9 +51,10 @@ export default function PrimaryGoalScreen() {
   };
 
   return (
-    <ConsultationShell
+    <SalonFrame
       auntyId={auntyId}
-      question="What would change everything for your hair? Pick the one that speaks to you most."
+      question="What would change everything?"
+      speakerVerb="is curious"
       step={4}
       totalSteps={7}
       ctaLabel="That's my dream"
@@ -67,7 +68,7 @@ export default function PrimaryGoalScreen() {
         accessibilityLabel="Primary hair goal options"
       >
         {GOAL_OPTIONS.map((goal, index) => (
-          <OptionCard
+          <EditorialCard
             key={goal.value}
             label={goal.label}
             description={goal.description}
@@ -79,7 +80,7 @@ export default function PrimaryGoalScreen() {
           />
         ))}
       </Animated.View>
-    </ConsultationShell>
+    </SalonFrame>
   );
 }
 

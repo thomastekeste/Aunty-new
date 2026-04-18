@@ -10,8 +10,8 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ConsultationShell } from '../../components/ConsultationShell';
-import { OptionCard } from '../../components/OptionCard';
+import { SalonFrame } from '../../components/SalonFrame';
+import { EditorialCard } from '../../components/EditorialCard';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
 import type { OnboardingStackParamList, Porosity } from '../../types';
@@ -77,12 +77,13 @@ export default function PorosityTestScreen() {
   const selectedOption = OPTIONS.find((o) => o.value === selected);
 
   return (
-    <ConsultationShell
+    <SalonFrame
       auntyId={auntyId}
-      question="Time to test your hair. Drop a strand in a glass of water. What happened?"
+      question="Drop a strand in water. What happened?"
+      speakerVerb="wants to test"
       step={3}
       totalSteps={7}
-      ctaLabel="Next"
+      ctaLabel="Continue"
       ctaDisabled={!selected}
       onCtaPress={handleContinue}
     >
@@ -103,10 +104,9 @@ export default function PorosityTestScreen() {
         </View>
       </Animated.View>
 
-      {/* Options */}
       <View style={styles.options}>
         {OPTIONS.map((option, index) => (
-          <OptionCard
+          <EditorialCard
             key={option.value}
             label={option.label}
             description={option.description}
@@ -119,7 +119,6 @@ export default function PorosityTestScreen() {
         ))}
       </View>
 
-      {/* Detail card on selection */}
       {selectedOption && (
         <Animated.View
           entering={FadeInDown.duration(400)}
@@ -127,11 +126,11 @@ export default function PorosityTestScreen() {
         >
           <Text style={styles.detailText}>{selectedOption.detail}</Text>
           <Text style={[styles.marciaNote, { color: ac.accent }]}>
-            {'\u2014 '} Aunty {aunty.name} say so.
+            {'\u2014 '} Aunty {aunty.name} says so.
           </Text>
         </Animated.View>
       )}
-    </ConsultationShell>
+    </SalonFrame>
   );
 }
 
@@ -175,14 +174,15 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   detailText: {
-    fontFamily: fonts.body,
+    fontFamily: fonts.serifMedium,
     fontSize: fontSize.base,
     color: colors.dark.text,
-    lineHeight: fontSize.base * 1.5,
+    lineHeight: fontSize.base * 1.55,
+    letterSpacing: -0.1,
   },
   marciaNote: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.xs,
+    fontFamily: fonts.serifItalic,
+    fontSize: fontSize.sm,
     color: auntyColors.marcia?.accent,
     marginTop: spacing.sm,
   },

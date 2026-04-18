@@ -1,33 +1,37 @@
 /**
- * CouncilConveningScreen — The dramatic loading/deliberation screen.
+ * CouncilConveningScreen — The ceremony.
  *
- * Dark background with overlapping aunty avatars and cycling status messages.
- * Animated gold dots convey council activity.
- * Makes real API calls while showing the ceremony animation.
- * Falls back to mock data if API is not available.
+ * Seven aunties orbit a central gold medallion. As each status message
+ * appears, the corresponding aunty's portrait pulses gold and her name
+ * surfaces. A slow ring of particles rotates behind everything.
+ * Below: the scroll — each completed step draws a hairline rule that
+ * lands a gold check on its right.
+ *
+ * API + fallback logic preserved from the previous implementation.
  */
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   FadeIn,
   FadeOut,
-  FadeInDown,
-  FadeInUp,
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
   withTiming,
   withSequence,
   withDelay,
+  withSpring,
   Easing,
+  interpolate,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { Button } from '../../components/Button';
+import { CeremonialButton } from '../../components/CeremonialButton';
 import { AUNTIES, COUNCIL_ORDER } from '../../constants/aunties';
 import type { AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
@@ -38,45 +42,59 @@ import {
   fonts,
   fontSize,
   spacing,
-  radius,
-  letterSpacing,
   gradients,
 } from '../../constants/theme';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'CouncilConvening'>;
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const MIN_DISPLAY_TIME = 4000; // Minimum 4s ceremony feel
+const { width: SCREEN_W } = Dimensions.get('window');
+const MIN_DISPLAY_TIME = 5400;
 
-// Status messages — specific to what's being built
-function getStatusMessages(auntyName: string, profile: any): string[] {
+const ORBIT_RADIUS = Math.min(SCREEN_W * 0.36, 150);
+const AVATAR_SIZE = 44;
+const MEDALLION_SIZE = 96;
+
+// ─── Status / scroll content ──────────────────────────────────
+function getStatusForAunty(auntyId: AuntyId, name: string, profile: any): string {
   const ct = profile?.curlType || '3c';
   const por = profile?.porosity || 'normal';
   const goal = profile?.primaryGoal || 'moisture';
 
-  return [
-    `Analyzing your ${ct} curl pattern\u2026`,
-    `Checking ${por} porosity needs\u2026`,
-    `Building your wash day routine\u2026`,
-    `Selecting products for ${goal}\u2026`,
-    `Mapping your weekly ritual\u2026`,
-    `${auntyName} is finalizing your plan\u2026`,
-  ];
+  switch (auntyId) {
+    case 'ngozi':
+      return `Ngozi is reading the science of your ${ct}…`;
+    case 'marcia':
+      return `Marcia is checking ${por} porosity…`;
+    case 'denise':
+      return 'Denise is mapping your wash day…';
+    case 'fatou':
+      return 'Fatou is refining the technique…';
+    case 'carmen':
+      return `Carmen is selecting for ${goal}…`;
+    case 'amara':
+      return 'Amara is laying the foundation…';
+    case 'salma':
+      return `${name}, Salma is finalizing your plan…`;
+    default:
+      return `${name}, the council is convening…`;
+  }
 }
 
-// Progress checklist items
-const CHECKLIST_ITEMS = [
-  'Hair profile analyzed',
-  'Routine mapped',
-  'Products matched',
-  'Plan ready',
+const SCROLL_ITEMS = [
+  'Hair profile reviewed',
+  'Routine drafted',
+  'Products vetted',
+  'Plan signed by the council',
 ];
 
-// ─── Mock data for offline / no-backend mode ────────────────────
+// ─── Mock data ─────────────────────────────────────────────────
 function generateMockCouncilResponse(name: string, profile: Record<string, any>): CouncilResponse {
-  const curlLabel = profile.curlType?.startsWith('2') ? 'wavy'
-    : profile.curlType?.startsWith('3') ? 'curly' : 'coily';
+  const curlLabel = profile.curlType?.startsWith('2')
+    ? 'wavy'
+    : profile.curlType?.startsWith('3')
+    ? 'curly'
+    : 'coily';
 
   return {
     auntyMessages: {
@@ -85,8 +103,8 @@ function generateMockCouncilResponse(name: string, profile: Record<string, any>)
       denise: `Baby, I've seen this before. We gon' get your routine right. Trust the process.`,
       fatou: `Your technique needs refinement, ch\u00e9rie. Precision is beauty.`,
       carmen: `Ay ${name}! Those curls have so much potential! We're going to make them pop!`,
-      amara: `Dear one, we will build strength into every strand. Patience and protein.`,
-      salma: `Habibi, when we find balance between moisture and protein, everything flows.`,
+      amara: 'Dear one, we will build strength into every strand. Patience and protein.',
+      salma: 'Habibi, when we find balance between moisture and protein, everything flows.',
     },
     consensus: `${name}, I've reviewed everything. Your hair journey begins with a personalized plan crafted just for you, with love and expertise.`,
     hairProfileSummary: `${curlLabel} hair with ${profile.porosity || 'normal'} porosity`,
@@ -149,75 +167,254 @@ function generateMockRoutine(): WeeklyRitual {
   };
 }
 
-function AnimatedDot({ delay }: { delay: number }) {
-  const opacity = useSharedValue(0.3);
+// ─── Orbiting aunty portrait ───────────────────────────────────
+function OrbitAvatar({
+  auntyId,
+  angle,
+  active,
+  index,
+}: {
+  auntyId: AuntyId;
+  angle: number;
+  active: boolean;
+  index: number;
+}) {
+  const ac = auntyColors[auntyId];
+  const pulse = useSharedValue(1);
+  const haloOpacity = useSharedValue(0);
 
   useEffect(() => {
-    opacity.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(1, { duration: 500, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0.3, { duration: 500, easing: Easing.inOut(Easing.ease) })
-        ),
-        -1,
-        false
-      )
+    if (active) {
+      pulse.value = withSequence(
+        withSpring(1.18, { damping: 10, stiffness: 180 }),
+        withSpring(1, { damping: 12, stiffness: 200 }),
+      );
+      haloOpacity.value = withSequence(
+        withTiming(0.55, { duration: 220 }),
+        withTiming(0, { duration: 1100 }),
+      );
+    }
+  }, [active]);
+
+  const x = Math.cos(angle) * ORBIT_RADIUS;
+  const y = Math.sin(angle) * ORBIT_RADIUS;
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: x }, { translateY: y }, { scale: pulse.value }],
+  }));
+
+  const haloStyle = useAnimatedStyle(() => ({
+    opacity: haloOpacity.value,
+    transform: [{ translateX: x }, { translateY: y }],
+  }));
+
+  return (
+    <>
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.orbitHalo, { backgroundColor: ac.accent }, haloStyle]}
+      />
+      <Animated.View
+        entering={FadeIn.delay(180 + index * 80).duration(420)}
+        style={[styles.orbitItem, animatedStyle]}
+      >
+        <AuntyAvatar auntyId={auntyId} size={AVATAR_SIZE} showRing={active} glowing={active} />
+      </Animated.View>
+    </>
+  );
+}
+
+// ─── Gold medallion (center) ───────────────────────────────────
+function GoldMedallion() {
+  const rot = useSharedValue(0);
+  const breathe = useSharedValue(1);
+
+  useEffect(() => {
+    rot.value = withRepeat(withTiming(1, { duration: 22000, easing: Easing.linear }), -1, false);
+    breathe.value = withRepeat(
+      withSequence(
+        withTiming(1.06, { duration: 1800, easing: Easing.inOut(Easing.quad) }),
+        withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.quad) }),
+      ),
+      -1,
+      false,
     );
   }, []);
 
-  const style = useAnimatedStyle(() => ({
-    opacity: opacity.value,
+  const ringStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${interpolate(rot.value, [0, 1], [0, 360])}deg` }],
   }));
 
-  return <Animated.View style={[styles.dot, style]} />;
+  const coreStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: breathe.value }],
+  }));
+
+  return (
+    <View style={styles.medallion} pointerEvents="none">
+      <Animated.View style={[styles.medallionRing, ringStyle]}>
+        {[0, 1, 2, 3, 4, 5].map((i) => {
+          const a = (i / 6) * Math.PI * 2;
+          return (
+            <View
+              key={i}
+              style={[
+                styles.medallionTick,
+                {
+                  transform: [
+                    { translateX: Math.cos(a) * (MEDALLION_SIZE / 2 + 6) },
+                    { translateY: Math.sin(a) * (MEDALLION_SIZE / 2 + 6) },
+                  ],
+                },
+              ]}
+            />
+          );
+        })}
+      </Animated.View>
+      <Animated.View style={[styles.medallionCore, coreStyle]}>
+        <LinearGradient
+          colors={[...gradients.councilGold]}
+          start={{ x: 0.2, y: 0 }}
+          end={{ x: 0.8, y: 1 }}
+          style={styles.medallionFill}
+        />
+        <View style={styles.medallionInnerRing} />
+        <Text style={styles.medallionGlyph}>{'\u2756'}</Text>
+      </Animated.View>
+    </View>
+  );
 }
 
+// ─── Slow rotating particle field ──────────────────────────────
+function ParticleField() {
+  const rot = useSharedValue(0);
+
+  useEffect(() => {
+    rot.value = withRepeat(withTiming(1, { duration: 60000, easing: Easing.linear }), -1, false);
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${interpolate(rot.value, [0, 1], [0, 360])}deg` }],
+  }));
+
+  const particles = useMemo(() => {
+    return Array.from({ length: 36 }, (_, i) => {
+      const angle = (i / 36) * Math.PI * 2 + (i % 3) * 0.4;
+      const r = 60 + (i % 5) * 36;
+      const size = 1.5 + (i % 4) * 0.7;
+      const opacity = 0.06 + ((i % 7) * 0.02);
+      return {
+        key: i,
+        left: Math.cos(angle) * r,
+        top: Math.sin(angle) * r,
+        size,
+        opacity,
+      };
+    });
+  }, []);
+
+  return (
+    <Animated.View style={[styles.particleField, style]} pointerEvents="none">
+      {particles.map((p) => (
+        <View
+          key={p.key}
+          style={{
+            position: 'absolute',
+            left: p.left,
+            top: p.top,
+            width: p.size,
+            height: p.size,
+            borderRadius: p.size / 2,
+            backgroundColor: '#F5DFA0',
+            opacity: p.opacity,
+          }}
+        />
+      ))}
+    </Animated.View>
+  );
+}
+
+// ─── Scroll item with hairline draw + gold check ───────────────
+function ScrollItem({ label, done, index }: { label: string; done: boolean; index: number }) {
+  const lineWidth = useSharedValue(done ? 1 : 0);
+  const checkScale = useSharedValue(done ? 1 : 0);
+
+  useEffect(() => {
+    if (done) {
+      lineWidth.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) });
+      checkScale.value = withDelay(500, withSpring(1, { damping: 12, stiffness: 220 }));
+    }
+  }, [done]);
+
+  const lineStyle = useAnimatedStyle(() => ({
+    width: `${interpolate(lineWidth.value, [0, 1], [0, 100])}%`,
+  }));
+
+  const checkStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: checkScale.value }],
+    opacity: checkScale.value,
+  }));
+
+  return (
+    <Animated.View entering={FadeIn.delay(index * 80).duration(280)} style={styles.scrollRow}>
+      <Text style={[styles.scrollLabel, done && styles.scrollLabelDone]}>{label}</Text>
+      <View style={styles.scrollLineWrap}>
+        <Animated.View style={[styles.scrollLine, lineStyle]} />
+      </View>
+      <Animated.View style={[styles.scrollCheck, checkStyle]}>
+        <Text style={styles.scrollCheckGlyph}>{'\u2713'}</Text>
+      </Animated.View>
+    </Animated.View>
+  );
+}
+
+// ─── Screen ────────────────────────────────────────────────────
 export default function CouncilConveningScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const { state, setCouncilResponse, setRoutine } = useOnboarding();
-  const auntyId = state.data.chosenAuntyId || 'denise';
+  const auntyId: AuntyId = state.data.chosenAuntyId || 'denise';
   const aunty = AUNTIES[auntyId];
   const ac = auntyColors[auntyId];
-  const { hairProfile } = state.data;
-  const STATUS_MESSAGES = getStatusMessages(aunty.name, hairProfile);
-  const [messageIndex, setMessageIndex] = useState(0);
-  const [checklistCount, setChecklistCount] = useState(0);
+  const { hairProfile, name } = state.data;
+
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [scrollDone, setScrollDone] = useState(0);
   const [hasError, setHasError] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const [completed, setCompleted] = useState(false);
+
   const apiDone = useRef(false);
   const minTimePassed = useRef(false);
 
+  const orderedAunties = COUNCIL_ORDER;
+  const angles = useMemo(() => {
+    const n = orderedAunties.length;
+    return orderedAunties.map((_, i) => (i / n) * Math.PI * 2 - Math.PI / 2);
+  }, [orderedAunties]);
+
   const tryNavigate = () => {
-    if (apiDone.current && minTimePassed.current) {
-      navigation.replace('CouncilVerdict');
+    if (apiDone.current && minTimePassed.current && !completed) {
+      setCompleted(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setTimeout(() => navigation.replace('CouncilVerdict'), 700);
     }
   };
 
   const fetchCouncilData = async () => {
-    const { name, hairProfile } = state.data;
-    const startTime = Date.now();
-
     try {
-      // Step 1: Generate council response
       const councilRes = await fetch(`${API_URL}/api/council/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, hairProfile }),
       });
-
       if (!councilRes.ok) throw new Error(`Council API error: ${councilRes.status}`);
       const councilData: CouncilResponse = await councilRes.json();
       setCouncilResponse(councilData);
 
-      // Step 2: Generate routine
       const routineRes = await fetch(`${API_URL}/api/routine/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, hairProfile }),
       });
-
       if (!routineRes.ok) throw new Error(`Routine API error: ${routineRes.status}`);
       const routineData: WeeklyRitual = await routineRes.json();
       setRoutine(routineData);
@@ -225,14 +422,9 @@ export default function CouncilConveningScreen() {
       apiDone.current = true;
       tryNavigate();
     } catch (error) {
-      console.warn('[CouncilConvening] API call failed, using mock data:', error);
-
-      // Fallback: use mock data
-      const mockCouncil = generateMockCouncilResponse(name || 'Love', hairProfile);
-      const mockRoutine = generateMockRoutine();
-      setCouncilResponse(mockCouncil);
-      setRoutine(mockRoutine);
-
+      console.warn('[CouncilConvening] API failed, using mock:', error);
+      setCouncilResponse(generateMockCouncilResponse(name || 'Love', hairProfile));
+      setRoutine(generateMockRoutine());
       apiDone.current = true;
       tryNavigate();
     }
@@ -243,8 +435,6 @@ export default function CouncilConveningScreen() {
     apiDone.current = false;
     minTimePassed.current = false;
     fetchCouncilData();
-
-    // Reset min display timer
     setTimeout(() => {
       minTimePassed.current = true;
       tryNavigate();
@@ -252,224 +442,276 @@ export default function CouncilConveningScreen() {
   };
 
   useEffect(() => {
-    // Cycle status messages — slower, more deliberate
-    timerRef.current = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % STATUS_MESSAGES.length);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }, 2800);
+    const auntyTimer = setInterval(() => {
+      setActiveIdx((i) => {
+        const next = (i + 1) % orderedAunties.length;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        return next;
+      });
+    }, 1100);
 
-    // Checklist items appear on a schedule
-    const checkTimers = CHECKLIST_ITEMS.map((_, i) =>
-      setTimeout(() => setChecklistCount(i + 1), 1000 + i * 900)
+    const scrollTimers = SCROLL_ITEMS.map((_, i) =>
+      setTimeout(() => setScrollDone(i + 1), 900 + i * 1200),
     );
 
-    // Minimum display time for the ceremony feel
     const minTimer = setTimeout(() => {
       minTimePassed.current = true;
       tryNavigate();
     }, MIN_DISPLAY_TIME);
 
-    // Start API call
     fetchCouncilData();
 
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      clearInterval(auntyTimer);
       clearTimeout(minTimer);
-      checkTimers.forEach(clearTimeout);
+      scrollTimers.forEach(clearTimeout);
     };
-  }, [navigation]);
+  }, []);
+
+  const activeAunty = orderedAunties[activeIdx];
+  const statusLine = getStatusForAunty(activeAunty, name || 'Love', hairProfile);
 
   return (
-    <View
+    <LinearGradient
+      colors={[...gradients.ceremony]}
       style={[styles.container, { paddingTop: insets.top }]}
-      accessibilityLabel={`${aunty.name} is reviewing your hair profile. Please wait.`}
+      accessibilityLabel={`The council is convening. ${aunty.name} is finalizing your plan.`}
     >
-      {/* Single chosen aunty avatar with pulsing glow */}
-      <Animated.View
-        entering={FadeIn.delay(200).duration(600)}
-        style={styles.avatarSingle}
-      >
-        <View style={[styles.avatarGlow, { backgroundColor: ac.accent }]} />
-        <AuntyAvatar auntyId={auntyId} size={100} showRing glowing />
-      </Animated.View>
-
-      {/* Title */}
+      {/* Top label */}
+      <Animated.Text entering={FadeIn.duration(500)} style={styles.eyebrow}>
+        THE COUNCIL CONVENES
+      </Animated.Text>
       <Animated.Text
-        entering={FadeIn.delay(600).duration(500)}
+        entering={FadeIn.delay(200).duration(500)}
         style={[styles.title, { color: ac.accent }]}
       >
-        {aunty.name} Is Reviewing
+        Your hair is being heard
       </Animated.Text>
 
-      {/* Animated gold dots */}
-      <Animated.View
-        entering={FadeIn.delay(900).duration(300)}
-        style={styles.dotsRow}
-      >
-        <AnimatedDot delay={0} />
-        <AnimatedDot delay={200} />
-        <AnimatedDot delay={400} />
-      </Animated.View>
-
-      {/* Cycling status message — crossfade via key */}
-      <Animated.Text
-        entering={FadeIn.duration(400)}
-        exiting={FadeOut.duration(300)}
-        style={styles.statusText}
-        key={`msg-${messageIndex}`}
-      >
-        {STATUS_MESSAGES[messageIndex]}
-      </Animated.Text>
-
-      {/* Progress checklist */}
-      <View style={styles.checklist}>
-        {CHECKLIST_ITEMS.map((item, i) =>
-          i < checklistCount ? (
-            <Animated.View
-              key={item}
-              entering={FadeIn.duration(300)}
-              style={styles.checkItem}
-            >
-              <Text style={[styles.checkMark, { color: ac.accent }]}>{'\u2713'}</Text>
-              <Text style={styles.checkText}>{item}</Text>
-            </Animated.View>
-          ) : null
-        )}
+      {/* Orbit */}
+      <View style={styles.orbitWrap}>
+        <ParticleField />
+        <GoldMedallion />
+        {orderedAunties.map((id, i) => (
+          <OrbitAvatar key={id} auntyId={id} angle={angles[i]} active={i === activeIdx} index={i} />
+        ))}
       </View>
 
-      {/* Error / Retry state */}
-      {hasError && (
-        <Animated.View entering={FadeIn.duration(300)} style={styles.retryContainer}>
-          <Text style={styles.errorText}>Something went wrong.</Text>
-          <View style={styles.retryButtonWrap}>
-            <Button
-              label="Retry"
-              onPress={handleRetry}
-              variant="primary"
-              size="md"
-              fullWidth={false}
-            />
-          </View>
-        </Animated.View>
-      )}
+      {/* Status line */}
+      <View style={styles.statusWrap}>
+        <Animated.Text
+          key={`status-${activeIdx}`}
+          entering={FadeIn.duration(420)}
+          exiting={FadeOut.duration(220)}
+          style={styles.statusText}
+        >
+          {statusLine}
+        </Animated.Text>
+      </View>
 
-      {/* Bottom text */}
-      <Animated.Text
-        entering={FadeIn.delay(1100).duration(500)}
-        style={styles.bottomText}
-      >
-        {aunty.name}. Your hair. Her expertise.
-      </Animated.Text>
-      <Animated.Text
-        entering={FadeIn.delay(1300).duration(500)}
-        style={styles.aiNote}
-      >
-        Personalized with AI
-      </Animated.Text>
-    </View>
+      {/* Scroll */}
+      <View style={[styles.scroll, { paddingBottom: insets.bottom + spacing.xl }]}>
+        {SCROLL_ITEMS.map((item, i) => (
+          <ScrollItem key={item} label={item} done={i < scrollDone} index={i} />
+        ))}
+
+        {hasError && (
+          <Animated.View entering={FadeIn.duration(300)} style={styles.retryRow}>
+            <Text style={styles.errorText}>Something went wrong.</Text>
+            <View style={{ width: 140 }}>
+              <CeremonialButton
+                label="Retry"
+                onPress={handleRetry}
+                size="sm"
+                variant="soft"
+                fullWidth
+              />
+            </View>
+          </Animated.View>
+        )}
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.dark.bg,
     alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },
-  avatarSingle: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xxl,
-  },
-  avatarGlow: {
-    position: 'absolute',
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    opacity: 0.2,
+
+  eyebrow: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    letterSpacing: 3,
+    marginTop: spacing.sm,
   },
   title: {
     fontFamily: fonts.display,
-    fontSize: fontSize.xxl,
-    color: colors.primary,
-    letterSpacing: letterSpacing.tight,
+    fontSize: fontSize.xl,
+    letterSpacing: -0.4,
+    marginTop: spacing.sm,
     textAlign: 'center',
+  },
+
+  // Orbit container
+  orbitWrap: {
+    width: ORBIT_RADIUS * 2 + AVATAR_SIZE * 2,
+    height: ORBIT_RADIUS * 2 + AVATAR_SIZE * 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xl,
     marginBottom: spacing.lg,
   },
-  dotsRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
+
+  // Particles
+  particleField: {
+    position: 'absolute',
+    width: ORBIT_RADIUS * 2 + AVATAR_SIZE * 2,
+    height: ORBIT_RADIUS * 2 + AVATAR_SIZE * 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
+
+  // Medallion
+  medallion: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: MEDALLION_SIZE + 24,
+    height: MEDALLION_SIZE + 24,
+  },
+  medallionRing: {
+    position: 'absolute',
+    width: MEDALLION_SIZE + 24,
+    height: MEDALLION_SIZE + 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  medallionTick: {
+    position: 'absolute',
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D4A04A',
+    opacity: 0.55,
+  },
+  medallionCore: {
+    width: MEDALLION_SIZE,
+    height: MEDALLION_SIZE,
+    borderRadius: MEDALLION_SIZE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    shadowColor: '#D4A04A',
+    shadowOpacity: 0.45,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 12,
+  },
+  medallionFill: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  medallionInnerRing: {
+    position: 'absolute',
+    width: MEDALLION_SIZE - 14,
+    height: MEDALLION_SIZE - 14,
+    borderRadius: (MEDALLION_SIZE - 14) / 2,
+    borderWidth: 1,
+    borderColor: 'rgba(58, 34, 8, 0.45)',
+  },
+  medallionGlyph: {
+    fontSize: 28,
+    color: '#3A2208',
+  },
+
+  // Orbit avatars
+  orbitItem: {
+    position: 'absolute',
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orbitHalo: {
+    position: 'absolute',
+    width: AVATAR_SIZE + 28,
+    height: AVATAR_SIZE + 28,
+    borderRadius: (AVATAR_SIZE + 28) / 2,
+  },
+
+  // Status
+  statusWrap: {
+    minHeight: 56,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingHorizontal: spacing.md,
   },
   statusText: {
-    fontFamily: fonts.body,
+    fontFamily: fonts.serifItalic,
     fontSize: fontSize.md,
-    color: colors.dark.textMuted,
+    color: colors.dark.text,
     textAlign: 'center',
-    minHeight: 48,
-    lineHeight: fontSize.md * 1.5,
+    lineHeight: fontSize.md * 1.4,
   },
-  checklist: {
+
+  // Scroll
+  scroll: {
+    width: '100%',
     marginTop: spacing.lg,
-    alignItems: 'flex-start',
-    alignSelf: 'center',
-    minHeight: 80,
+    flex: 1,
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
   },
-  checkItem: {
+  scrollRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginBottom: spacing.xs,
   },
-  checkMark: {
-    fontFamily: fonts.bodySemiBold,
+  scrollLabel: {
+    fontFamily: fonts.serifItalic,
     fontSize: fontSize.sm,
+    color: 'rgba(254, 248, 236, 0.4)',
+    minWidth: 180,
   },
-  checkText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.dark.textMuted,
+  scrollLabelDone: {
+    color: colors.dark.text,
+    fontFamily: fonts.serifSemiBold,
   },
-  retryContainer: {
+  scrollLineWrap: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(254, 248, 236, 0.08)',
+  },
+  scrollLine: {
+    height: 1,
+    backgroundColor: '#D4A04A',
+  },
+  scrollCheck: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#D4A04A',
     alignItems: 'center',
-    marginTop: spacing.lg,
+    justifyContent: 'center',
   },
-  retryButtonWrap: {
-    minWidth: 160,
+  scrollCheckGlyph: {
+    color: '#3A2208',
+    fontSize: 12,
+    fontFamily: fonts.bodyBold,
+  },
+
+  retryRow: {
+    alignItems: 'center',
+    marginTop: spacing.md,
+    gap: spacing.sm,
   },
   errorText: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
     color: colors.error,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  bottomText: {
-    fontFamily: fonts.displayMedium,
-    fontSize: fontSize.lg,
-    color: colors.dark.text,
-    textAlign: 'center',
-    position: 'absolute',
-    bottom: 80,
-    fontStyle: 'italic',
-    letterSpacing: letterSpacing.wide,
-  },
-  aiNote: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.dark.textMuted,
-    textAlign: 'center',
-    position: 'absolute',
-    bottom: 52,
-    alignSelf: 'center',
-    letterSpacing: letterSpacing.wide,
   },
 });

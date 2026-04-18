@@ -10,7 +10,7 @@ import { View, TextInput, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ConsultationShell } from '../../components/ConsultationShell';
+import { SalonFrame } from '../../components/SalonFrame';
 import { PressableScale } from '../../components/PressableScale';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
@@ -51,9 +51,10 @@ export default function NameEntryScreen() {
   };
 
   return (
-    <ConsultationShell
+    <SalonFrame
       auntyId={auntyId}
       question={aunty.greeting}
+      speakerVerb="wants to know"
       step={1}
       totalSteps={7}
       ctaLabel="That's me"
@@ -138,7 +139,7 @@ export default function NameEntryScreen() {
           </View>
         </Animated.View>
       )}
-    </ConsultationShell>
+    </SalonFrame>
   );
 }
 
@@ -174,8 +175,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pillText: {
-    fontFamily: fonts.bodyMedium,
+    fontFamily: fonts.serifMedium,
     fontSize: fontSize.base,
     color: colors.dark.textMuted,
+    letterSpacing: -0.1,
   },
 });

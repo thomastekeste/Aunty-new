@@ -10,7 +10,7 @@ import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ConsultationShell } from '../../components/ConsultationShell';
+import { SalonFrame } from '../../components/SalonFrame';
 import { PressableScale } from '../../components/PressableScale';
 import { CurlPatternIcon } from '../../components/CurlPatternIcon';
 import { useOnboarding } from '../../context/OnboardingContext';
@@ -121,9 +121,10 @@ export default function CurlTypeScreen() {
   };
 
   return (
-    <ConsultationShell
+    <SalonFrame
       auntyId={auntyId}
-      question="Let Aunty see your pattern. Which one looks like you?"
+      question="Which pattern is yours?"
+      speakerVerb="wants to see"
       step={2}
       totalSteps={7}
       ctaLabel="That's my curl"
@@ -159,7 +160,7 @@ export default function CurlTypeScreen() {
           </Text>
         </Animated.View>
       )}
-    </ConsultationShell>
+    </SalonFrame>
   );
 }
 
@@ -181,38 +182,40 @@ const styles = StyleSheet.create({
   },
   card: {
     width: CARD_WIDTH,
-    backgroundColor: colors.dark.surfaceLight,
+    backgroundColor: 'rgba(255, 250, 240, 0.04)',
     borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: colors.dark.border,
+    borderWidth: 1,
+    borderColor: 'rgba(254, 248, 236, 0.10)',
     paddingVertical: spacing.md + 4,
     paddingHorizontal: spacing.sm,
     alignItems: 'center',
     gap: 6,
   },
   cardLabel: {
-    fontFamily: fonts.bodyBold,
+    fontFamily: fonts.serifBold,
     fontSize: fontSize.lg,
     color: colors.dark.textMuted,
+    letterSpacing: -0.2,
   },
   cardDesc: {
-    fontFamily: fonts.body,
+    fontFamily: fonts.serifItalic,
     fontSize: fontSize.sm,
     color: colors.dark.textMuted,
     textAlign: 'center',
   },
   selectedHint: {
-    backgroundColor: colors.dark.surfaceLight,
+    backgroundColor: 'rgba(255, 250, 240, 0.05)',
     borderRadius: radius.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
     padding: spacing.md,
     marginTop: spacing.sm,
   },
   selectedHintText: {
-    fontFamily: fonts.displayMedium,
+    fontFamily: fonts.serifItalic,
     fontSize: fontSize.md,
     color: colors.primary,
-    fontStyle: 'italic',
     textAlign: 'center',
-    lineHeight: fontSize.md * 1.5,
+    lineHeight: fontSize.md * 1.55,
   },
 });

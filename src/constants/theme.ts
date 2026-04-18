@@ -118,11 +118,27 @@ export const auntyColors: Record<
   },
 };
 
-// ─── Typography (One font: Plus Jakarta Sans — modern, warm, clean) ─
+// ─── Typography ──────────────────────────────────────────────────
+// Two-font system:
+//   Editorial serif (Fraunces) — aunty names, screen titles, pull-quotes
+//   UI sans (Plus Jakarta Sans) — buttons, body, labels, captions
 export const fonts = {
-  display: 'PlusJakartaSans_700Bold',
-  displayMedium: 'PlusJakartaSans_600SemiBold',
-  displayItalic: 'PlusJakartaSans_700Bold', // no italic variant, use bold
+  // Editorial serif
+  serif: 'Fraunces_400Regular',
+  serifMedium: 'Fraunces_500Medium',
+  serifSemiBold: 'Fraunces_600SemiBold',
+  serifBold: 'Fraunces_700Bold',
+  serifItalic: 'Fraunces_400Regular_Italic',
+  serifItalicBold: 'Fraunces_600SemiBold_Italic',
+
+  // Display = serif (was sans bold). This swap is intentional —
+  // every reference to `fonts.display` in headers/aunty names now
+  // renders in editorial serif automatically.
+  display: 'Fraunces_700Bold',
+  displayMedium: 'Fraunces_600SemiBold',
+  displayItalic: 'Fraunces_600SemiBold_Italic',
+
+  // UI sans
   body: 'PlusJakartaSans_400Regular',
   bodyMedium: 'PlusJakartaSans_500Medium',
   bodySemiBold: 'PlusJakartaSans_600SemiBold',
@@ -314,6 +330,12 @@ export const shadows = {
 export const gradients = {
   gold: ['#D4A04A', '#B8862E'] as const,
   goldSoft: ['#FDF6E8', '#F5DFA0'] as const,
+  goldEmboss: ['#F5DFA0', '#D4A04A', '#A8761E'] as const, // ceremonial CTA fill
+  goldShimmer: [
+    'rgba(255, 244, 200, 0)',
+    'rgba(255, 244, 200, 0.45)',
+    'rgba(255, 244, 200, 0)',
+  ] as const,
   accent: ['#C75B2A', '#A04420'] as const,
   canvas: ['#FEF8EC', '#F5EBD5'] as const,
   dark: ['#2D1B0E', '#1A0F08'] as const,
@@ -321,6 +343,30 @@ export const gradients = {
   warmOverlay: ['rgba(254, 248, 236, 0)', 'rgba(254, 248, 236, 1)'] as const,
   councilGold: ['#F5DFA0', '#D4A04A', '#B8862E'] as const,
   ceremony: ['#1A0F08', '#2D1B0E', '#3D2A1A'] as const, // dark ceremonial
+  glassDark: ['rgba(26, 15, 8, 0.72)', 'rgba(26, 15, 8, 0.95)'] as const,
+};
+
+// ─── Salon design tokens ────────────────────────────────────────
+export const salon = {
+  bead: {
+    completed: '#D4A04A',     // filled gold
+    completedSize: 5,
+    active: '#F5DFA0',         // bright gold
+    activeSize: 9,
+    activeHalo: 'rgba(245, 223, 160, 0.35)',
+    upcoming: 'rgba(254, 248, 236, 0.25)',
+    upcomingSize: 5,
+  },
+  card: {
+    surface: 'rgba(255, 250, 240, 0.04)',
+    surfaceElevated: 'rgba(255, 250, 240, 0.07)',
+    border: 'rgba(254, 248, 236, 0.10)',
+    innerHighlight: 'rgba(255, 250, 240, 0.06)', // top-edge catch
+  },
+  bar: {
+    width: 4,
+    widthSelected: 6,
+  },
 };
 
 // ─── Animation Presets ───────────────────────────────────────────

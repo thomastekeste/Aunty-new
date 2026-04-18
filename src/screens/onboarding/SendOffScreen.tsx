@@ -1,29 +1,19 @@
 /**
  * SendOffScreen — The emotional close.
  *
- * Word-by-word reveal. Three lines that land.
- * Not a motivational poster — a personal moment between
- * the aunty and the user about what their hair means.
+ * Three lines that flip in place. Auntie's signature in italic at the close.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  FadeIn,
-  FadeOut,
-  FadeInUp,
-  useSharedValue,
-  useAnimatedStyle,
-  withDelay,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { WordReveal } from '../../components/WordReveal';
-import { Button } from '../../components/Button';
+import { SpeechBubble } from '../../components/SpeechBubble';
+import { CeremonialButton } from '../../components/CeremonialButton';
 import { AUNTIES } from '../../constants/aunties';
 import type { AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
@@ -34,11 +24,7 @@ import {
   fontSize,
   spacing,
   gradients,
-  letterSpacing,
 } from '../../constants/theme';
-import { onboardingMotion } from '../../constants/onboardingMotion';
-
-const { height: SCREEN_H } = Dimensions.get('window');
 
 export default function SendOffScreen() {
   const insets = useSafeAreaInsets();
@@ -48,102 +34,71 @@ export default function SendOffScreen() {
   const aunty = AUNTIES[auntyId];
   const ac = auntyColors[auntyId];
 
-  // 0=avatar entrance, 1=line1, 2=line2, 3=line3, 4=button
-  const [phase, setPhase] = useState(0);
+  const [showButton, setShowButton] = useState(false);
 
-  const btnOpacity = useSharedValue(0);
-  const btnStyle = useAnimatedStyle(() => ({
-    opacity: btnOpacity.value,
-  }));
+  const lines = [
+    `${name}, your crown was never broken.`,
+    'It just needed someone who speaks its language.',
+    'Now go wear it like you mean it.',
+  ];
 
-  useEffect(() => {
-    const t = setTimeout(() => setPhase(1), onboardingMotion.linePauseMs);
-    return () => clearTimeout(t);
-  }, []);
-
-  const showButton = () => {
+  const handleComplete = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    btnOpacity.value = withTiming(1, { duration: 400 });
-    setPhase(4);
-  };
+    setShowButton(true);
+  }, []);
 
   const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
 
   const handleBegin = useCallback(async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     try { await AsyncStorage.setItem('onboarding_completed_at', new Date().toISOString()); } catch {}
-    try { fetch(`${API_URL}/api/onboarding/intake`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state.data) }).catch(() => {}); } catch {}
+    try {
+      fetch(`${API_URL}/api/onboarding/intake`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state.data),
+      }).catch(() => {});
+    } catch {}
     complete();
-  }, [complete, state.data]);
+  }, [API_URL, complete, state.data]);
 
   return (
     <LinearGradient colors={[...gradients.ceremony]} style={[styles.container, { paddingTop: insets.top }]}>
       <View style={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}>
-
-        {/* Aunty avatar with glow */}
-        <Animated.View entering={FadeInUp.delay(200).duration(800)} style={styles.avatarWrap}>
+        <Animated.View entering={FadeInUp.delay(120).duration(700)} style={styles.avatarWrap}>
           <View style={[styles.glow, { backgroundColor: ac.accent }]} />
-          <AuntyAvatar auntyId={auntyId} size={80} showRing glowing />
+          <AuntyAvatar auntyId={auntyId} size={88} showRing glowing />
         </Animated.View>
 
-        <Animated.Text entering={FadeIn.delay(800)} style={[styles.label, { color: ac.accent }]}>
-          {aunty.name.toUpperCase()}
+        <Animated.Text
+          entering={FadeIn.delay(400).duration(500)}
+          style={[styles.name, { color: ac.accent }]}
+        >
+          {aunty.name}
         </Animated.Text>
 
-        {/* The monologue — three lines, word by word */}
-        <View style={styles.monologue}>
-
-          {phase >= 1 && (
-            <WordReveal
-              key="line1"
-              text={`${name}, your crown was never broken.`}
-              stagger={onboardingMotion.wordStaggerMs}
-              onComplete={() => setTimeout(() => setPhase(2), onboardingMotion.linePauseMs)}
-              style={styles.line}
-            />
-          )}
-
-          {phase >= 2 && (
-            <Animated.View entering={FadeIn.duration(250)} style={{ marginTop: spacing.lg }}>
-              <WordReveal
-                key="line2"
-                text="It just needed someone who speaks its language."
-                stagger={onboardingMotion.wordStaggerMs}
-                onComplete={() => setTimeout(() => setPhase(3), onboardingMotion.linePauseMs)}
-                style={[styles.line, { color: ac.accent }]}
-              />
-            </Animated.View>
-          )}
-
-          {phase >= 3 && (
-            <Animated.View entering={FadeIn.duration(250)} style={{ marginTop: spacing.lg }}>
-              <WordReveal
-                key="line3"
-                text="Now go wear it like you mean it."
-                stagger={onboardingMotion.wordStaggerMs}
-                onComplete={() => setTimeout(showButton, onboardingMotion.shortPauseMs)}
-                style={styles.line}
-              />
-            </Animated.View>
-          )}
+        <View style={styles.bubbleWrap}>
+          <SpeechBubble
+            lines={lines}
+            holdMs={1900}
+            fadeMs={420}
+            shimmer
+            textStyle={[styles.line, { color: colors.dark.text }]}
+            onComplete={handleComplete}
+          />
         </View>
-
-        {/* Gold accent */}
-        {phase >= 3 && (
-          <Animated.View entering={FadeIn.delay(300)} style={[styles.rule, { backgroundColor: ac.accent }]} />
-        )}
 
         <View style={{ flex: 1 }} />
 
-        {/* Button */}
-        <Animated.View style={[styles.btnWrap, btnStyle]}>
-          <Button label="Let's Go" onPress={handleBegin} variant="primary" size="lg" />
-        </Animated.View>
-
-        {phase >= 4 && (
-          <Animated.Text entering={FadeIn.delay(200)} style={styles.footer}>
-            — {aunty.name}
-          </Animated.Text>
+        {showButton && (
+          <>
+            <Animated.View entering={FadeInDown.duration(420)} style={styles.btnWrap}>
+              <CeremonialButton label="Let's go" onPress={handleBegin} size="lg" />
+            </Animated.View>
+            <Animated.Text entering={FadeIn.delay(280)} style={styles.signature}>
+              {'\u2014 '}{aunty.name}
+            </Animated.Text>
+          </>
         )}
       </View>
     </LinearGradient>
@@ -152,23 +107,29 @@ export default function SendOffScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { flex: 1, alignItems: 'center', paddingHorizontal: spacing.xl, justifyContent: 'center' },
-
+  content: { flex: 1, alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xxl },
   avatarWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg },
-  glow: { position: 'absolute', width: 140, height: 140, borderRadius: 70, opacity: 0.18 },
-  label: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, letterSpacing: letterSpacing.widest, marginBottom: spacing.xxl },
-
-  monologue: { width: '100%', minHeight: SCREEN_H * 0.28 },
+  glow: { position: 'absolute', width: 160, height: 160, borderRadius: 80, opacity: 0.18 },
+  name: {
+    fontFamily: fonts.serifBold,
+    fontSize: fontSize.xxl,
+    letterSpacing: -0.4,
+    marginBottom: spacing.xl,
+  },
+  bubbleWrap: { width: '100%', minHeight: 200, justifyContent: 'center' },
   line: {
     fontFamily: fonts.display,
     fontSize: fontSize.xxl,
     color: colors.dark.text,
-    lineHeight: fontSize.xxl * 1.35,
-    letterSpacing: letterSpacing.tight,
+    lineHeight: fontSize.xxl * 1.3,
+    letterSpacing: -0.4,
+    textAlign: 'center',
   },
-
-  rule: { width: 32, height: 2, opacity: 0.5, borderRadius: 1, marginTop: spacing.xl },
-
   btnWrap: { width: '100%', marginBottom: spacing.md },
-  footer: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.dark.textMuted, letterSpacing: letterSpacing.wide },
+  signature: {
+    fontFamily: fonts.serifItalic,
+    fontSize: fontSize.md,
+    color: colors.dark.textMuted,
+    marginTop: spacing.sm,
+  },
 });

@@ -23,7 +23,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { Button } from '../../components/Button';
+import { CeremonialButton } from '../../components/CeremonialButton';
 import { useAuth } from '../../context/AuthContext';
 import {
   colors,
@@ -169,12 +169,10 @@ export default function SignUpScreen() {
             ) : null}
           </Animated.View>
 
-          {/* CTA */}
           <Animated.View entering={FadeInDown.delay(550).duration(400)} style={styles.ctaArea}>
-            <Button
-              label="Create Account"
+            <CeremonialButton
+              label="Create account"
               onPress={handleSignUp}
-              variant="primary"
               size="lg"
               disabled={!isValid}
               loading={loading}
@@ -236,11 +234,12 @@ const styles = StyleSheet.create({
     lineHeight: fontSize.display * 1.05,
   },
   subtitle: {
-    fontFamily: fonts.body,
+    fontFamily: fonts.serifItalic,
     fontSize: fontSize.md,
     color: colors.dark.textMuted,
     marginTop: spacing.md,
-    lineHeight: fontSize.md * 1.5,
+    lineHeight: fontSize.md * 1.55,
+    letterSpacing: -0.1,
   },
   form: {
     gap: spacing.lg,
@@ -256,11 +255,11 @@ const styles = StyleSheet.create({
     letterSpacing: letterSpacing.widest,
   },
   input: {
-    fontFamily: fonts.displayMedium,
+    fontFamily: fonts.serifMedium,
     fontSize: fontSize.xl,
     color: colors.dark.text,
     paddingVertical: spacing.md,
-    letterSpacing: letterSpacing.tight,
+    letterSpacing: -0.2,
     minHeight: 44,
   },
   underline: {
