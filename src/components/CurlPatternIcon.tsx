@@ -1,140 +1,67 @@
 /**
- * CurlPatternIcon — Curl pattern illustrations matching the standard chart.
+ * CurlPatternIcon — Real strand illustrations from the standard curl chart.
  *
- * Visual approach mirrors the reference texture chart:
- *   2a-2c → smooth S-waves, low → high amplitude
- *   3a-3c → stacked oval loops (phone-cord coil), loose → tight
- *   4a    → small dense coils (tight spring)
- *   4b    → angular Z-pattern (sharp zigzag)
- *   4c    → micro zigzag (high frequency, low amplitude — shrinkage)
+ * Each type is a hand-drawn strand silhouette (white pixels on transparent),
+ * rendered as a tinted Image so it can take on the aunty's accent color when
+ * the card is selected, or a muted neutral when it's at rest.
  *
- * Each variant renders inside a square viewport and breathes with ~6% top/bottom
- * padding so it sits comfortably in a card without crowding label text.
+ * Source assets live in `assets/curl-types/{type}.png`.
  */
 
 import React from 'react';
-import Svg, { Path, Ellipse, G } from 'react-native-svg';
+import { Image, type ImageStyle, type StyleProp } from 'react-native';
 import type { CurlType } from '../types';
 
 interface Props {
   type: CurlType;
   size?: number;
+  /** Tint applied to the strand silhouette. */
   color?: string;
-  /** Override stroke weight; defaults to size * 0.05 (clamped 1.6 - 3). */
-  strokeWidth?: number;
+  /** Optional aspect-ratio override. Defaults to the strand's natural 11:50. */
+  aspectRatio?: number;
+  style?: StyleProp<ImageStyle>;
 }
+
+const SOURCES: Record<CurlType, number> = {
+  '2a': require('../../assets/curl-types/2a.png'),
+  '2b': require('../../assets/curl-types/2b.png'),
+  '2c': require('../../assets/curl-types/2c.png'),
+  '3a': require('../../assets/curl-types/3a.png'),
+  '3b': require('../../assets/curl-types/3b.png'),
+  '3c': require('../../assets/curl-types/3c.png'),
+  '4a': require('../../assets/curl-types/4a.png'),
+  '4b': require('../../assets/curl-types/4b.png'),
+  '4c': require('../../assets/curl-types/4c.png'),
+};
+
+// Source crops are 110×500. Maintain that ratio when rendering so strands
+// don't get stretched. `size` controls the height of the rendered strand.
+const NATIVE_W = 110;
+const NATIVE_H = 500;
 
 export function CurlPatternIcon({
   type,
-  size = 48,
+  size = 56,
   color = '#FEF8EC',
-  strokeWidth,
+  aspectRatio = NATIVE_W / NATIVE_H,
+  style,
 }: Props) {
-  const w = size;
-  const h = size;
-  const cx = w / 2;
-  const sw = strokeWidth ?? Math.min(3, Math.max(1.6, size * 0.05));
-
-  /** Top / bottom padding so strands don't touch the card edges. */
-  const top = h * 0.06;
-  const bottom = h * 0.94;
-  const range = bottom - top;
-
-  // ── Coil: stack of overlapping ovals (phone-cord look) ─────────
-  const coil = (
-    count: number,
-    ovalW: number,
-    overlapPct = 0.35,
-    stroke = sw,
-  ) => {
-    const ovalH = range / (count - (count - 1) * overlapPct);
-    const stride = ovalH * (1 - overlapPct);
-    const startCy = top + ovalH / 2;
-    return (
-      <G>
-        {Array.from({ length: count }, (_, i) => (
-          <Ellipse
-            key={i}
-            cx={cx}
-            cy={startCy + i * stride}
-            rx={ovalW / 2}
-            ry={ovalH / 2}
-            stroke={color}
-            strokeWidth={stroke}
-            fill="none"
-          />
-        ))}
-      </G>
-    );
-  };
-
-  // ── Sine wave for 2a-2c ────────────────────────────────────────
-  const wave = (amplitude: number, periods: number, stroke = sw) => {
-    const steps = 80;
-    const pts: string[] = [];
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      const y = top + t * range;
-      const x = cx + Math.sin(t * Math.PI * 2 * periods) * amplitude;
-      pts.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`);
-    }
-    return (
-      <Path
-        d={pts.join(' ')}
-        stroke={color}
-        strokeWidth={stroke}
-        fill="none"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    );
-  };
-
-  // ── Sharp zigzag for 4b / 4c ───────────────────────────────────
-  const zigzag = (amplitude: number, segments: number, stroke = sw) => {
-    const stepY = range / segments;
-    const pts: string[] = [`M ${cx.toFixed(2)} ${top.toFixed(2)}`];
-    for (let i = 1; i <= segments; i++) {
-      const x = cx + (i % 2 === 0 ? -amplitude : amplitude);
-      const y = top + i * stepY;
-      pts.push(`L ${x.toFixed(2)} ${y.toFixed(2)}`);
-    }
-    pts.push(`L ${cx.toFixed(2)} ${bottom.toFixed(2)}`);
-    return (
-      <Path
-        d={pts.join(' ')}
-        stroke={color}
-        strokeWidth={stroke}
-        fill="none"
-        strokeLinecap="round"
-        strokeLinejoin="miter"
-        strokeMiterlimit={4}
-      />
-    );
-  };
-
-  const patterns: Record<CurlType, () => React.ReactNode> = {
-    // Wavy: gentle → deep S-curves
-    '2a': () => wave(w * 0.05, 3.5),
-    '2b': () => wave(w * 0.10, 3.5),
-    '2c': () => wave(w * 0.16, 3.5),
-
-    // Curly: open → tight phone-cord coils
-    '3a': () => coil(5, w * 0.58, 0.32),
-    '3b': () => coil(7, w * 0.48, 0.36),
-    '3c': () => coil(9, w * 0.40, 0.38),
-
-    // Coily: dense small coil
-    '4a': () => coil(12, w * 0.34, 0.42),
-
-    // Coily: zigzag patterns
-    '4b': () => zigzag(w * 0.20, 9),
-    '4c': () => zigzag(w * 0.14, 16),
-  };
+  const height = size;
+  const width = height * aspectRatio;
 
   return (
-    <Svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
-      {patterns[type]?.()}
-    </Svg>
+    <Image
+      source={SOURCES[type]}
+      style={[
+        {
+          width,
+          height,
+          tintColor: color,
+        },
+        style,
+      ]}
+      resizeMode="contain"
+      accessibilityIgnoresInvertColors
+    />
   );
 }
