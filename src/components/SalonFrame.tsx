@@ -141,14 +141,22 @@ export function SalonFrame({
                 : salon.bead.upcomingSize;
             const color =
               status === 'active'
-                ? salon.bead.active
+                ? ac.accent
                 : status === 'done'
                 ? salon.bead.completed
                 : salon.bead.upcoming;
             return (
               <View key={b} style={styles.beadWrap}>
                 {status === 'active' ? (
-                  <View style={[styles.beadHalo, { backgroundColor: salon.bead.activeHalo }]} />
+                  <>
+                    <View style={[styles.beadHalo, { backgroundColor: ac.accent + '33' }]} />
+                    <View
+                      style={[
+                        styles.beadHaloOuter,
+                        { backgroundColor: ac.accent + '14' },
+                      ]}
+                    />
+                  </>
                 ) : null}
                 <View
                   style={{
@@ -166,11 +174,12 @@ export function SalonFrame({
         <View style={styles.backButton} />
       </View>
 
-      {/* Aunty header */}
       <Animated.View entering={FadeIn.duration(400)} style={styles.auntyHeader}>
         <AuntyAvatar auntyId={auntyId} size={64} showRing glowing />
         <View style={styles.auntyText}>
-          <Text style={[styles.auntyName, { color: ac.accent }]}>{aunty.name}</Text>
+          <Text style={[styles.auntyName, { color: ac.accent }]} numberOfLines={1}>
+            {aunty.name}
+          </Text>
           <Text style={styles.auntyVerb}>{speakerVerb}</Text>
         </View>
       </Animated.View>
@@ -253,19 +262,24 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   backButton: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(254, 248, 236, 0.14)',
+    backgroundColor: 'rgba(254, 248, 236, 0.03)',
   },
   backButtonPressed: {
     backgroundColor: colors.dark.surfaceLight,
+    borderColor: 'rgba(254, 248, 236, 0.28)',
   },
   backArrow: {
     fontFamily: fonts.body,
-    fontSize: fontSize.xl,
+    fontSize: fontSize.lg,
     color: colors.dark.text,
+    marginTop: -1,
   },
   beadRow: {
     flexDirection: 'row',
@@ -283,6 +297,16 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
+    top: -2,
+    left: -2,
+  },
+  beadHaloOuter: {
+    position: 'absolute',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    top: -6,
+    left: -6,
   },
 
   auntyHeader: {
@@ -296,24 +320,26 @@ const styles = StyleSheet.create({
   auntyText: { flexShrink: 1 },
   auntyName: {
     fontFamily: fonts.serifSemiBold,
-    fontSize: fontSize.lg,
-    letterSpacing: 0.2,
+    fontSize: fontSize.xl,
+    letterSpacing: -0.2,
+    lineHeight: fontSize.xl * 1.05,
   },
   auntyVerb: {
     fontFamily: fonts.serifItalic,
     fontSize: fontSize.sm,
     color: colors.dark.textMuted,
-    marginTop: 1,
+    marginTop: 2,
+    letterSpacing: 0.1,
   },
 
   question: {
-    fontFamily: fonts.display,
+    fontFamily: fonts.displayMedium,
     fontSize: fontSize.xxl,
-    lineHeight: fontSize.xxl * 1.16,
-    letterSpacing: -0.4,
+    lineHeight: fontSize.xxl * 1.18,
+    letterSpacing: -0.5,
     color: colors.dark.text,
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
 
   scrollContent: { paddingHorizontal: spacing.lg },

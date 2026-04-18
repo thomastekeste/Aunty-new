@@ -99,9 +99,9 @@ export function EditorialCard({
   }));
 
   const cardLiftStyle = useAnimatedStyle(() => ({
-    shadowOpacity: 0.25 + lift.value * 0.25,
-    shadowRadius: 12 + lift.value * 14,
-    transform: [{ translateY: -lift.value * 1.5 }],
+    shadowOpacity: 0.08 + lift.value * 0.32,
+    shadowRadius: 8 + lift.value * 18,
+    transform: [{ translateY: -lift.value * 2 }],
   }));
 
   const barStyle = useAnimatedStyle(() => ({
@@ -198,16 +198,16 @@ export function EditorialCard({
 
 const styles = StyleSheet.create({
   card: {
-    minHeight: 72,
+    minHeight: 76,
     borderRadius: radius.lg,
     borderWidth: 1,
     overflow: 'hidden',
     marginBottom: spacing.sm,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   cardCompact: {
     minHeight: 92,
@@ -251,14 +251,16 @@ const styles = StyleSheet.create({
     fontFamily: fonts.serifSemiBold,
     fontSize: fontSize.lg,
     color: colors.dark.text,
-    letterSpacing: -0.1,
+    letterSpacing: -0.2,
+    lineHeight: fontSize.lg * 1.18,
   },
   description: {
     fontFamily: fonts.serifItalic,
     fontSize: fontSize.sm,
     color: colors.dark.textMuted,
     marginTop: 4,
-    lineHeight: fontSize.sm * 1.4,
+    lineHeight: fontSize.sm * 1.45,
+    letterSpacing: 0.05,
   },
   tag: {
     position: 'absolute',

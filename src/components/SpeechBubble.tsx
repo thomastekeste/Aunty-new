@@ -27,7 +27,11 @@ import { gradients } from '../constants/theme';
 
 interface Props {
   lines: string[];
-  /** ms each line stays visible after its fade-in completes. Default 1400. */
+  /**
+   * ms each line stays visible after its fade-in completes.
+   * If omitted, hold is adaptive: ~900ms baseline + ~28ms / char, clamped 950–2600.
+   * Pass a fixed number to override.
+   */
   holdMs?: number;
   /** ms for cross-fade between lines. Default 320. */
   fadeMs?: number;
@@ -42,9 +46,16 @@ interface Props {
   onLineLanded?: (index: number) => void;
 }
 
+/** Reading-time aware hold for editorial pacing. */
+function adaptiveHold(line: string): number {
+  const len = line?.length ?? 0;
+  const ms = 900 + len * 28;
+  return Math.min(2600, Math.max(950, ms));
+}
+
 export function SpeechBubble({
   lines,
-  holdMs = 1400,
+  holdMs,
   fadeMs = 320,
   shimmer = true,
   loopShimmer = false,
@@ -80,7 +91,8 @@ export function SpeechBubble({
 
     onLineLanded?.(index);
 
-    const advanceAt = fadeMs + holdMs;
+    const effectiveHold = holdMs ?? adaptiveHold(lines[index] ?? '');
+    const advanceAt = fadeMs + effectiveHold;
     const isLast = index === lines.length - 1;
 
     const t = setTimeout(() => {
@@ -106,7 +118,7 @@ export function SpeechBubble({
     const x = interpolate(shimmerX.value, [-1, 1], [-200, 200]);
     return {
       transform: [{ translateX: x }],
-      opacity: interpolate(shimmerX.value, [-1, -0.5, 0, 0.5, 1], [0, 0.6, 1, 0.6, 0]),
+      opacity: interpolate(shimmerX.value, [-1, -0.5, 0, 0.5, 1], [0, 0.42, 0.7, 0.42, 0]),
     };
   });
 

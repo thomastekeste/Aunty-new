@@ -150,8 +150,11 @@ export default function CurlTypeScreen() {
       ))}
 
       {selected && (
-        <Animated.View entering={FadeInDown.duration(300)} style={styles.selectedHint}>
-          <Text style={styles.selectedHintText}>
+        <Animated.View
+          entering={FadeInDown.duration(300)}
+          style={[styles.selectedHint, { borderLeftColor: auntyColors[auntyId].accent }]}
+        >
+          <Text style={[styles.selectedHintText, { color: auntyColors[auntyId].accent }]}>
             {selected.startsWith('2')
               ? 'Beautiful. Let\u2019s work with that.'
               : selected.startsWith('3')
@@ -207,14 +210,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 250, 240, 0.05)',
     borderRadius: radius.md,
     borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
     padding: spacing.md,
     marginTop: spacing.sm,
   },
   selectedHintText: {
     fontFamily: fonts.serifItalic,
     fontSize: fontSize.md,
-    color: colors.primary,
     textAlign: 'center',
     lineHeight: fontSize.md * 1.55,
   },

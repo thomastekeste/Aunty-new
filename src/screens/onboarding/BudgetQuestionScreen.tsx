@@ -217,7 +217,9 @@ export default function BudgetQuestionScreen() {
             accessibilityRole="button"
             accessibilityLabel="Change scope selection"
           >
-            <Text style={styles.backText}>{'<'} Change selection</Text>
+            <Text style={[styles.backText, { color: ac.accent }]}>
+              {'\u2190'}  Change selection
+            </Text>
           </PressableScale>
         </Animated.View>
       )}
@@ -249,8 +251,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
 
   auntyHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.xl },
-  auntyName: { fontFamily: fonts.serifSemiBold, fontSize: fontSize.lg, letterSpacing: -0.2 },
-  auntyMessage: { fontFamily: fonts.serifItalic, fontSize: fontSize.sm, color: colors.dark.textMuted, marginTop: 2 },
+  auntyName: { fontFamily: fonts.serifSemiBold, fontSize: fontSize.xl, letterSpacing: -0.2, lineHeight: fontSize.xl * 1.05 },
+  auntyMessage: { fontFamily: fonts.serifItalic, fontSize: fontSize.sm, color: colors.dark.textMuted, marginTop: 2, letterSpacing: 0.1 },
 
   optionsContainer: { flex: 1, paddingHorizontal: spacing.lg },
   question: { fontFamily: fonts.display, fontSize: fontSize.xxl, color: colors.dark.text, letterSpacing: -0.4, marginBottom: spacing.xs },
@@ -297,7 +299,7 @@ const styles = StyleSheet.create({
   budgetCheck: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
 
   backLink: { marginTop: spacing.lg, paddingVertical: spacing.sm, alignSelf: 'flex-start' },
-  backText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.sm, color: colors.primary, letterSpacing: 0.4 },
+  backText: { fontFamily: fonts.serifMedium, fontSize: fontSize.sm, letterSpacing: 0.2 },
 
   footer: { paddingHorizontal: spacing.lg, gap: spacing.sm },
   progress: { fontFamily: fonts.serifItalic, fontSize: fontSize.xs, color: colors.dark.textMuted, textAlign: 'center', marginTop: spacing.xs },

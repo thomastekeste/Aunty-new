@@ -14,7 +14,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { Button } from '../../components/Button';
+import { CeremonialButton } from '../../components/CeremonialButton';
 import { PaywallModal } from '../../components/PaywallModal';
 import { AUNTIES } from '../../constants/aunties';
 import { PRODUCTS, type Product, type ProductCategory } from '../../constants/products';
@@ -102,10 +102,9 @@ export default function ProductRevealScreen() {
 
           {/* CTA */}
           <Animated.View entering={FadeInDown.delay(550)} style={styles.ctaSection}>
-            <Button
-              label="See My Products"
+            <CeremonialButton
+              label="See my products"
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowPaywall(true); }}
-              variant="primary"
               size="lg"
             />
             <Pressable onPress={() => navigation.navigate('SendOff')} style={styles.skipBtn} hitSlop={12}>
@@ -182,7 +181,7 @@ export default function ProductRevealScreen() {
 
       {/* Continue button */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.sm }]}>
-        <Button label="Continue" onPress={() => navigation.navigate('SendOff')} variant="primary" size="lg" />
+        <CeremonialButton label="Continue" onPress={() => navigation.navigate('SendOff')} size="lg" />
       </View>
     </View>
   );

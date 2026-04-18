@@ -140,7 +140,7 @@ export function CeremonialButton({
     const x = interpolate(idleShimmer.value, [-1, 1.2], [-160, 360]);
     return {
       transform: [{ translateX: x }, { rotate: '12deg' }],
-      opacity: interpolate(idleShimmer.value, [-1, -0.4, 0.4, 1.2], [0, 0.7, 0.7, 0]),
+      opacity: interpolate(idleShimmer.value, [-1, -0.4, 0.4, 1.2], [0, 0.42, 0.42, 0]),
     };
   });
 
@@ -265,10 +265,10 @@ const styles = StyleSheet.create({
   primaryShadow: {
     overflow: 'hidden',
     shadowColor: '#7A5210',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.45,
-    shadowRadius: 22,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.32,
+    shadowRadius: 18,
+    elevation: 7,
   },
   primaryFill: {
     ...StyleSheet.absoluteFillObject,
@@ -278,15 +278,15 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: '50%',
+    height: '46%',
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
-    backgroundColor: 'rgba(255, 248, 225, 0.18)',
+    backgroundColor: 'rgba(255, 248, 225, 0.14)',
   },
   ring: {
     ...StyleSheet.absoluteFillObject,
-    borderWidth: 1.5,
-    borderColor: 'rgba(122, 82, 30, 0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(122, 82, 30, 0.45)',
   },
   flash: {
     backgroundColor: '#FFF8E1',
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   primaryLabel: {
     fontFamily: fonts.serifSemiBold,
     color: '#3A2208',
-    letterSpacing: letterSpacing.wide,
+    letterSpacing: 0.1,
   },
 
   // ── shimmer ─────────────────────────────────────
