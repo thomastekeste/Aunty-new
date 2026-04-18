@@ -5,11 +5,21 @@
  * Grid of curl types from 2a through 4c with descriptions.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  Easing,
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { SalonFrame } from '../../components/SalonFrame';
 import { PressableScale } from '../../components/PressableScale';
 import { CurlPatternIcon } from '../../components/CurlPatternIcon';
@@ -70,6 +80,45 @@ function CurlCard({
   accentColors: { accent: string; bg: string; bgDark: string; text: string; gradient: [string, string] };
 }) {
   const ac = accentColors;
+  const sway = useSharedValue(0);
+  const selectedLift = useSharedValue(selected ? 1 : 0);
+
+  useEffect(() => {
+    const baseDuration = 1300 + (index % 3) * 130;
+    sway.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: baseDuration, easing: Easing.inOut(Easing.sin) }),
+        withTiming(-1, { duration: baseDuration, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      true,
+    );
+    return () => {
+      cancelAnimation(sway);
+    };
+  }, [index, sway]);
+
+  useEffect(() => {
+    selectedLift.value = withSpring(selected ? 1 : 0, {
+      damping: 16,
+      stiffness: 220,
+      mass: 0.55,
+    });
+  }, [selected, selectedLift]);
+
+  const iconMotion = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: sway.value * 1.1 - selectedLift.value * 2.4 },
+      { rotate: `${sway.value * (selected ? 2.8 : 1.5)}deg` },
+      { scale: 1 + selectedLift.value * 0.08 },
+    ],
+    opacity: 0.86 + selectedLift.value * 0.14,
+  }));
+
+  const iconAura = useAnimatedStyle(() => ({
+    opacity: selectedLift.value * 0.26,
+    transform: [{ scale: 1 + selectedLift.value * 0.12 }],
+  }));
 
   return (
     <Animated.View entering={FadeInDown.delay(60 * index).duration(400)}>
@@ -87,11 +136,14 @@ function CurlCard({
         accessibilityState={{ selected }}
         accessibilityLabel={`${option.label}: ${option.description}`}
       >
-        <CurlPatternIcon
-          type={option.type}
-          size={84}
-          color={selected ? ac.accent : 'rgba(254, 248, 236, 0.7)'}
-        />
+        <Animated.View style={[styles.iconWrap, iconMotion]}>
+          <CurlPatternIcon
+            type={option.type}
+            size={76}
+            color={ac.accent}
+            selected={selected}
+          />
+        </Animated.View>
         <Text style={[styles.cardLabel, selected && { color: colors.dark.text }]}>
           {option.label}
         </Text>
@@ -200,6 +252,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     color: colors.dark.textMuted,
     letterSpacing: -0.2,
+  },
+  iconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 90,
+    width: '100%',
+    zIndex: 2,
   },
   cardDesc: {
     fontFamily: fonts.serifItalic,

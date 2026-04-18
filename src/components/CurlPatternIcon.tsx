@@ -1,28 +1,25 @@
 /**
- * CurlPatternIcon — Real strand illustrations from the standard curl chart.
+ * CurlPatternIcon — Real strand illustrations from the chart.
  *
- * Each type is a hand-drawn strand silhouette (white pixels on transparent),
- * rendered as a tinted Image so it can take on the aunty's accent color when
- * the card is selected, or a muted neutral when it's at rest.
- *
- * Source assets live in `assets/curl-types/{type}.png`.
+ * Crops are dark strokes on cream, displayed inside a cream-tinted
+ * rounded frame so they sit correctly against the dark card surface.
+ * The frame border tints with the aunty accent on selection.
  */
 
 import React from 'react';
-import { Image, type ImageStyle, type StyleProp } from 'react-native';
+import { Image, View, StyleSheet } from 'react-native';
 import type { CurlType } from '../types';
 
 interface Props {
   type: CurlType;
+  /** Height of the illustration frame. Width auto-fits via aspect ratio. */
   size?: number;
-  /** Tint applied to the strand silhouette. */
+  /** Border/accent color — aunty accent when selected, muted when not. */
   color?: string;
-  /** Optional aspect-ratio override. Defaults to the strand's natural 11:50. */
-  aspectRatio?: number;
-  style?: StyleProp<ImageStyle>;
+  selected?: boolean;
 }
 
-const SOURCES: Record<CurlType, number> = {
+const SOURCES: Record<CurlType, ReturnType<typeof require>> = {
   '2a': require('../../assets/curl-types/2a.png'),
   '2b': require('../../assets/curl-types/2b.png'),
   '2c': require('../../assets/curl-types/2c.png'),
@@ -34,34 +31,45 @@ const SOURCES: Record<CurlType, number> = {
   '4c': require('../../assets/curl-types/4c.png'),
 };
 
-// Source crops are 110×500. Maintain that ratio when rendering so strands
-// don't get stretched. `size` controls the height of the rendered strand.
-const NATIVE_W = 110;
-const NATIVE_H = 500;
+// Source crops are 92×485 — roughly 1:5.27 portrait
+const ASPECT = 92 / 485;
 
-export function CurlPatternIcon({
-  type,
-  size = 56,
-  color = '#FEF8EC',
-  aspectRatio = NATIVE_W / NATIVE_H,
-  style,
-}: Props) {
+export function CurlPatternIcon({ type, size = 80, color = 'rgba(254,248,236,0.2)', selected = false }: Props) {
   const height = size;
-  const width = height * aspectRatio;
+  const width = Math.round(height * ASPECT);
+  const frameW = width + 14;
+  const frameH = height + 14;
 
   return (
-    <Image
-      source={SOURCES[type]}
+    <View
       style={[
+        styles.frame,
         {
-          width,
-          height,
-          tintColor: color,
+          width: frameW,
+          height: frameH,
+          borderRadius: 10,
+          borderColor: selected ? color : 'rgba(254,248,236,0.12)',
+          borderWidth: selected ? 1.5 : 1,
+          backgroundColor: selected
+            ? 'rgba(245, 237, 220, 0.96)'
+            : 'rgba(245, 237, 220, 0.82)',
         },
-        style,
       ]}
-      resizeMode="contain"
-      accessibilityIgnoresInvertColors
-    />
+    >
+      <Image
+        source={SOURCES[type]}
+        style={{ width, height }}
+        resizeMode="contain"
+        accessibilityIgnoresInvertColors
+      />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  frame: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+});
