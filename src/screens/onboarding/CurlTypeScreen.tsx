@@ -139,9 +139,8 @@ function CurlCard({
         <Animated.View style={[styles.iconWrap, iconMotion]}>
           <CurlPatternIcon
             type={option.type}
-            size={76}
-            color={ac.accent}
-            selected={selected}
+            size={90}
+            color={selected ? ac.accent : 'rgba(254, 248, 236, 0.60)'}
           />
         </Animated.View>
         <Text style={[styles.cardLabel, selected && { color: colors.dark.text }]}>
