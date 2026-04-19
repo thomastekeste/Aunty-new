@@ -36,9 +36,6 @@ import {
 
 type Nav = NativeStackNavigationProp<any, 'SignIn'>;
 
-const DEV_EMAIL = process.env.EXPO_PUBLIC_DEV_EMAIL ?? '';
-const DEV_PASSWORD = process.env.EXPO_PUBLIC_DEV_PASSWORD ?? '';
-
 export default function SignInScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
@@ -67,22 +64,6 @@ export default function SignInScreen() {
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       // Auth state change will trigger navigation
-    }
-    setLoading(false);
-  };
-
-  const handleDevSignIn = async () => {
-    if (!DEV_EMAIL || !DEV_PASSWORD) {
-      Alert.alert('Dev Sign In', 'Set EXPO_PUBLIC_DEV_EMAIL and EXPO_PUBLIC_DEV_PASSWORD in .env to use this shortcut.');
-      return;
-    }
-    setError('');
-    setLoading(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const result = await signIn(DEV_EMAIL, DEV_PASSWORD);
-    if (result.error) {
-      setError(result.error);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
     setLoading(false);
   };
@@ -208,21 +189,6 @@ export default function SignInScreen() {
               loading={loading}
             />
           </Animated.View>
-
-          {/* Dev-only quick sign-in */}
-          {__DEV__ && (
-            <Animated.View entering={FadeIn.delay(650).duration(300)} style={styles.devArea}>
-              <Pressable
-                onPress={handleDevSignIn}
-                disabled={loading}
-                style={({ pressed }) => [styles.devBtn, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel="Dev quick sign in"
-              >
-                <Text style={styles.devBtnText}>⚡ Dev Sign In</Text>
-              </Pressable>
-            </Animated.View>
-          )}
 
           {/* Sign Up Link */}
           <Animated.View entering={FadeIn.delay(700).duration(400)}>
@@ -372,28 +338,5 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.72,
-  },
-
-  // Dev-only
-  devArea: {
-    marginBottom: spacing.sm,
-    alignItems: 'center',
-  },
-  devBtn: {
-    borderWidth: 1,
-    borderColor: 'rgba(254, 248, 236, 0.15)',
-    borderRadius: 10,
-    borderStyle: 'dashed',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm + 2,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  devBtnText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: fontSize.sm,
-    color: 'rgba(254, 248, 236, 0.45)',
-    letterSpacing: letterSpacing.wide,
   },
 });

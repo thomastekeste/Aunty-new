@@ -31,6 +31,8 @@ interface AuthContextValue extends AuthState {
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
+  /** Dev-only: instantly sets the dev user without any credentials. No-op in production. */
+  devBypassAuth: () => void;
 }
 
 const CACHE_KEY = '@aunty_curl_user';
@@ -226,6 +228,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [user],
   );
 
+  const devBypassAuth = useCallback(() => {
+    if (__DEV__) setUser(DEV_USER);
+  }, []);
+
   const value: AuthContextValue = {
     user,
     session,
@@ -235,6 +241,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signOut,
     updateProfile,
+    devBypassAuth,
   };
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;

@@ -25,6 +25,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { CeremonialButton } from '../../components/CeremonialButton';
 import { useAuth } from '../../context/AuthContext';
+import { useOnboarding } from '../../context/OnboardingContext';
 import {
   colors,
   fonts,
@@ -41,7 +42,8 @@ type Nav = NativeStackNavigationProp<any, 'SignUp'>;
 export default function SignUpScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
-  const { signUp } = useAuth();
+  const { signUp, devBypassAuth } = useAuth();
+  const { complete: completeOnboarding } = useOnboarding();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -197,6 +199,24 @@ export default function SignUpScreen() {
               </Text>
             </Pressable>
           </Animated.View>
+
+          {/* Dev-only: skip auth + onboarding, land straight on Home */}
+          {__DEV__ && (
+            <Animated.View entering={FadeIn.delay(800).duration(300)} style={styles.devArea}>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                  devBypassAuth();
+                  completeOnboarding();
+                }}
+                style={styles.devBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Skip to app (dev only)"
+              >
+                <Text style={styles.devBtnText}>⚡ Skip to App</Text>
+              </Pressable>
+            </Animated.View>
+          )}
         </ScrollView>
       </LinearGradient>
     </KeyboardAvoidingView>
@@ -293,5 +313,29 @@ const styles = StyleSheet.create({
   linkHighlight: {
     fontFamily: fonts.bodySemiBold,
     color: colors.primary,
+  },
+
+  // Dev-only
+  devArea: {
+    alignItems: 'center',
+    marginTop: spacing.xl,
+    paddingBottom: spacing.lg,
+  },
+  devBtn: {
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderRadius: 14,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    minHeight: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(212,160,74,0.12)',
+  },
+  devBtnText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.base,
+    color: colors.primary,
+    letterSpacing: letterSpacing.wide,
   },
 });
