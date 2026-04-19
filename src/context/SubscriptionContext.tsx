@@ -52,6 +52,9 @@ interface SubscriptionContextValue {
   error: string | null;
   customerInfo: CustomerInfo | null;
   currentOffering: PurchasesOffering | null;
+  // Trial offer info derived from RevenueCat product metadata
+  yearlyHasIntroOffer: boolean;
+  trialDays: number;
   canAccess: (feature: Feature) => boolean;
   purchasePackage: (pkg: PurchasesPackage) => Promise<boolean>;
   restorePurchases: () => Promise<boolean>;
@@ -72,6 +75,13 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   // Derive tier from entitlements
   const isActive = customerInfo?.entitlements?.active?.[ENTITLEMENT_ID]?.isActive ?? false;
   const tier: Tier = isActive ? 'premium' : 'free';
+
+  // Trial offer detection — requires App Store Connect introductory offer to be configured
+  // Set `Introductory Offer: 7 days free` on the yearly SKU in App Store Connect before TestFlight.
+  const yearlyHasIntroOffer =
+    (currentOffering?.annual?.product as any)?.introPrice != null;
+  const trialDays: number =
+    (currentOffering?.annual?.product as any)?.introPrice?.periodNumberOfUnits ?? 7;
 
   // Initialize RevenueCat (skip in Expo Go — native module not available)
   useEffect(() => {
@@ -156,6 +166,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     error,
     customerInfo,
     currentOffering,
+    yearlyHasIntroOffer,
+    trialDays,
     canAccess,
     purchasePackage,
     restorePurchases,

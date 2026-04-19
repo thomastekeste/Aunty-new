@@ -1,7 +1,13 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { colors, fonts, fontSize, letterSpacing, radius, spacing, shadows } from '../../constants/theme';
 import { HomeSectionHeader } from './HomeSectionHeader';
+import {
+  getRitualLog,
+  computeStreak,
+  toDateKey,
+  type RitualLogEntry,
+} from '../../services/ritualLog';
 import type { RitualDayType } from '../../types';
 
 export interface WeekProgressDay {
@@ -14,6 +20,7 @@ export interface WeekProgressDay {
   gradient: readonly [string, string];
   isToday: boolean;
   isPast: boolean;
+  dateObj: Date;
 }
 
 interface Props {
@@ -24,9 +31,30 @@ interface Props {
 }
 
 export function WeekProgressStrip({ title, subtitle, days, renderIcon }: Props) {
+  const [ritualLog, setRitualLog] = useState<Record<string, RitualLogEntry>>({});
+  const [streak, setStreak] = useState(0);
+
+  useEffect(() => {
+    getRitualLog().then((log) => {
+      setRitualLog(log);
+      setStreak(computeStreak(log).current);
+    });
+  }, []);
+
+  const getStatus = (day: WeekProgressDay): 'completed' | 'skipped' | 'none' => {
+    const key = toDateKey(day.dateObj);
+    const e = ritualLog[key];
+    if (!e) return 'none';
+    if (e.completed) return 'completed';
+    if (e.skipped) return 'skipped';
+    return 'none';
+  };
+
+  const streakSubtitle = streak > 0 ? `${streak}-day streak · ${subtitle}` : subtitle;
+
   return (
     <View>
-      <HomeSectionHeader title={title} subtitle={subtitle} />
+      <HomeSectionHeader title={title} subtitle={streakSubtitle} />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -35,6 +63,18 @@ export function WeekProgressStrip({ title, subtitle, days, renderIcon }: Props) 
         snapToInterval={72}
       >
         {days.map((day) => {
+          const status = getStatus(day);
+
+          const statusBadge = status === 'completed' ? (
+            <View style={[styles.statusBadge, { backgroundColor: day.accent }]}>
+              <Text style={styles.statusBadgeGlyph}>✓</Text>
+            </View>
+          ) : status === 'skipped' ? (
+            <View style={[styles.statusBadge, styles.statusBadgeSkipped]}>
+              <Text style={[styles.statusBadgeGlyph, { color: colors.muted }]}>–</Text>
+            </View>
+          ) : null;
+
           if (day.isToday) {
             return (
               <View
@@ -47,7 +87,10 @@ export function WeekProgressStrip({ title, subtitle, days, renderIcon }: Props) 
               >
                 <Text style={[styles.dayName, { color: day.accent }]}>{day.dayName}</Text>
                 <Text style={[styles.dayDate, { color: colors.ink }]}>{day.date}</Text>
-                <View style={[styles.dayIconCircle, { backgroundColor: day.accent }]}>{renderIcon(day)}</View>
+                <View style={styles.iconWrap}>
+                  <View style={[styles.dayIconCircle, { backgroundColor: day.accent }]}>{renderIcon(day)}</View>
+                  {statusBadge && <View style={styles.badgeOverlay}>{statusBadge}</View>}
+                </View>
                 <Text style={[styles.dayRitual, { color: day.accent, fontFamily: fonts.bodySemiBold }]} numberOfLines={1}>
                   {day.ritualLabel}
                 </Text>
@@ -59,15 +102,18 @@ export function WeekProgressStrip({ title, subtitle, days, renderIcon }: Props) 
             <View key={day.key} style={[styles.dayCard, day.isPast && styles.dayCardPast]}>
               <Text style={styles.dayName}>{day.dayName}</Text>
               <Text style={[styles.dayDate, day.isPast && styles.dayDatePast]}>{day.date}</Text>
-              <View
-                style={[
-                  styles.dayIconCircle,
-                  day.isPast
-                    ? { backgroundColor: day.accent + '20' }
-                    : { backgroundColor: colors.borderLight },
-                ]}
-              >
-                {renderIcon(day)}
+              <View style={styles.iconWrap}>
+                <View
+                  style={[
+                    styles.dayIconCircle,
+                    day.isPast
+                      ? { backgroundColor: day.accent + '20' }
+                      : { backgroundColor: colors.borderLight },
+                  ]}
+                >
+                  {renderIcon(day)}
+                </View>
+                {statusBadge && <View style={styles.badgeOverlay}>{statusBadge}</View>}
               </View>
               <Text style={[styles.dayRitual, day.isPast && { color: day.accent }]} numberOfLines={1}>
                 {day.ritualLabel}
@@ -116,12 +162,38 @@ const styles = StyleSheet.create({
   dayDatePast: {
     color: colors.ink,
   },
+  iconWrap: {
+    position: 'relative',
+  },
   dayIconCircle: {
     width: 28,
     height: 28,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  badgeOverlay: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+  },
+  statusBadge: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.canvas,
+  },
+  statusBadgeSkipped: {
+    backgroundColor: colors.canvasDeep,
+  },
+  statusBadgeGlyph: {
+    fontSize: 8,
+    color: '#FFFFFF',
+    fontFamily: fonts.bodyBold,
+    lineHeight: 10,
   },
   dayRitual: {
     fontFamily: fonts.body,

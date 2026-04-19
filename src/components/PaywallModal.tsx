@@ -6,7 +6,7 @@
  * Handles purchase, restore, and close actions.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -60,8 +60,16 @@ const VALUE_SECTIONS = [
   },
 ];
 
+const COMPARISON_ROWS = [
+  { feature: 'Chat with your aunty', free: '5 messages/day', premium: 'Unlimited' },
+  { feature: 'Product picks', free: 'Top 3 only', premium: 'Full personalised list' },
+  { feature: 'Weekly ritual', free: 'View only', premium: 'Tracked + editable' },
+  { feature: 'Articles & guides', free: 'Foundations only', premium: 'Full library' },
+] as const;
+
 export function PaywallModal({ visible, onClose, onSubscribe, onRestore }: Props) {
-  const { currentOffering, purchasePackage, restorePurchases } = useSubscription();
+  const { currentOffering, purchasePackage, restorePurchases, yearlyHasIntroOffer, trialDays } = useSubscription();
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
 
   // Get packages from RevenueCat offering
   const yearlyPkg = currentOffering?.annual;
@@ -72,6 +80,10 @@ export function PaywallModal({ visible, onClose, onSubscribe, onRestore }: Props
   const yearlyPrice = yearlyPkg?.product?.priceString || '$59.99/year';
   const monthlyPrice = monthlyPkg?.product?.priceString || '$9.99/month';
   const lifetimePrice = lifetimePkg?.product?.priceString || '$149.99';
+
+  const trialLabel = yearlyHasIntroOffer
+    ? `Start ${trialDays}-Day Free Trial`
+    : 'Subscribe Yearly';
 
   const handleYearly = useCallback(async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -157,48 +169,86 @@ export function PaywallModal({ visible, onClose, onSubscribe, onRestore }: Props
               </Text>
             </View>
 
+            {/* Free vs Premium comparison table */}
+            <View style={styles.compTable}>
+              <View style={styles.compHeader}>
+                <Text style={[styles.compCell, styles.compFeatureCell]} />
+                <Text style={[styles.compCell, styles.compHeaderText]}>Free</Text>
+                <Text style={[styles.compCell, styles.compHeaderText, { color: colors.primary }]}>Pro</Text>
+              </View>
+              {COMPARISON_ROWS.map((row, i) => (
+                <View key={i} style={[styles.compRow, i % 2 === 0 && styles.compRowTinted]}>
+                  <Text style={[styles.compCell, styles.compFeatureText]}>{row.feature}</Text>
+                  <Text style={[styles.compCell, styles.compValueText]}>{row.free}</Text>
+                  <Text style={[styles.compCell, styles.compValueText, { color: colors.primary, fontFamily: fonts.bodySemiBold }]}>{row.premium}</Text>
+                </View>
+              ))}
+            </View>
+
             {/* Pricing */}
             <View style={styles.pricing}>
-              {/* Yearly */}
+              {/* Primary CTA — yearly with trial */}
               <Pressable onPress={handleYearly} style={styles.yearlyBtn}>
                 <LinearGradient colors={[...gradients.gold]} style={styles.yearlyGradient}>
                   <View style={styles.bestValue}>
-                    <Text style={styles.bestValueText}>BEST VALUE</Text>
+                    <Text style={styles.bestValueText}>
+                      {yearlyHasIntroOffer ? `${trialDays} DAYS FREE` : 'BEST VALUE'}
+                    </Text>
                   </View>
-                  <Text style={styles.yearlyPrice}>{yearlyPrice}</Text>
-                  <Text style={styles.yearlySub}>Less than one bad product purchase</Text>
+                  <Text style={styles.yearlyCtaLabel}>{trialLabel}</Text>
+                  <Text style={styles.yearlyPrice}>
+                    {yearlyHasIntroOffer ? `Then ${yearlyPrice}` : yearlyPrice}
+                  </Text>
+                  <Text style={styles.yearlySub}>Cancel anytime in Settings</Text>
                 </LinearGradient>
               </Pressable>
 
-              {/* Monthly */}
-              <Pressable onPress={handleMonthly} style={styles.monthlyBtn}>
-                <Text style={styles.monthlyPrice}>{monthlyPrice}</Text>
-                <Text style={styles.monthlySub}>Cancel anytime</Text>
+              {/* More options toggle */}
+              <Pressable
+                style={styles.moreOptionsBtn}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowMoreOptions((v) => !v); }}
+              >
+                <Text style={styles.moreOptionsText}>
+                  {showMoreOptions ? 'Hide options ↑' : 'More options ↓'}
+                </Text>
               </Pressable>
 
-              {/* Lifetime (if available) */}
-              {lifetimePkg && (
-                <Pressable
-                  onPress={async () => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    const success = await purchasePackage(lifetimePkg);
-                    if (success) { onSubscribe?.('yearly'); onClose(); }
-                  }}
-                  style={styles.lifetimeBtn}
-                >
-                  <Text style={styles.lifetimePrice}>{lifetimePrice} — Lifetime</Text>
-                  <Text style={styles.lifetimeSub}>Pay once, yours forever</Text>
-                </Pressable>
+              {showMoreOptions && (
+                <>
+                  {/* Monthly */}
+                  <Pressable onPress={handleMonthly} style={styles.monthlyBtn}>
+                    <Text style={styles.monthlyPrice}>{monthlyPrice}</Text>
+                    <Text style={styles.monthlySub}>Month-to-month · Cancel anytime</Text>
+                  </Pressable>
+
+                  {/* Lifetime (if available) */}
+                  {lifetimePkg && (
+                    <Pressable
+                      onPress={async () => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        const success = await purchasePackage(lifetimePkg);
+                        if (success) { onSubscribe?.('yearly'); onClose(); }
+                      }}
+                      style={styles.lifetimeBtn}
+                    >
+                      <Text style={styles.lifetimePrice}>{lifetimePrice} — Lifetime</Text>
+                      <Text style={styles.lifetimeSub}>Pay once, yours forever</Text>
+                    </Pressable>
+                  )}
+                </>
               )}
             </View>
 
-            {/* Guarantee */}
-            <Text style={styles.guarantee}>7-day free trial. Cancel before it ends and pay nothing.</Text>
-
-            {/* Restore */}
+            {/* Restore — prominent */}
             <Pressable onPress={handleRestore} style={styles.restore}>
               <Text style={styles.restoreText}>Restore Purchases</Text>
             </Pressable>
+
+            {yearlyHasIntroOffer && (
+              <Text style={styles.legalText}>
+                Free trial starts on activation. Subscription auto-renews at {yearlyPrice} unless cancelled at least 24 hours before the end of the trial period.
+              </Text>
+            )}
           </ScrollView>
         </View>
       </View>
@@ -234,8 +284,11 @@ const styles = StyleSheet.create({
   yearlyGradient: { paddingVertical: spacing.lg, alignItems: 'center', borderRadius: radius.lg },
   bestValue: { backgroundColor: 'rgba(45,27,14,0.2)', paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, marginBottom: spacing.sm },
   bestValueText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.ink, letterSpacing: letterSpacing.wider },
-  yearlyPrice: { fontFamily: fonts.display, fontSize: fontSize.xxl, color: colors.ink },
-  yearlySub: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkLight, marginTop: spacing.xs, textAlign: 'center' },
+  yearlyCtaLabel: { fontFamily: fonts.display, fontSize: fontSize.xl, color: colors.ink, marginBottom: 2 },
+  yearlyPrice: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkLight, marginTop: 2 },
+  yearlySub: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.inkLight, marginTop: spacing.xs, textAlign: 'center' },
+  moreOptionsBtn: { alignItems: 'center', paddingVertical: spacing.sm },
+  moreOptionsText: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.dark.textMuted },
 
   monthlyBtn: { borderWidth: 1.5, borderColor: colors.dark.border, borderRadius: radius.lg, paddingVertical: spacing.md, alignItems: 'center' },
   monthlyPrice: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.lg, color: colors.dark.text },
@@ -245,7 +298,19 @@ const styles = StyleSheet.create({
   lifetimePrice: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.lg, color: colors.primary },
   lifetimeSub: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.dark.textMuted, marginTop: 2 },
 
-  guarantee: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.primary, textAlign: 'center', paddingVertical: spacing.lg, paddingHorizontal: spacing.xl },
+  // Comparison table
+  compTable: { marginHorizontal: spacing.lg, marginBottom: spacing.xl, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  compHeader: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.06)', paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  compRow: { flexDirection: 'row', paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  compRowTinted: { backgroundColor: 'rgba(255,255,255,0.03)' },
+  compCell: { flex: 1, textAlign: 'center' },
+  compFeatureCell: { flex: 2, textAlign: 'left' },
+  compHeaderText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.dark.textMuted, letterSpacing: letterSpacing.wide },
+  compFeatureText: { flex: 2, textAlign: 'left', fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.dark.text },
+  compValueText: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.dark.textMuted },
+
+  // Legal + restore
+  legalText: { fontFamily: fonts.body, fontSize: 10, color: colors.dark.textMuted, textAlign: 'center', paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, lineHeight: 14, opacity: 0.6 },
 
   restore: { alignItems: 'center', paddingVertical: spacing.sm },
   restoreText: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.dark.textMuted, textDecorationLine: 'underline' },

@@ -49,6 +49,8 @@ import SettingsScreen from '../screens/app/SettingsScreen';
 import RitualStepScreen from '../screens/app/RitualStepScreen';
 import CheckInScreen from '../screens/app/CheckinScreen';
 import HairProfileScreen from '../screens/app/HairProfileScreen';
+import EditProfileScreen from '../screens/app/EditProfileScreen';
+import ChangeAuntyScreen from '../screens/app/ChangeAuntyScreen';
 
 import type {
   RootStackParamList,
@@ -176,6 +178,8 @@ function AppNavigator() {
         <AppStack.Screen name="Settings" component={SettingsScreen} />
         <AppStack.Screen name="RitualSteps" component={RitualStepScreen} />
         <AppStack.Screen name="CheckIn" component={CheckInScreen} />
+        <AppStack.Screen name="EditProfile" component={EditProfileScreen} />
+        <AppStack.Screen name="ChangeAunty" component={ChangeAuntyScreen} />
       </AppStack.Group>
     </AppStack.Navigator>
   );

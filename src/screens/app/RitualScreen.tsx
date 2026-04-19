@@ -6,7 +6,7 @@
  * Warm editorial design, SVG icons, spring animations.
  */
 
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,9 @@ import {
   StyleSheet,
   Pressable,
   Dimensions,
+  Modal,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
@@ -43,6 +45,15 @@ import {
 } from '../../constants/theme';
 import { AUNTIES, RITUAL_HOSTS, type AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
+import {
+  getRitualLog,
+  markRitualComplete,
+  markRitualSkipped,
+  computeStreak,
+  computeWeekStats,
+  toDateKey,
+  type RitualLogEntry,
+} from '../../services/ritualLog';
 import type { RitualDayType } from '../../types';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -155,7 +166,26 @@ export default function RitualScreen() {
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [selectedDay, setSelectedDay] = useState<number | null>(now.getDate());
 
+  // Ritual log state
+  const [ritualLog, setRitualLog] = useState<Record<string, RitualLogEntry>>({});
+  const [actionSheetDay, setActionSheetDay] = useState<number | null>(null);
+
   const scrollRef = useRef<ScrollView>(null);
+
+  // Load log on mount + whenever the screen gains focus (e.g. after completing a ritual)
+  const loadLog = useCallback(async () => {
+    const log = await getRitualLog();
+    setRitualLog(log);
+  }, []);
+
+  useEffect(() => { loadLog(); }, [loadLog]);
+  useFocusEffect(useCallback(() => { loadLog(); }, [loadLog]));
+
+  const streak = useMemo(() => computeStreak(ritualLog), [ritualLog]);
+  const weekStats = useMemo(() => computeWeekStats(ritualLog), [ritualLog]);
+
+  // True if today is Sunday and user has done >= 4 days this week
+  const showEndOfWeekCard = now.getDay() === 0 && weekStats.done >= 4;
 
   const { firstDay, daysInMonth } = useMemo(
     () => getMonthDays(viewYear, viewMonth),
@@ -201,6 +231,42 @@ export default function RitualScreen() {
     setSelectedDay(null);
   };
 
+  // Action sheet handlers
+  const openActionSheet = useCallback((day: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedDay(day);
+    setActionSheetDay(day);
+  }, []);
+
+  const closeActionSheet = useCallback(() => setActionSheetDay(null), []);
+
+  const handleMarkComplete = useCallback(async (day: number) => {
+    const d = new Date(viewYear, viewMonth, day);
+    await markRitualComplete(toDateKey(d));
+    await loadLog();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    closeActionSheet();
+  }, [viewYear, viewMonth, loadLog, closeActionSheet]);
+
+  const handleSkip = useCallback(async (day: number, reason: string) => {
+    const d = new Date(viewYear, viewMonth, day);
+    await markRitualSkipped(toDateKey(d), reason);
+    await loadLog();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    closeActionSheet();
+  }, [viewYear, viewMonth, loadLog, closeActionSheet]);
+
+  const getDayStatus = useCallback((day: number): 'completed' | 'skipped' | 'none' => {
+    const key = toDateKey(new Date(viewYear, viewMonth, day));
+    const entry = ritualLog[key];
+    if (!entry) return 'none';
+    if (entry.completed) return 'completed';
+    if (entry.skipped) return 'skipped';
+    return 'none';
+  }, [ritualLog, viewYear, viewMonth]);
+
+  const actionSheetRitual = actionSheetDay ? getRitualForDay(actionSheetDay) : null;
+
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.sm }]}>
       <ScrollView
@@ -213,6 +279,35 @@ export default function RitualScreen() {
           <Text style={styles.overline}>YOUR RITUAL</Text>
           <Text style={styles.title}>Hair Calendar</Text>
         </Animated.View>
+
+        {/* ─── Streak Banner ───────────────────────────────── */}
+        <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.streakBanner}>
+          <View style={styles.streakLeft}>
+            <Text style={styles.streakFlame}>🔥</Text>
+            <View>
+              <Text style={styles.streakCount}>{streak.current} day{streak.current !== 1 ? 's' : ''}</Text>
+              <Text style={styles.streakLabel}>current streak</Text>
+            </View>
+          </View>
+          <View style={styles.streakRight}>
+            <Text style={styles.weekStatText}>
+              {weekStats.done}/{weekStats.total} this week
+            </Text>
+            {streak.longest > 1 && (
+              <Text style={styles.longestText}>Best: {streak.longest}</Text>
+            )}
+          </View>
+        </Animated.View>
+
+        {/* ─── End-of-week celebration ─────────────────────── */}
+        {showEndOfWeekCard && (
+          <Animated.View entering={FadeInDown.delay(150).duration(400)} style={[styles.eowCard, { borderLeftColor: ac.accent }]}>
+            <AuntyAvatar auntyId={auntyId} size={36} showRing />
+            <Text style={styles.eowText}>
+              You showed up {weekStats.done} of 7 days this week. That's how hair changes.
+            </Text>
+          </Animated.View>
+        )}
 
         {/* ─── Month Navigator ─────────────────────────────── */}
         <Animated.View entering={FadeIn.duration(400)} style={styles.monthNav}>
@@ -261,16 +356,25 @@ export default function RitualScreen() {
             const selected = selectedDay === day;
             const todayMark = isToday(day);
             const pastMark = isPast(day);
+            const status = getDayStatus(day);
+
+            const statusBadge = status === 'completed' ? (
+              <View style={[styles.completedBadge, { backgroundColor: color }]}>
+                <Text style={styles.completedBadgeGlyph}>✓</Text>
+              </View>
+            ) : status === 'skipped' ? (
+              <View style={[styles.skippedBadge]}>
+                <Text style={styles.skippedBadgeGlyph}>–</Text>
+              </View>
+            ) : null;
 
             // Today: gradient cell
             if (todayMark && !selected) {
               return (
                 <Pressable
                   key={i}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setSelectedDay(day);
-                  }}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSelectedDay(day); }}
+                  onLongPress={() => openActionSheet(day)}
                   accessibilityLabel={`Today, ${day}, ${ritual.label} day`}
                 >
                   <LinearGradient
@@ -280,7 +384,7 @@ export default function RitualScreen() {
                     style={[styles.cell, styles.cellTodayGrad]}
                   >
                     <Text style={styles.cellDayToday}>{day}</Text>
-                    <View style={styles.cellDotToday} />
+                    {statusBadge ?? <View style={styles.cellDotToday} />}
                   </LinearGradient>
                 </Pressable>
               );
@@ -291,15 +395,13 @@ export default function RitualScreen() {
               return (
                 <Pressable
                   key={i}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setSelectedDay(day);
-                  }}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSelectedDay(day); }}
+                  onLongPress={() => openActionSheet(day)}
                   accessibilityLabel={`Selected, ${day}, ${ritual.label} day`}
                 >
                   <View style={[styles.cell, styles.cellSelected, { borderColor: color }]}>
                     <Text style={[styles.cellDaySelected, { color }]}>{day}</Text>
-                    <View style={[styles.cellDot, { backgroundColor: color }]} />
+                    {statusBadge ?? <View style={[styles.cellDot, { backgroundColor: color }]} />}
                   </View>
                 </Pressable>
               );
@@ -309,22 +411,17 @@ export default function RitualScreen() {
             return (
               <Pressable
                 key={i}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setSelectedDay(day);
-                }}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSelectedDay(day); }}
+                onLongPress={() => (todayMark || pastMark) ? openActionSheet(day) : null}
                 accessibilityLabel={`${day}, ${ritual.label} day`}
               >
                 <View style={styles.cell}>
                   <Text style={[styles.cellDay, pastMark && { color: colors.ink }]}>
                     {day}
                   </Text>
-                  <View
-                    style={[
-                      styles.cellDot,
-                      { backgroundColor: pastMark ? color : color + '40' },
-                    ]}
-                  />
+                  {statusBadge ?? (
+                    <View style={[styles.cellDot, { backgroundColor: pastMark ? color : color + '40' }]} />
+                  )}
                 </View>
               </Pressable>
             );
@@ -405,9 +502,9 @@ export default function RitualScreen() {
                 ))}
               </View>
 
-              {/* Start CTA — only show for today or future */}
-              {!isPast(selectedDay) && (
-                <View style={styles.detailCta}>
+              {/* Action CTAs */}
+              <View style={styles.detailCta}>
+                {!isPast(selectedDay) && (
                   <Button
                     label={isToday(selectedDay) ? 'Start Ritual' : 'Preview Ritual'}
                     onPress={() => {
@@ -418,12 +515,97 @@ export default function RitualScreen() {
                     size="md"
                     icon={<PlayIcon size={14} color={colors.ink} />}
                   />
-                </View>
-              )}
+                )}
+                {/* Quick mark for past/today */}
+                {(isPast(selectedDay) || isToday(selectedDay)) && getDayStatus(selectedDay) === 'none' && (
+                  <Pressable
+                    style={styles.markCompleteBtn}
+                    onPress={() => handleMarkComplete(selectedDay)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Mark ritual as complete"
+                  >
+                    <Text style={styles.markCompleteBtnText}>✓ Mark Complete</Text>
+                  </Pressable>
+                )}
+                {(isPast(selectedDay) || isToday(selectedDay)) && getDayStatus(selectedDay) !== 'none' && (
+                  <View style={styles.statusChip}>
+                    <Text style={styles.statusChipText}>
+                      {getDayStatus(selectedDay) === 'completed' ? '✓ Completed' : '– Skipped'}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
           </Animated.View>
         )}
       </ScrollView>
+
+      {/* ─── Day Action Sheet ───────────────────────────── */}
+      <Modal
+        visible={actionSheetDay !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={closeActionSheet}
+      >
+        <Pressable style={styles.sheetOverlay} onPress={closeActionSheet}>
+          <Pressable style={styles.sheetContainer} onPress={() => {}}>
+            {actionSheetDay && actionSheetRitual && (
+              <>
+                <View style={styles.sheetHandle} />
+                <Text style={styles.sheetTitle}>
+                  {new Date(viewYear, viewMonth, actionSheetDay).toLocaleDateString('en-US', {
+                    weekday: 'long', month: 'short', day: 'numeric',
+                  })}
+                </Text>
+                <Text style={[styles.sheetRitualLabel, { color: TYPE_COLORS[actionSheetRitual.type] }]}>
+                  {actionSheetRitual.label} Day
+                </Text>
+
+                <View style={styles.sheetActions}>
+                  {getDayStatus(actionSheetDay) !== 'completed' && (
+                    <Pressable
+                      style={[styles.sheetAction, styles.sheetActionPrimary]}
+                      onPress={() => handleMarkComplete(actionSheetDay)}
+                    >
+                      <Text style={styles.sheetActionPrimaryText}>✓ Mark Complete</Text>
+                    </Pressable>
+                  )}
+
+                  <Pressable
+                    style={styles.sheetAction}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      navigation.navigate('RitualSteps');
+                      closeActionSheet();
+                    }}
+                  >
+                    <Text style={styles.sheetActionText}>▶ View Ritual Steps</Text>
+                  </Pressable>
+
+                  <Text style={styles.sheetSkipLabel}>SKIP THIS DAY</Text>
+                  <View style={styles.skipReasonRow}>
+                    {(['traveling', 'busy', 'not-feeling-it'] as const).map((r) => (
+                      <Pressable
+                        key={r}
+                        style={styles.skipReasonPill}
+                        onPress={() => handleSkip(actionSheetDay, r)}
+                      >
+                        <Text style={styles.skipReasonText}>
+                          {r === 'traveling' ? '✈ Traveling' : r === 'busy' ? '⏰ Too busy' : '💤 Not feeling it'}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+
+                <Pressable style={styles.sheetCancel} onPress={closeActionSheet}>
+                  <Text style={styles.sheetCancelText}>Cancel</Text>
+                </Pressable>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -661,5 +843,235 @@ const styles = StyleSheet.create({
   },
   detailCta: {
     marginTop: spacing.xs,
+    gap: spacing.sm,
+  },
+
+  // Mark complete / status chip in detail card
+  markCompleteBtn: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.primary + '18',
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm + 2,
+    alignItems: 'center',
+  },
+  markCompleteBtnText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.primary,
+  },
+  statusChip: {
+    marginTop: spacing.sm,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.canvasDeep,
+    alignItems: 'center',
+  },
+  statusChipText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.muted,
+  },
+
+  // Streak banner
+  streakBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: GRID_PAD,
+    marginBottom: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  streakLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  streakFlame: {
+    fontSize: 28,
+  },
+  streakCount: {
+    fontFamily: fonts.display,
+    fontSize: fontSize.xl,
+    color: colors.ink,
+    letterSpacing: letterSpacing.tight,
+  },
+  streakLabel: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+  },
+  streakRight: {
+    alignItems: 'flex-end',
+  },
+  weekStatText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.primary,
+  },
+  longestText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    marginTop: 2,
+  },
+
+  // End-of-week card
+  eowCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: GRID_PAD,
+    marginBottom: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderLeftWidth: 3,
+    padding: spacing.md,
+  },
+  eowText: {
+    flex: 1,
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: fontSize.sm * 1.5,
+    fontStyle: 'italic',
+  },
+
+  // Calendar completion badges
+  completedBadge: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completedBadgeGlyph: {
+    fontSize: 8,
+    color: '#FFFFFF',
+    fontFamily: fonts.bodyBold,
+    lineHeight: 10,
+  },
+  skippedBadge: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.muted + '40',
+  },
+  skippedBadgeGlyph: {
+    fontSize: 10,
+    color: colors.muted,
+    fontFamily: fonts.bodyBold,
+    lineHeight: 12,
+  },
+
+  // Action sheet
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  sheetContainer: {
+    backgroundColor: colors.canvas,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxxl,
+    paddingTop: spacing.md,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginBottom: spacing.md,
+  },
+  sheetTitle: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    letterSpacing: letterSpacing.widest,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  sheetRitualLabel: {
+    fontFamily: fonts.display,
+    fontSize: fontSize.xl,
+    letterSpacing: letterSpacing.tight,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  sheetActions: {
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  sheetAction: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  sheetActionPrimary: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  sheetActionPrimaryText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.base,
+    color: colors.ink,
+  },
+  sheetActionText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.base,
+    color: colors.ink,
+  },
+  sheetSkipLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    letterSpacing: letterSpacing.widest,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  skipReasonRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+  skipReasonPill: {
+    backgroundColor: colors.canvasDeep,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+  },
+  skipReasonText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+  },
+  sheetCancel: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  sheetCancelText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.base,
+    color: colors.muted,
   },
 });

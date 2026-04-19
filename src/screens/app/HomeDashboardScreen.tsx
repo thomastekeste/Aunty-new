@@ -86,16 +86,17 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
-function getWeekDates(): number[] {
+function getWeekDates(): Array<{ date: number; dateObj: Date }> {
   const now = new Date();
   const day = now.getDay();
-  const dates: number[] = [];
+  const results: Array<{ date: number; dateObj: Date }> = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date(now);
     d.setDate(now.getDate() - day + i);
-    dates.push(d.getDate());
+    d.setHours(0, 0, 0, 0);
+    results.push({ date: d.getDate(), dateObj: d });
   }
-  return dates;
+  return results;
 }
 
 function RitualTypeIcon({ type, size = 20, color = '#FFFFFF' }: { type: RitualDayType; size?: number; color?: string }) {
@@ -255,12 +256,13 @@ export default function HomeDashboardScreen() {
 
   const weekDays = useMemo<WeekProgressDay[]>(() => {
     const dates = getWeekDates();
-    return dates.map((date, i) => {
+    return dates.map(({ date, dateObj }, i) => {
       const dayRitual = DAILY_RITUAL[i];
       return {
         key: `${DAY_NAMES[i]}-${date}`,
         dayName: DAY_NAMES[i],
         date,
+        dateObj,
         type: dayRitual.type,
         ritualLabel: dayRitual.type.charAt(0).toUpperCase() + dayRitual.type.slice(1),
         accent: TYPE_COLORS[dayRitual.type],

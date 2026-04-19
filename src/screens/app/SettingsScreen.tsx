@@ -116,7 +116,7 @@ function ListRow({
 // ─── Main Screen ────────────────────────────────────────────────
 
 export default function SettingsScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { state: onboardingState, reset: resetOnboarding } = useOnboarding();
   const { signOut } = useAuth();
@@ -205,7 +205,11 @@ export default function SettingsScreen() {
           <View style={[styles.card, shadows.sm]}>
             <ListRow label="Name" value={name || 'Not set'} />
             <View style={styles.divider} />
-            <ListRow label="Hair Profile" value={profileSummary} />
+            <ListRow
+              label="Hair Profile"
+              value={profileSummary}
+              onPress={() => navigation.navigate('EditProfile')}
+            />
           </View>
         </Animated.View>
 
@@ -213,13 +217,19 @@ export default function SettingsScreen() {
         <Animated.View entering={FadeInDown.delay(200).duration(400)}>
           <SectionHeader title="Preferences" />
           <View style={[styles.card, shadows.sm]}>
-            <View style={styles.auntyRow}>
+            <Pressable
+              style={styles.auntyRow}
+              onPress={() => navigation.navigate('ChangeAunty')}
+              accessibilityRole="button"
+              accessibilityLabel="Change aunty guide"
+            >
               <AuntyAvatar auntyId={auntyId} size={44} showRing />
               <View style={{ flex: 1 }}>
                 <Text style={styles.auntyRowName}>{aunty.name}</Text>
                 <Text style={styles.auntyRowTitle}>{aunty.title} — {aunty.region}</Text>
               </View>
-            </View>
+              <Text style={styles.auntyRowChevron}>›</Text>
+            </Pressable>
             <View style={styles.divider} />
             <ListRow
               label="Notifications"
@@ -393,6 +403,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.muted,
     marginTop: 1,
+  },
+  auntyRowChevron: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSize.xl,
+    color: colors.muted,
+    lineHeight: 24,
   },
   version: {
     fontFamily: fonts.body,

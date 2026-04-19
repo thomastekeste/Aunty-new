@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -42,6 +41,7 @@ import {
 } from '../../constants/theme';
 import { AUNTIES, type AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { markRitualComplete } from '../../services/ritualLog';
 import type { RitualDayType } from '../../types';
 
 // Ritual data (mirrored from RitualScreen)
@@ -222,13 +222,8 @@ export default function RitualStepScreen() {
       setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 200);
       setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 500);
       setIsComplete(true);
-      // Persist completion
-      const dateKey = new Date().toISOString().split('T')[0];
-      AsyncStorage.setItem(`ritual_completed_${dateKey}`, JSON.stringify({
-        type: today.type,
-        label: today.label,
-        completedAt: new Date().toISOString(),
-      })).catch(() => {});
+      // Persist completion via centralised ritualLog service
+      markRitualComplete().catch(() => {});
     }
   }, [currentStep, totalSteps, today]);
 

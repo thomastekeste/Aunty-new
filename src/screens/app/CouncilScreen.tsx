@@ -6,18 +6,21 @@
  * Calls Gemini API or falls back to local personality-based responses.
  */
 
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
   FlatList,
   TextInput,
+  Image,
   StyleSheet,
   Pressable,
   ScrollView,
   KeyboardAvoidingView,
+  Alert,
   Platform,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import Animated, {
@@ -40,14 +43,17 @@ import {
 } from '../../constants/theme';
 import { AUNTIES, type AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
+import {
+  loadChat,
+  debouncedSaveChat,
+  clearChat,
+  type StoredMessage,
+} from '../../services/chatStorage';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
 
-interface Message {
-  id: string;
-  text: string;
-  sender: 'user' | 'aunty';
-  timestamp: string;
+interface Message extends StoredMessage {
+  // StoredMessage fields: id, text, sender, timestamp, imageUri?
 }
 
 function getTimestamp(): string {
@@ -109,9 +115,21 @@ export default function CouncilScreen() {
   ]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const isSendingRef = useRef(false);
   const [showPrompts, setShowPrompts] = useState(true);
+
+  // Load persisted chat on mount
+  useEffect(() => {
+    let cancelled = false;
+    loadChat(auntyId).then((saved) => {
+      if (cancelled || saved.length === 0) return;
+      setMessages(saved as Message[]);
+      setShowPrompts(false); // returning users don't need prompt rail
+    });
+    return () => { cancelled = true; };
+  }, [auntyId]);
 
   const QUICK_PROMPTS = useMemo(() => {
     const base = [
@@ -132,17 +150,24 @@ export default function CouncilScreen() {
 
   const handleSend = useCallback(async () => {
     const trimmed = inputText.trim();
-    if (!trimmed || isSendingRef.current) return;
+    if ((!trimmed && !pendingImageUri) || isSendingRef.current) return;
     isSendingRef.current = true;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     const userMsg: Message = {
       id: Date.now().toString(),
-      text: trimmed,
+      text: trimmed || '📷',
       sender: 'user',
       timestamp: getTimestamp(),
+      ...(pendingImageUri ? { imageUri: pendingImageUri } : {}),
     };
-    setMessages((prev) => [...prev, userMsg].slice(-MAX_MESSAGES));
+    const imageToSend = pendingImageUri;
+    setPendingImageUri(null);
+    setMessages((prev) => {
+      const next = [...prev, userMsg].slice(-MAX_MESSAGES);
+      debouncedSaveChat(auntyId, next);
+      return next;
+    });
     setInputText('');
     setIsTyping(true);
 
@@ -157,14 +182,30 @@ export default function CouncilScreen() {
         text: m.text,
       }));
 
+      const body: Record<string, unknown> = {
+        message: trimmed,
+        auntyId,
+        conversationHistory: history,
+      };
+      if (imageToSend) {
+        // Convert to base64 for backend (backend can adopt multimodal support later)
+        try {
+          const response = await fetch(imageToSend);
+          const blob = await response.blob();
+          const reader = new FileReader();
+          const base64 = await new Promise<string>((resolve) => {
+            reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+            reader.readAsDataURL(blob);
+          });
+          body.imageBase64 = base64;
+        } catch {
+          // If image encoding fails, send without it
+        }
+      }
       const res = await fetch(`${API_URL}/api/chat/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: trimmed,
-          auntyId,
-          conversationHistory: history,
-        }),
+        body: JSON.stringify(body),
         signal: controller.signal,
       });
 
@@ -186,15 +227,67 @@ export default function CouncilScreen() {
       sender: 'aunty',
       timestamp: getTimestamp(),
     };
-    setMessages((prev) => [...prev, auntyMsg].slice(-MAX_MESSAGES));
-  }, [inputText, auntyId, aunty, name, hairProfile, messages]);
+    setMessages((prev) => {
+      const next = [...prev, auntyMsg].slice(-MAX_MESSAGES);
+      debouncedSaveChat(auntyId, next);
+      return next;
+    });
+  }, [inputText, pendingImageUri, auntyId, aunty, name, hairProfile, messages]);
+
+  const handleImageAttach = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Allow photo access in Settings to attach images.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'images',
+      allowsEditing: true,
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setPendingImageUri(result.assets[0].uri);
+    }
+  }, []);
+
+  const handleClearConversation = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert(
+      'Clear Conversation',
+      `Start fresh with Aunty ${aunty.name}? This can't be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: () => {
+            clearChat(auntyId).catch(() => {});
+            setMessages([{
+              id: Date.now().toString(),
+              text: profileGreeting,
+              sender: 'aunty',
+              timestamp: getTimestamp(),
+            }]);
+            setShowPrompts(true);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          },
+        },
+      ],
+    );
+  }, [auntyId, aunty.name, profileGreeting]);
 
   const renderMessage = ({ item }: { item: Message }) => {
     if (item.sender === 'user') {
       return (
         <Animated.View entering={FadeInDown.duration(200)} style={styles.userMessageRow}>
           <View style={styles.userBubble}>
-            <Text style={styles.userMessageText}>{item.text}</Text>
+            {item.imageUri && (
+              <Image source={{ uri: item.imageUri }} style={styles.messageThumbnail} resizeMode="cover" />
+            )}
+            {item.text && item.text !== '📷' && (
+              <Text style={styles.userMessageText}>{item.text}</Text>
+            )}
             <Text style={styles.userTimestamp}>{item.timestamp}</Text>
           </View>
         </Animated.View>
@@ -210,6 +303,9 @@ export default function CouncilScreen() {
             <Text style={styles.auntyTimestamp}>{item.timestamp}</Text>
           </View>
           <View style={[styles.auntyBubble, { backgroundColor: ac.bg, borderLeftColor: ac.accent }]}>
+            {item.imageUri && (
+              <Image source={{ uri: item.imageUri }} style={styles.messageThumbnail} resizeMode="cover" />
+            )}
             <Text style={[styles.auntyMessageText, { color: colors.ink }]}>{item.text}</Text>
           </View>
         </View>
@@ -232,6 +328,15 @@ export default function CouncilScreen() {
             <Text style={[typography.caption, { color: ac.accent }]}>{aunty.title}</Text>
             <Text style={styles.aiDisclosure}>AI-powered character</Text>
           </View>
+          <Pressable
+            onPress={handleClearConversation}
+            style={styles.clearBtn}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Clear conversation"
+          >
+            <Text style={styles.clearBtnText}>⋯</Text>
+          </Pressable>
         </View>
       </View>
 
@@ -284,11 +389,29 @@ export default function CouncilScreen() {
 
       {/* Input */}
       <View style={[styles.inputContainer, { paddingBottom: insets.bottom + spacing.sm }]}>
+        {/* Pending image preview */}
+        {pendingImageUri && (
+          <View style={styles.pendingImageRow}>
+            <Image source={{ uri: pendingImageUri }} style={styles.pendingThumbnail} resizeMode="cover" />
+            <Pressable onPress={() => setPendingImageUri(null)} style={styles.removePendingBtn} hitSlop={8}>
+              <Text style={styles.removePendingText}>✕</Text>
+            </Pressable>
+          </View>
+        )}
         <View style={styles.inputRow}>
+          {/* Image attach button */}
+          <Pressable
+            onPress={handleImageAttach}
+            style={styles.attachBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Attach image"
+          >
+            <Text style={styles.attachBtnText}>📎</Text>
+          </Pressable>
           <TextInput
             style={styles.textInput}
             value={inputText}
-            onChangeText={setInputText}
+            onChangeText={(t) => { setInputText(t); if (t.length > 0) setShowPrompts(false); }}
             placeholder={`Ask ${aunty.name}...`}
             placeholderTextColor={colors.muted}
             multiline
@@ -298,20 +421,20 @@ export default function CouncilScreen() {
           />
           <Pressable
             onPress={handleSend}
-            disabled={!inputText.trim() || isTyping}
+            disabled={(!inputText.trim() && !pendingImageUri) || isTyping}
             style={[
               styles.sendButton,
-              (!inputText.trim() || isTyping) && styles.sendButtonDisabled,
+              ((!inputText.trim() && !pendingImageUri) || isTyping) && styles.sendButtonDisabled,
             ]}
             accessibilityRole="button"
             accessibilityLabel="Send message"
             accessibilityHint={`Send your question to ${aunty.name}`}
           >
             <LinearGradient
-              colors={inputText.trim() && !isTyping ? [...gradients.gold] : [colors.border, colors.border]}
+              colors={(inputText.trim() || pendingImageUri) && !isTyping ? [...gradients.gold] : [colors.border, colors.border]}
               style={styles.sendButtonGradient}
             >
-              <Text style={[styles.sendIcon, { color: inputText.trim() && !isTyping ? colors.ink : colors.muted }]}>
+              <Text style={[styles.sendIcon, { color: (inputText.trim() || pendingImageUri) && !isTyping ? colors.ink : colors.muted }]}>
                 {'\u2191'}
               </Text>
             </LinearGradient>
@@ -482,5 +605,66 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
     fontSize: fontSize.xl,
     marginTop: -2,
+  },
+
+  // Clear conversation button in header
+  clearBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.canvasDeep,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 'auto',
+  },
+  clearBtnText: {
+    fontSize: fontSize.xl,
+    color: colors.muted,
+    lineHeight: 22,
+  },
+
+  // Message image thumbnails
+  messageThumbnail: {
+    width: '100%',
+    height: 160,
+    borderRadius: radius.md,
+    marginBottom: spacing.xs,
+  },
+
+  // Image attach + pending preview
+  attachBtn: {
+    width: 40,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachBtnText: {
+    fontSize: 20,
+  },
+  pendingImageRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  pendingThumbnail: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.md,
+  },
+  removePendingBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -8,
+    marginLeft: -16,
+  },
+  removePendingText: {
+    fontSize: 10,
+    color: colors.ink,
+    fontFamily: fonts.bodySemiBold,
   },
 });
