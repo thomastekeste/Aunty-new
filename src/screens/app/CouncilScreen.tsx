@@ -14,6 +14,7 @@ import {
   TextInput,
   StyleSheet,
   Pressable,
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -79,10 +80,29 @@ export default function CouncilScreen() {
   const name = state.data.name || 'Queen';
   const hairProfile = state.data.hairProfile || {};
 
+  // Build profile-aware greeting
+  const profileGreeting = useMemo(() => {
+    const parts: string[] = [];
+    if (hairProfile.curlType) parts.push(`${hairProfile.curlType} curls`);
+    if (hairProfile.porosity) parts.push(`${hairProfile.porosity} porosity`);
+    if (hairProfile.primaryGoal) {
+      const goalMap: Record<string, string> = {
+        moisture: 'moisture', growth: 'growth', definition: 'curl definition',
+        'damage-repair': 'damage repair', 'scalp-health': 'scalp health',
+        'simplify-routine': 'simplifying your routine', transition: 'transitioning',
+      };
+      parts.push(`working on ${goalMap[hairProfile.primaryGoal] || hairProfile.primaryGoal}`);
+    }
+    const profileLine = parts.length > 0
+      ? ` I see you've got ${parts.join(', ')} — you're in the right place.`
+      : '';
+    return `${aunty.greeting}${name ? ` ${name}.` : ''}${profileLine} Ask me anything.`;
+  }, [aunty.greeting, name, hairProfile.curlType, hairProfile.porosity, hairProfile.primaryGoal]);
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: `${aunty.greeting} Ask me anything about your hair journey.`,
+      text: profileGreeting,
       sender: 'aunty',
       timestamp: getTimestamp(),
     },
@@ -91,6 +111,21 @@ export default function CouncilScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const isSendingRef = useRef(false);
+  const [showPrompts, setShowPrompts] = useState(true);
+
+  const QUICK_PROMPTS = useMemo(() => {
+    const base = [
+      'What should I do on wash day?',
+      'How do I reduce frizz?',
+      'What products do you recommend?',
+      'How often should I deep condition?',
+    ];
+    if (hairProfile.porosity === 'high') base.unshift('My hair loses moisture fast — help!');
+    if (hairProfile.porosity === 'low') base.unshift('Products just sit on my hair. What do I do?');
+    if (hairProfile.primaryGoal === 'growth') base.unshift('How do I retain length?');
+    if (hairProfile.primaryGoal === 'definition') base.unshift('How do I get better curl definition?');
+    return base.slice(0, 5);
+  }, [hairProfile.porosity, hairProfile.primaryGoal]);
 
   // Cap conversation history to last 50 messages to prevent unbounded growth
   const MAX_MESSAGES = 50;
@@ -222,6 +257,30 @@ export default function CouncilScreen() {
           ) : null
         }
       />
+
+      {/* Quick Prompts — shown until user types or dismisses */}
+      {showPrompts && messages.length < 3 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.promptRow}
+          keyboardShouldPersistTaps="handled"
+        >
+          {QUICK_PROMPTS.map((prompt) => (
+            <Pressable
+              key={prompt}
+              style={styles.promptChip}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setInputText(prompt);
+                setShowPrompts(false);
+              }}
+            >
+              <Text style={styles.promptChipText}>{prompt}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
 
       {/* Input */}
       <View style={[styles.inputContainer, { paddingBottom: insets.bottom + spacing.sm }]}>
@@ -355,6 +414,27 @@ const styles = StyleSheet.create({
     color: colors.dark.textMuted,
     marginTop: spacing.xs,
     textAlign: 'right',
+  },
+  promptRow: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  promptChip: {
+    backgroundColor: colors.canvasDeep,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+  },
+  promptChipText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
   },
   inputContainer: {
     paddingHorizontal: spacing.lg,

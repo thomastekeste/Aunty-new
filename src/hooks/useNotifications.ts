@@ -10,7 +10,8 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import type { EventSubscription } from 'expo-modules-core';
+
+type NotifSubscription = ReturnType<typeof Notifications.addNotificationReceivedListener>;
 
 const PUSH_TOKEN_KEY = 'expo_push_token';
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
@@ -38,12 +39,13 @@ async function registerForPushNotificationsAsync(): Promise<string | undefined> 
     });
   }
 
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
+  // expo-modules-core types may not resolve in all setups; cast to access standard fields
+  const existingPerms = await Notifications.getPermissionsAsync() as unknown as { granted: boolean; canAskAgain: boolean };
+  let finalStatus = existingPerms.granted ? 'granted' : 'denied';
 
-  if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
+  if (!existingPerms.granted && existingPerms.canAskAgain !== false) {
+    const newPerms = await Notifications.requestPermissionsAsync() as unknown as { granted: boolean };
+    finalStatus = newPerms.granted ? 'granted' : 'denied';
   }
 
   if (finalStatus !== 'granted') {
@@ -54,7 +56,7 @@ async function registerForPushNotificationsAsync(): Promise<string | undefined> 
   try {
     const projectId =
       Constants.expoConfig?.extra?.eas?.projectId ??
-      (Constants as any).easConfig?.projectId;
+      (Constants.expoConfig?.extra?.projectId as string | undefined);
     const pushToken = await Notifications.getExpoPushTokenAsync(
       projectId ? { projectId } : undefined
     );
@@ -75,8 +77,8 @@ export interface NotificationHookResult {
 export function usePushNotifications(): NotificationHookResult {
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const [notification, setNotification] = useState<Notifications.Notification | null>(null);
-  const notificationListener = useRef<EventSubscription>(undefined);
-  const responseListener = useRef<EventSubscription>(undefined);
+  const notificationListener = useRef<NotifSubscription | undefined>(undefined);
+  const responseListener = useRef<NotifSubscription | undefined>(undefined);
 
   useEffect(() => {
     // Try to load cached token first
@@ -101,7 +103,7 @@ export function usePushNotifications(): NotificationHookResult {
           fetch(`${API_URL}/api/notifications/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pushToken: token, platform: Platform.OS }),
+            body: JSON.stringify({ token, platform: Platform.OS }),
           }).catch(() => {
             // Silent fail — token is stored locally
           });

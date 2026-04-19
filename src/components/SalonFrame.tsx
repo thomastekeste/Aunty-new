@@ -175,12 +175,12 @@ export function SalonFrame({
       </View>
 
       <Animated.View entering={FadeIn.duration(400)} style={styles.auntyHeader}>
-        <AuntyAvatar auntyId={auntyId} size={48} showRing glowing />
+        <AuntyAvatar auntyId={auntyId} size={36} showRing glowing />
         <View style={styles.auntyText}>
           <Text style={[styles.auntyName, { color: ac.accent }]} numberOfLines={1}>
             {aunty.name}
+            <Text style={styles.auntyVerb}>  {speakerVerb}</Text>
           </Text>
-          <Text style={styles.auntyVerb}>{speakerVerb}</Text>
         </View>
       </Animated.View>
 
@@ -197,7 +197,7 @@ export function SalonFrame({
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 110 },
+          { paddingBottom: insets.bottom + 96 },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.xs,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.xs,
   },
   backButton: {
     width: 36,
@@ -314,32 +314,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
-    marginTop: spacing.xs,
-    marginBottom: spacing.md,
+    marginTop: 0,
+    marginBottom: spacing.sm,
   },
-  auntyText: { flexShrink: 1 },
+  auntyText: { flexShrink: 1, flex: 1 },
   auntyName: {
     fontFamily: fonts.serifSemiBold,
-    fontSize: fontSize.lg,
-    letterSpacing: -0.2,
-    lineHeight: fontSize.lg * 1.1,
+    fontSize: fontSize.md,
+    letterSpacing: -0.1,
+    lineHeight: fontSize.md * 1.1,
   },
   auntyVerb: {
     fontFamily: fonts.serifItalic,
-    fontSize: fontSize.xs,
+    fontSize: fontSize.sm,
     color: colors.dark.textMuted,
-    marginTop: 1,
     letterSpacing: 0.1,
   },
 
   question: {
     fontFamily: fonts.displayMedium,
-    fontSize: fontSize.xl,
-    lineHeight: fontSize.xl * 1.2,
-    letterSpacing: -0.4,
+    fontSize: fontSize.lg + 2,
+    lineHeight: (fontSize.lg + 2) * 1.18,
+    letterSpacing: -0.3,
     color: colors.dark.text,
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
 
   scrollContent: { paddingHorizontal: spacing.lg },

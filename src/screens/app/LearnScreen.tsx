@@ -6,7 +6,7 @@
  * Progressive disclosure — curated home, drill into sections.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,8 @@ import {
   Pressable,
   StyleSheet,
   Dimensions,
+  Modal,
+  Linking,
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,9 +24,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
+import { PaywallModal } from '../../components/PaywallModal';
 import { AUNTIES } from '../../constants/aunties';
 import type { AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { useSubscription } from '../../context/SubscriptionContext';
 import {
   METHOD_ARTICLES,
   PRODUCT_ARTICLES,
@@ -223,13 +227,26 @@ function FeaturedCard({ article, auntyId }: { article: Article; auntyId: AuntyId
 
 // ─── Article Card (compact for lists) ───────────────────────────
 
-function ArticleCard({ article, index }: { article: Article; index: number }) {
+function ArticleCard({
+  article,
+  index,
+  onPress,
+}: {
+  article: Article;
+  index: number;
+  onPress: (a: Article) => void;
+}) {
   const ac = auntyColors[article.auntyId];
   const aunty = AUNTIES[article.auntyId];
 
   return (
     <Animated.View entering={FadeInDown.delay(50 + index * 40).duration(350)}>
-      <View style={[styles.articleCard, { borderLeftColor: ac.accent }]}>
+      <Pressable
+        onPress={() => onPress(article)}
+        style={[styles.articleCard, { borderLeftColor: ac.accent }]}
+        accessibilityRole="button"
+        accessibilityLabel={`Read: ${article.title}`}
+      >
         <View style={styles.articleTop}>
           <Text style={styles.articleTitle}>{article.title}</Text>
           {article.isPremium && <LockIcon />}
@@ -240,21 +257,43 @@ function ArticleCard({ article, index }: { article: Article; index: number }) {
           <Text style={[styles.articleAunty, { color: ac.accent }]}>{aunty.name}</Text>
           <View style={styles.dot} />
           <Text style={styles.articleTime}>{article.readTime}</Text>
+          <View style={styles.dot} />
+          <Text style={styles.readCta}>Read {'\u2192'}</Text>
         </View>
-      </View>
+      </Pressable>
     </Animated.View>
   );
 }
 
 // ─── Creator Card ───────────────────────────────────────────────
 
+function getCreatorUrl(creator: Creator): string {
+  const handle = creator.handle.replace('@', '');
+  switch (creator.platform) {
+    case 'youtube': return `https://www.youtube.com/@${handle}`;
+    case 'instagram': return `https://www.instagram.com/${handle}`;
+    case 'tiktok': return `https://www.tiktok.com/@${handle}`;
+    default: return `https://www.youtube.com/@${handle}`;
+  }
+}
+
 function CreatorCard({ creator, index }: { creator: Creator; index: number }) {
   const ac = auntyColors[creator.endorsedBy];
   const aunty = AUNTIES[creator.endorsedBy];
 
+  const handlePress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Linking.openURL(getCreatorUrl(creator)).catch(() => {});
+  }, [creator]);
+
   return (
     <Animated.View entering={FadeInDown.delay(50 + index * 40).duration(350)}>
-      <View style={[styles.creatorCard, { borderTopColor: ac.accent }]}>
+      <Pressable
+        onPress={handlePress}
+        style={[styles.creatorCard, { borderTopColor: ac.accent }]}
+        accessibilityRole="link"
+        accessibilityLabel={`Visit ${creator.name} on ${creator.platform}`}
+      >
         <View style={styles.creatorHeader}>
           <PlatformBadge platform={creator.platform} />
           <Text style={styles.creatorCurlTypes}>{creator.curlTypes}</Text>
@@ -266,7 +305,8 @@ function CreatorCard({ creator, index }: { creator: Creator; index: number }) {
           <AuntyAvatar auntyId={creator.endorsedBy} size={20} />
           <Text style={[styles.creatorEndorsedText, { color: ac.accent }]}>{aunty.name} approved</Text>
         </View>
-      </View>
+        <Text style={[styles.creatorVisit, { color: ac.accent }]}>Visit {'\u2192'}</Text>
+      </Pressable>
     </Animated.View>
   );
 }
@@ -396,11 +436,23 @@ function EmptyCategory({ auntyId, label }: { auntyId: AuntyId; label: string }) 
 export default function LearnScreen() {
   const insets = useSafeAreaInsets();
   const { state } = useOnboarding();
+  const { isActive: isSubscribed } = useSubscription();
   const auntyId: AuntyId = state.data.chosenAuntyId || 'denise';
   const aunty = AUNTIES[auntyId];
   const ac = auntyColors[auntyId];
 
   const [activeCategory, setActiveCategory] = useState<ContentCategory | null>(null);
+  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  const handleArticlePress = useCallback((article: Article) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (article.isPremium && !isSubscribed) {
+      setShowPaywall(true);
+    } else {
+      setSelectedArticle(article);
+    }
+  }, [isSubscribed]);
 
   // Pick featured article from user's aunty, or first one
   const allArticles = [...METHOD_ARTICLES, ...PRODUCT_ARTICLES];
@@ -409,6 +461,45 @@ export default function LearnScreen() {
     : null;
 
   const goBack = () => setActiveCategory(null);
+
+  // ─── Article Detail Modal (shared between both views) ────────
+  const articleModal = selectedArticle ? (() => {
+    const a = selectedArticle;
+    const ac2 = auntyColors[a.auntyId];
+    const aAunty = AUNTIES[a.auntyId];
+    return (
+      <Modal
+        visible
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setSelectedArticle(null)}
+      >
+        <View style={[styles.modalContainer, { paddingTop: insets.top + spacing.md }]}>
+          <Pressable style={styles.modalClose} onPress={() => setSelectedArticle(null)} accessibilityRole="button" accessibilityLabel="Close article">
+            <Text style={styles.modalCloseText}>Done</Text>
+          </Pressable>
+          <ScrollView
+            contentContainerStyle={[styles.modalContent, { paddingBottom: insets.bottom + 60 }]}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={[styles.modalAccentBar, { backgroundColor: ac2.accent }]} />
+            <Text style={styles.modalCategory}>{a.category.toUpperCase()} · {a.readTime}</Text>
+            <Text style={styles.modalTitle}>{a.title}</Text>
+            <Text style={styles.modalTeaser}>{a.teaser}</Text>
+            <View style={styles.modalMeta}>
+              <AuntyAvatar auntyId={a.auntyId} size={32} showRing />
+              <View>
+                <Text style={[styles.modalAuntyName, { color: ac2.accent }]}>{aAunty.name}</Text>
+                <Text style={styles.modalAuntyTitle}>{aAunty.title}</Text>
+              </View>
+            </View>
+            <View style={styles.modalDivider} />
+            <Text style={styles.modalBody}>{a.body}</Text>
+          </ScrollView>
+        </View>
+      </Modal>
+    );
+  })() : null;
 
   // ─── Category Detail View ───────────────────────────────────
   if (activeCategory) {
@@ -423,7 +514,7 @@ export default function LearnScreen() {
               <SectionHeader overline="FOUNDATIONS" title="The Method" count={METHOD_ARTICLES.length} onBack={goBack} />
               {METHOD_ARTICLES.length > 0 ? (
                 <View style={styles.articleList}>
-                  {METHOD_ARTICLES.map((a, i) => <ArticleCard key={a.id} article={a} index={i} />)}
+                  {METHOD_ARTICLES.map((a, i) => <ArticleCard key={a.id} article={a} index={i} onPress={handleArticlePress} />)}
                 </View>
               ) : (
                 <EmptyCategory auntyId={auntyId} label="method articles" />
@@ -436,7 +527,7 @@ export default function LearnScreen() {
               <SectionHeader overline="INGREDIENT SCHOOL" title="Product Knowledge" count={PRODUCT_ARTICLES.length} onBack={goBack} />
               {PRODUCT_ARTICLES.length > 0 ? (
                 <View style={styles.articleList}>
-                  {PRODUCT_ARTICLES.map((a, i) => <ArticleCard key={a.id} article={a} index={i} />)}
+                  {PRODUCT_ARTICLES.map((a, i) => <ArticleCard key={a.id} article={a} index={i} onPress={handleArticlePress} />)}
                 </View>
               ) : (
                 <EmptyCategory auntyId={auntyId} label="product articles" />
@@ -470,6 +561,10 @@ export default function LearnScreen() {
             </>
           )}
         </ScrollView>
+        {articleModal}
+        {showPaywall && (
+          <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
+        )}
       </View>
     );
   }
@@ -522,6 +617,10 @@ export default function LearnScreen() {
         {/* Quick Q&A */}
         <QuickQAPreview onSeeAll={() => setActiveCategory('qa')} />
       </ScrollView>
+      {articleModal}
+      {showPaywall && (
+        <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
+      )}
     </View>
   );
 }
@@ -620,4 +719,25 @@ const styles = StyleSheet.create({
   emptyCategory: { alignItems: 'center', paddingVertical: spacing.xxxl, paddingHorizontal: spacing.xl, gap: spacing.md },
   emptyCategoryTitle: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.lg, color: colors.ink },
   emptyCategoryText: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.muted, textAlign: 'center', lineHeight: fontSize.md * 1.5 },
+
+  // Read CTA in article meta
+  readCta: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.primary },
+
+  // Creator visit CTA
+  creatorVisit: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, marginTop: spacing.xs },
+
+  // Article detail modal
+  modalContainer: { flex: 1, backgroundColor: colors.canvas },
+  modalClose: { alignSelf: 'flex-end', paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, minHeight: 44, justifyContent: 'center' },
+  modalCloseText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.base, color: colors.primary },
+  modalContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
+  modalAccentBar: { width: 40, height: 4, borderRadius: 2, marginBottom: spacing.md },
+  modalCategory: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.muted, letterSpacing: letterSpacing.widest, marginBottom: spacing.sm },
+  modalTitle: { fontFamily: fonts.display, fontSize: fontSize.xxl, color: colors.ink, letterSpacing: letterSpacing.tight, lineHeight: fontSize.xxl * 1.15, marginBottom: spacing.sm },
+  modalTeaser: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.inkLight, lineHeight: fontSize.md * 1.55, fontStyle: 'italic', marginBottom: spacing.lg },
+  modalMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+  modalAuntyName: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.sm },
+  modalAuntyTitle: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.muted, marginTop: 2 },
+  modalDivider: { height: 1, backgroundColor: colors.borderLight, marginBottom: spacing.lg },
+  modalBody: { fontFamily: fonts.body, fontSize: fontSize.base, color: colors.ink, lineHeight: fontSize.base * 1.7 },
 });

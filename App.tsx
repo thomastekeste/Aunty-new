@@ -20,6 +20,7 @@ import {
 import { AuthProvider } from './src/context/AuthContext';
 import { OnboardingProvider } from './src/context/OnboardingContext';
 import { SubscriptionProvider } from './src/context/SubscriptionContext';
+import { ThemeProvider } from './src/context/ThemeContext';
 import { RootNavigator } from './src/navigation';
 import { colors, fontSize } from './src/constants/theme';
 
@@ -43,14 +44,16 @@ export default function App() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <OnboardingProvider>
-            <SubscriptionProvider>
-              <StatusBar style="light" />
-              <RootNavigator />
-            </SubscriptionProvider>
-          </OnboardingProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <OnboardingProvider>
+              <SubscriptionProvider>
+                <StatusBar style="light" />
+                <RootNavigator />
+              </SubscriptionProvider>
+            </OnboardingProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

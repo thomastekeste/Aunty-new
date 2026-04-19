@@ -177,9 +177,11 @@ export type AppTabParamList = {
   Learn: undefined;
 };
 
+export type CheckInMood = 'great' | 'good' | 'okay' | 'struggling';
+
 export type AppStackParamList = {
   Tabs: undefined;
-  CheckIn: undefined;
+  CheckIn: { mood?: CheckInMood } | undefined;
   RitualSteps: undefined;
   AuntyChat: { auntyId: AuntyId };
   HairProfile: undefined;

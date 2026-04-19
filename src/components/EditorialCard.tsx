@@ -176,7 +176,9 @@ export function EditorialCard({
                 {label}
               </Text>
               {description ? (
-                <Text style={styles.description}>{description}</Text>
+                <Text style={styles.description} numberOfLines={2}>
+                  {description}
+                </Text>
               ) : null}
             </View>
           </View>
@@ -198,19 +200,19 @@ export function EditorialCard({
 
 const styles = StyleSheet.create({
   card: {
-    minHeight: 76,
-    borderRadius: radius.lg,
+    minHeight: 56,
+    borderRadius: radius.md,
     borderWidth: 1,
     overflow: 'hidden',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
     elevation: 2,
   },
   cardCompact: {
-    minHeight: 92,
+    minHeight: 80,
   },
   bar: {
     position: 'absolute',
@@ -223,15 +225,15 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 18,
+    height: 14,
   },
   body: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
+    gap: spacing.sm,
+    paddingVertical: spacing.sm + 2,
     paddingLeft: spacing.md + salon.bar.widthSelected,
-    paddingRight: spacing.md,
+    paddingRight: spacing.md + 28, // reserve for check badge
   },
   bodyCompact: {
     flexDirection: 'column',
@@ -239,50 +241,51 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   iconZone: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.md,
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconGlyph: { fontSize: 24 },
+  iconGlyph: { fontSize: 20 },
   text: { flex: 1 },
   label: {
     fontFamily: fonts.serifSemiBold,
-    fontSize: fontSize.lg,
+    fontSize: fontSize.md,
     color: colors.dark.text,
-    letterSpacing: -0.2,
-    lineHeight: fontSize.lg * 1.18,
+    letterSpacing: -0.15,
+    lineHeight: fontSize.md * 1.2,
   },
   description: {
     fontFamily: fonts.serifItalic,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.dark.textMuted,
-    marginTop: 4,
-    lineHeight: fontSize.sm * 1.45,
+    marginTop: 2,
+    lineHeight: fontSize.xs * 1.35,
     letterSpacing: 0.05,
   },
   tag: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: 8,
+    right: 8,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
+    paddingVertical: 2,
     borderRadius: radius.sm,
   },
   tagText: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: 10,
+    fontSize: 9,
     color: '#FFFFFF',
-    letterSpacing: 1.4,
+    letterSpacing: 1.2,
   },
   checkBadge: {
     position: 'absolute',
-    top: 12,
+    top: '50%',
     right: 12,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    marginTop: -10,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -292,8 +295,8 @@ const styles = StyleSheet.create({
   },
   checkGlyph: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.bodyBold,
-    lineHeight: 16,
+    lineHeight: 14,
   },
 });

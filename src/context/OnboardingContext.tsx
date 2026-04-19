@@ -141,11 +141,17 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     })();
   }, []);
 
-  // Persist after every state change (skip the initial restore)
+  // Debounced persist — write to storage at most once per 1.5 s
+  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (isInitialized.current && state.isRestored) {
+    if (!isInitialized.current || !state.isRestored) return;
+    if (persistTimer.current) clearTimeout(persistTimer.current);
+    persistTimer.current = setTimeout(() => {
       persistState(state);
-    }
+    }, 1500);
+    return () => {
+      if (persistTimer.current) clearTimeout(persistTimer.current);
+    };
   }, [state]);
 
   const value: ContextValue = {

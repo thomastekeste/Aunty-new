@@ -40,10 +40,9 @@ import ValidationTwoScreen from '../screens/onboarding/ValidationTwoScreen';
 import ValidationThreeScreen from '../screens/onboarding/ValidationThreeScreen';
 
 // App screens
-import HomeScreen from '../screens/app/HomeScreen';
+import HomeDashboardScreen from '../screens/app/HomeDashboardScreen';
 import RitualScreen from '../screens/app/RitualScreen';
 import CouncilScreen from '../screens/app/CouncilScreen';
-import JourneyScreen from '../screens/app/JourneyScreen';
 import LearnScreen from '../screens/app/LearnScreen';
 import ProductsScreen from '../screens/app/ProductsScreen';
 import SettingsScreen from '../screens/app/SettingsScreen';
@@ -155,7 +154,7 @@ function TabNavigator() {
       tabBar={(props) => <TabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
-      <AppTab.Screen name="Home" component={HomeScreen} />
+      <AppTab.Screen name="Home" component={HomeDashboardScreen} />
       <AppTab.Screen name="Ritual" component={RitualScreen} />
       <AppTab.Screen name="Products" component={ProductsScreen} />
       <AppTab.Screen name="Chat" component={CouncilScreen} />
@@ -190,8 +189,8 @@ export function RootNavigator() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { state } = useOnboarding();
 
-  // Show loading while checking auth state
-  if (authLoading) {
+  // Block until both auth and onboarding storage are ready
+  if (authLoading || !state.isRestored) {
     return (
       <View style={loadingStyles.container}>
         <ActivityIndicator color={colors.primary} size="large" />

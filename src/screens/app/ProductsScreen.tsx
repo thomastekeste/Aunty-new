@@ -29,6 +29,7 @@ import * as Haptics from 'expo-haptics';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { AUNTIES } from '../../constants/aunties';
 import { PRODUCTS, CATEGORY_LABELS, type Product, type ProductCategory } from '../../constants/products';
+import { getRecommendations } from '../../services/recommendations';
 import { useOnboarding } from '../../context/OnboardingContext';
 import {
   colors,
@@ -178,14 +179,46 @@ export default function ProductsScreen() {
   const { state } = useOnboarding();
   const profile = state.data.hairProfile;
 
-  const filtered = useMemo(() => {
-    return PRODUCTS.filter((p) => {
-      if (profile.curlType && p.curlTypes.length > 0 && !p.curlTypes.includes(profile.curlType)) return false;
-      return true;
-    });
-  }, [profile.curlType]);
+  // Use full recommendation engine — scored, sorted, personalized
+  const bundle = useMemo(() => getRecommendations(profile), [
+    profile.curlType,
+    profile.porosity,
+    profile.primaryGoal,
+    profile.secondaryGoals,
+    profile.scalpConcerns,
+    profile.heatUse,
+    profile.colorTreated,
+  ]);
 
-  const grouped = useMemo(() => groupByCategory(filtered), [filtered]);
+  // byCategory from recs; fall back to unscored products for completeness
+  const grouped = useMemo<Map<ProductCategory, Product[]>>(() => {
+    const map = new Map<ProductCategory, Product[]>();
+    // Start with recommendation engine results
+    for (const [cat, recs] of Object.entries(bundle.byCategory)) {
+      map.set(cat as ProductCategory, recs.map((r) => r.product));
+    }
+    // Fill any missing categories with unfiltered products
+    for (const p of PRODUCTS) {
+      if (!map.has(p.category)) {
+        const list = map.get(p.category) || [];
+        list.push(p);
+        map.set(p.category, list);
+      }
+    }
+    return map;
+  }, [bundle]);
+
+  // Build a quick reason lookup: productId → reason string
+  const reasonMap = useMemo<Record<string, string>>(() => {
+    const m: Record<string, string> = {};
+    for (const recs of Object.values(bundle.byCategory)) {
+      for (const r of recs) {
+        m[r.product.id] = r.reason;
+      }
+    }
+    return m;
+  }, [bundle]);
+
   const tabs = useMemo(() => Array.from(grouped.keys()), [grouped]);
   const [activeTab, setActiveTab] = useState<ProductCategory>(tabs[0] || 'cleanser');
   const activeProducts = grouped.get(activeTab) || [];
@@ -201,7 +234,7 @@ export default function ProductsScreen() {
         <Text style={styles.overline}>AUNTY'S PICKS</Text>
         <Text style={styles.title}>Your Products</Text>
         <Text style={styles.subtitle}>
-          Matched to {profile.curlType || 'your'} hair
+          Personalised{profile.curlType ? ` for ${profile.curlType} hair` : ' for your profile'}
         </Text>
       </View>
 
@@ -254,7 +287,7 @@ export default function ProductsScreen() {
               <Text style={styles.sectionLabel}>Premium Picks</Text>
             </View>
             {premiumProducts.map((p, i) => (
-              <ProductCard key={p.id} product={p} index={i} isPremium />
+              <ProductCard key={p.id} product={p} index={i} isPremium reason={reasonMap[p.id]} />
             ))}
           </View>
         )}
@@ -273,6 +306,7 @@ export default function ProductsScreen() {
                 key={p.id}
                 product={p}
                 index={premiumProducts.length + i}
+                reason={reasonMap[p.id]}
               />
             ))}
           </View>
@@ -301,10 +335,12 @@ function ProductCard({
   product: p,
   index,
   isPremium = false,
+  reason,
 }: {
   product: Product;
   index: number;
   isPremium?: boolean;
+  reason?: string;
 }) {
   const ac = auntyColors[p.recommendedBy];
   const aunty = AUNTIES[p.recommendedBy];
@@ -352,6 +388,13 @@ function ProductCard({
                   <Text style={styles.premiumPillText}>Premium Pick</Text>
                 </View>
               )}
+            </View>
+          )}
+
+          {/* Why recommended — from engine */}
+          {reason && (
+            <View style={styles.reasonPill}>
+              <Text style={styles.reasonText}>{reason}</Text>
             </View>
           )}
 
@@ -576,6 +619,23 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.xs,
     color: colors.primaryDeep,
+  },
+
+  // Recommendation reason chip
+  reasonPill: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary + '14',
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    marginBottom: spacing.xs,
+  },
+  reasonText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    letterSpacing: 0.1,
   },
 
   // Aunty recommendation

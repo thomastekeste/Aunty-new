@@ -25,6 +25,7 @@ import * as Haptics from 'expo-haptics';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import {
   colors,
@@ -118,6 +119,7 @@ export default function SettingsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { state: onboardingState, reset: resetOnboarding } = useOnboarding();
+  const { signOut } = useAuth();
   const { mode: themeMode, isDark, setMode: setThemeMode } = useTheme();
 
   const { name, hairProfile, chosenAuntyId } = onboardingState.data;
@@ -159,7 +161,7 @@ export default function SettingsScreen() {
   const handleSignOut = useCallback(() => {
     Alert.alert(
       'Sign Out',
-      'Are you sure you want to sign out? Your progress will be saved locally.',
+      'Are you sure you want to sign out?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -167,12 +169,13 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            await signOut();
             resetOnboarding();
           },
         },
       ]
     );
-  }, [resetOnboarding]);
+  }, [signOut, resetOnboarding]);
 
   const themeModeLabel = themeMode === 'system' ? 'System' : themeMode === 'dark' ? 'Dark' : 'Light';
 

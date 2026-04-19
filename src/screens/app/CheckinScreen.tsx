@@ -17,7 +17,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import type { AppStackParamList, CheckInMood } from '../../types';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { Button } from '../../components/Button';
@@ -33,7 +34,7 @@ import {
 import { AUNTIES, type AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
 
-type Mood = 'great' | 'good' | 'okay' | 'struggling';
+type Mood = CheckInMood;
 
 interface MoodOption {
   key: Mood;
@@ -72,12 +73,14 @@ function getWeekNumber(onboardingDate?: string): number {
 export default function CheckInScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const route = useRoute<RouteProp<AppStackParamList, 'CheckIn'>>();
+  const initialMood = route.params?.mood ?? null;
   const { state } = useOnboarding();
   const auntyId: AuntyId = state.data.chosenAuntyId || 'denise';
   const aunty = AUNTIES[auntyId];
   const ac = auntyColors[auntyId];
 
-  const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
+  const [selectedMood, setSelectedMood] = useState<Mood | null>(initialMood);
   const [notes, setNotes] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [auntyResponse, setAuntyResponse] = useState('');

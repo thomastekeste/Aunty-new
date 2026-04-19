@@ -178,7 +178,7 @@ export const AUNTIES: Record<string, Aunty> = {
   },
   amara: {
     id: 'amara',
-    name: 'Selam',
+    name: 'Amara',
     region: 'Ethiopian-Eritrean',
     title: 'The Steady One',
     specialty: 'Calm strength. Never panics, always delivers.',

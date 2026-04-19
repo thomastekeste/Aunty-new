@@ -79,7 +79,7 @@ export default function PorosityTestScreen() {
   return (
     <SalonFrame
       auntyId={auntyId}
-      question="Drop a strand in water. What happened?"
+      question="Let's test your porosity — does your hair float, hover, or sink?"
       speakerVerb="wants to test"
       step={3}
       totalSteps={7}
@@ -92,14 +92,15 @@ export default function PorosityTestScreen() {
         entering={FadeInDown.delay(200).duration(400)}
         style={styles.instruction}
         accessibilityRole="text"
-        accessibilityLabel="The Water Glass Test: Take a clean strand of hair. Drop it in a glass of room-temperature water. Wait 2 to 4 minutes and observe."
+        accessibilityLabel="If you don't know your porosity, try the water glass test. Drop a clean strand of hair into a glass of room-temperature water. Wait 2 to 4 minutes, then see whether it floats at the top, hovers in the middle, or sinks to the bottom."
       >
         <Text style={styles.instructionIcon}>{'\uD83E\uDDEA'}</Text>
         <View style={styles.instructionTextWrap}>
-          <Text style={styles.instructionTitle}>The Water Glass Test</Text>
+          <Text style={styles.instructionTitle}>Don't know yours? Try the water test</Text>
           <Text style={styles.instructionBody}>
-            Take a clean strand of hair (shed from your brush is fine). Drop it in a glass
-            of room-temperature water. Wait 2-4 minutes and observe.
+            Drop a clean strand (a piece from your brush works) into a glass of
+            room-temperature water. Wait 2-4 minutes — does it float at the top,
+            hover in the middle, or sink to the bottom?
           </Text>
         </View>
       </Animated.View>
@@ -140,12 +141,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     backgroundColor: colors.dark.surfaceLight,
     borderRadius: radius.md,
-    padding: spacing.sm,
-    marginBottom: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm + 2,
+    marginBottom: spacing.sm,
     gap: spacing.sm,
   },
   instructionIcon: {
-    fontSize: 22,
+    fontSize: 18,
     marginTop: 1,
   },
   instructionTextWrap: {
@@ -170,14 +172,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dark.surfaceLight,
     borderRadius: radius.md,
     borderLeftWidth: 3,
-    padding: spacing.sm,
-    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm + 2,
+    marginTop: spacing.sm,
   },
   detailText: {
     fontFamily: fonts.serifMedium,
     fontSize: fontSize.sm,
     color: colors.dark.text,
-    lineHeight: fontSize.sm * 1.5,
+    lineHeight: fontSize.sm * 1.4,
     letterSpacing: -0.1,
   },
   marciaNote: {

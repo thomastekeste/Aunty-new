@@ -30,8 +30,9 @@ import {
   gradients,
   letterSpacing,
 } from '../constants/theme';
+import { PaywallFeatureCarousel } from './PaywallFeatureCarousel';
 
-const { height: SCREEN_H } = Dimensions.get('window');
+const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get('window');
 
 interface Props {
   visible: boolean;
@@ -131,7 +132,10 @@ export function PaywallModal({ visible, onClose, onSubscribe, onRestore }: Props
               <Text style={styles.hookUrgency}>Introductory pricing — won't last forever.</Text>
             </LinearGradient>
 
-            {/* Value props */}
+            {/* Feature carousel — sweep through every tab of the app */}
+            <PaywallFeatureCarousel cardWidth={SCREEN_W} />
+
+            {/* Value props — supporting detail */}
             <View style={styles.values}>
               {VALUE_SECTIONS.map((v, i) => (
                 <View key={i} style={styles.valueRow}>
