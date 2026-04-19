@@ -200,11 +200,11 @@ export function EditorialCard({
 
 const styles = StyleSheet.create({
   card: {
-    minHeight: 56,
-    borderRadius: radius.md,
+    minHeight: 68,
+    borderRadius: radius.lg,
     borderWidth: 1,
     overflow: 'hidden',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardCompact: {
-    minHeight: 80,
+    minHeight: 92,
   },
   bar: {
     position: 'absolute',
@@ -230,10 +230,10 @@ const styles = StyleSheet.create({
   body: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm + 2,
-    paddingLeft: spacing.md + salon.bar.widthSelected,
-    paddingRight: spacing.md + 28, // reserve for check badge
+    gap: spacing.md - 2,
+    paddingVertical: spacing.sm + 6,
+    paddingLeft: spacing.md + salon.bar.widthSelected + 2,
+    paddingRight: spacing.md + 32, // reserve for check badge
   },
   bodyCompact: {
     flexDirection: 'column',
@@ -241,27 +241,27 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   iconZone: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconGlyph: { fontSize: 20 },
+  iconGlyph: { fontSize: 24 },
   text: { flex: 1 },
   label: {
     fontFamily: fonts.serifSemiBold,
-    fontSize: fontSize.md,
+    fontSize: 17,
     color: colors.dark.text,
-    letterSpacing: -0.15,
-    lineHeight: fontSize.md * 1.2,
+    letterSpacing: -0.25,
+    lineHeight: 17 * 1.2,
   },
   description: {
     fontFamily: fonts.serifItalic,
-    fontSize: fontSize.xs,
+    fontSize: fontSize.sm,
     color: colors.dark.textMuted,
-    marginTop: 2,
-    lineHeight: fontSize.xs * 1.35,
+    marginTop: 3,
+    lineHeight: fontSize.sm * 1.4,
     letterSpacing: 0.05,
   },
   tag: {
@@ -281,11 +281,11 @@ const styles = StyleSheet.create({
   checkBadge: {
     position: 'absolute',
     top: '50%',
-    right: 12,
-    marginTop: -10,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    right: 14,
+    marginTop: -13,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -295,8 +295,8 @@ const styles = StyleSheet.create({
   },
   checkGlyph: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: fonts.bodyBold,
-    lineHeight: 14,
+    lineHeight: 16,
   },
 });

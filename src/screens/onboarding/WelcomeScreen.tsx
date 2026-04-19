@@ -10,7 +10,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -79,7 +79,7 @@ export function WelcomeScreen() {
   // Hero → picker after a beat (no typer to wait on)
   useEffect(() => {
     if (phase === 0) {
-      const t = setTimeout(() => setPhase(1), 900);
+      const t = setTimeout(() => setPhase(1), 700);
       return () => clearTimeout(t);
     }
   }, [phase]);
@@ -87,7 +87,7 @@ export function WelcomeScreen() {
   const handleSelect = (id: AuntyId) => {
     setSelectedId(id);
     setChosenAunty(id);
-    setTimeout(() => setPhase(2), 320);
+    setTimeout(() => setPhase(2), 150);
   };
 
   const handleSpeechComplete = useCallback(() => {
@@ -101,14 +101,21 @@ export function WelcomeScreen() {
     <LinearGradient colors={[...gradients.ceremony]} style={styles.container}>
       {/* Aunty-color halo behind everything once chosen */}
       {ac ? (
-        <View pointerEvents="none" style={[styles.halo, { backgroundColor: ac.accent }]} />
+        <Animated.View
+          entering={FadeIn.duration(420)}
+          pointerEvents="none"
+          style={[styles.halo, { backgroundColor: ac.accent }]}
+        />
       ) : null}
 
       <View style={[styles.content, { paddingTop: insets.top + spacing.xxl }]}>
         {/* ─── PHASE 0+1: Hero + Picker ────────────────── */}
         {phase <= 1 && (
-          <View style={styles.pickSection}>
-            <Animated.View entering={FadeInDown.duration(700)} style={styles.heroWrap}>
+          <Animated.View
+            style={styles.pickSection}
+            exiting={FadeOut.duration(220)}
+          >
+            <Animated.View entering={FadeInDown.duration(620)} style={styles.heroWrap}>
               <Text style={styles.eyebrow}>THE AUNTY CURL COUNCIL</Text>
               <Text style={styles.hero}>
                 Every curl{'\n'}needs an{' '}
@@ -117,7 +124,7 @@ export function WelcomeScreen() {
             </Animated.View>
 
             {phase >= 1 && (
-              <Animated.View entering={FadeIn.delay(120).duration(500)}>
+              <Animated.View entering={FadeIn.delay(80).duration(380)}>
                 <Text style={styles.pickLabel}>Pick yours</Text>
                 <ScrollView
                   horizontal
@@ -131,7 +138,7 @@ export function WelcomeScreen() {
                     const c = auntyColors[id];
                     const sel = selectedId === id;
                     return (
-                      <Animated.View key={id} entering={FadeIn.delay(i * 70).duration(280)}>
+                      <Animated.View key={id} entering={FadeIn.delay(i * 50).duration(240)}>
                         <PressableScale
                           onPress={() => handleSelect(id)}
                           haptic="medium"
@@ -164,27 +171,38 @@ export function WelcomeScreen() {
                 <Text style={styles.hint}>swipe to see all 7</Text>
               </Animated.View>
             )}
-          </View>
+          </Animated.View>
         )}
 
         {/* ─── PHASE 2+3: Aunty introduces herself ──────── */}
         {phase >= 2 && ac && selectedId && (
-          <Animated.View entering={FadeIn.duration(600)} style={styles.introSection}>
-            <View style={styles.avatarWrap}>
+          <Animated.View entering={FadeIn.duration(320)} style={styles.introSection}>
+            <Animated.View
+              entering={FadeIn.delay(60).duration(320)}
+              style={styles.avatarWrap}
+            >
               <View style={[styles.avatarGlow, { backgroundColor: ac.accent }]} />
               <AuntyAvatar auntyId={selectedId} size={84} showRing glowing />
-            </View>
+            </Animated.View>
 
-            <Text style={[styles.auntyName, { color: ac.accent }]}>
+            <Animated.Text
+              entering={FadeIn.delay(140).duration(280)}
+              style={[styles.auntyName, { color: ac.accent }]}
+            >
               {AUNTIES[selectedId].name}
-            </Text>
-            <Text style={styles.auntyRegion}>{AUNTIES[selectedId].region}</Text>
+            </Animated.Text>
+            <Animated.Text
+              entering={FadeIn.delay(200).duration(260)}
+              style={styles.auntyRegion}
+            >
+              {AUNTIES[selectedId].region}
+            </Animated.Text>
 
             <View style={styles.bubbleWrap}>
               <SpeechBubble
                 lines={lines}
-                holdMs={1700}
-                fadeMs={360}
+                holdMs={1200}
+                fadeMs={240}
                 shimmer
                 textStyle={styles.bubbleText}
                 onComplete={handleSpeechComplete}
@@ -192,10 +210,10 @@ export function WelcomeScreen() {
             </View>
 
             {phase >= 3 && (
-              <Animated.View entering={FadeInDown.delay(150).duration(420)} style={styles.btnWrap}>
+              <Animated.View entering={FadeInDown.delay(80).duration(360)} style={styles.btnWrap}>
                 <CeremonialButton
                   label="Begin"
-                  onPress={() => navigation.navigate('ValuePreview')}
+                  onPress={() => navigation.navigate('NameEntry')}
                   size="lg"
                 />
               </Animated.View>

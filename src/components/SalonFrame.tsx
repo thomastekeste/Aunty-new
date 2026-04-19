@@ -175,7 +175,7 @@ export function SalonFrame({
       </View>
 
       <Animated.View entering={FadeIn.duration(400)} style={styles.auntyHeader}>
-        <AuntyAvatar auntyId={auntyId} size={36} showRing glowing />
+        <AuntyAvatar auntyId={auntyId} size={44} showRing glowing />
         <View style={styles.auntyText}>
           <Text style={[styles.auntyName, { color: ac.accent }]} numberOfLines={1}>
             {aunty.name}
@@ -197,7 +197,7 @@ export function SalonFrame({
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 96 },
+          { paddingBottom: insets.bottom + 112 },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -218,7 +218,7 @@ export function SalonFrame({
             onPress={onCtaPress}
             disabled={ctaDisabled}
             loading={ctaLoading}
-            size="md"
+            size="lg"
           />
         </View>
       </View>
@@ -246,11 +246,11 @@ const styles = StyleSheet.create({
   auntyHalo: {
     position: 'absolute',
     alignSelf: 'center',
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    opacity: 0.08,
-    transform: [{ translateY: -80 }],
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    opacity: 0.1,
+    transform: [{ translateY: -40 }],
   },
 
   topRow: {
@@ -312,33 +312,33 @@ const styles = StyleSheet.create({
   auntyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.sm + 2,
     paddingHorizontal: spacing.lg,
-    marginTop: 0,
-    marginBottom: spacing.sm,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm + 2,
   },
   auntyText: { flexShrink: 1, flex: 1 },
   auntyName: {
     fontFamily: fonts.serifSemiBold,
-    fontSize: fontSize.md,
-    letterSpacing: -0.1,
-    lineHeight: fontSize.md * 1.1,
+    fontSize: fontSize.lg,
+    letterSpacing: -0.2,
+    lineHeight: fontSize.lg * 1.1,
   },
   auntyVerb: {
     fontFamily: fonts.serifItalic,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     color: colors.dark.textMuted,
     letterSpacing: 0.1,
   },
 
   question: {
     fontFamily: fonts.displayMedium,
-    fontSize: fontSize.lg + 2,
-    lineHeight: (fontSize.lg + 2) * 1.18,
-    letterSpacing: -0.3,
+    fontSize: 30,
+    lineHeight: 30 * 1.14,
+    letterSpacing: -0.6,
     color: colors.dark.text,
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
 
   scrollContent: { paddingHorizontal: spacing.lg },

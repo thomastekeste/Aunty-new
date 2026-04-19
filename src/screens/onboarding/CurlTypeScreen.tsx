@@ -134,8 +134,8 @@ function CurlCard({
         <Animated.View style={[styles.iconWrap, iconMotion]}>
           <CurlPatternIcon
             type={option.type}
-            size={36}
-            color={selected ? ac.accent : 'rgba(254, 248, 236, 0.65)'}
+            size={48}
+            color={selected ? ac.accent : 'rgba(254, 248, 236, 0.72)'}
           />
         </Animated.View>
         <Text style={[styles.cardLabel, selected && { color: colors.dark.text }]}>
@@ -235,29 +235,30 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: 'rgba(254, 248, 236, 0.10)',
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm + 2,
     paddingHorizontal: spacing.xs,
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   cardLabel: {
     fontFamily: fonts.serifBold,
-    fontSize: fontSize.md,
-    color: colors.dark.textMuted,
-    letterSpacing: -0.2,
+    fontSize: fontSize.lg,
+    color: colors.dark.text,
+    letterSpacing: -0.4,
   },
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 40,
+    minHeight: 56,
     width: '100%',
   },
   cardDesc: {
     fontFamily: fonts.serifItalic,
-    fontSize: 11,
+    fontSize: 12,
     color: colors.dark.textMuted,
     textAlign: 'center',
+    lineHeight: 14,
   },
   selectedHint: {
     backgroundColor: 'rgba(255, 250, 240, 0.05)',

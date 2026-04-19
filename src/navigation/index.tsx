@@ -32,7 +32,6 @@ import StrugglesScreen from '../screens/onboarding/StrugglesScreen';
 import BudgetQuestionScreen from '../screens/onboarding/BudgetQuestionScreen';
 import CouncilConveningScreen from '../screens/onboarding/CouncilConveningScreen';
 import CouncilVerdictScreen from '../screens/onboarding/CouncilVerdictScreen';
-import ValuePreviewScreen from '../screens/onboarding/ValuePreviewScreen';
 import ProductRevealScreen from '../screens/onboarding/ProductRevealScreen';
 import SendOffScreen from '../screens/onboarding/SendOffScreen';
 import ValidationOneScreen from '../screens/onboarding/ValidationOneScreen';
@@ -99,11 +98,6 @@ function OnboardingNavigator() {
       }}
     >
       <OnboardingStack.Screen name="Welcome" component={WelcomeScreen} />
-      <OnboardingStack.Screen
-        name="ValuePreview"
-        component={ValuePreviewScreen}
-        options={{ animation: 'fade', animationDuration: 360 }}
-      />
       <OnboardingStack.Screen name="NameEntry" component={NameEntryScreen} />
       <OnboardingStack.Screen name="CurlType" component={CurlTypeScreen} />
       <OnboardingStack.Screen

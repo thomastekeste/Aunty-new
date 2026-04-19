@@ -152,7 +152,6 @@ export type RootStackParamList = {
 
 export type OnboardingStackParamList = {
   Welcome: undefined;
-  ValuePreview: undefined;
   NameEntry: undefined;
   CurlType: undefined;
   Validation1: undefined;
