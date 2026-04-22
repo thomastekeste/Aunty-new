@@ -22,6 +22,8 @@ export interface Aunty {
   ingredient: string;
   win: string;
   fail: string;
+  /** One-line sign-off used under her name on dashboards and verdicts. */
+  signOff: string;
   emoji: string; // for internal reference only, never rendered as icon
 }
 
@@ -54,6 +56,7 @@ export const AUNTIES: Record<string, Aunty> = {
     ingredient: 'Shea butter, hot oil treatments, steam therapy',
     win: 'Ah ah! Now we dey talk o! Dis is what I been waiting for.',
     fail: 'Dis hair dey cry and you no dey listen — abeg, we do this together.',
+    signOff: 'No excuses, only shea.',
     emoji: '✨',
   },
   marcia: {
@@ -84,6 +87,7 @@ export const AUNTIES: Record<string, Aunty> = {
     ingredient: 'Jamaican black castor oil, scalp massage, peppermint',
     win: 'Yuh see it? Root strong, everything else follow.',
     fail: 'Nuh rush di process. Come, we go back to basics.',
+    signOff: 'Feed the root. Trust the grow.',
     emoji: '🌱',
   },
   denise: {
@@ -114,6 +118,7 @@ export const AUNTIES: Record<string, Aunty> = {
     ingredient: 'LOC method, satin bonnets, twist-outs, protective styling',
     win: 'Now THAT is what I\'m talking about. Look at that growth, baby.',
     fail: 'We don\'t give up in this house. We adjust and we keep going.',
+    signOff: 'Wisdom is the long way round.',
     emoji: '👑',
   },
   fatou: {
@@ -144,6 +149,7 @@ export const AUNTIES: Record<string, Aunty> = {
     ingredient: 'Karité butter, thread stretching, precision sectioning',
     win: 'Magnifique! Your technique, it is becoming art.',
     fail: 'Non, non — we must be more gentle, more precise. Again, with care.',
+    signOff: 'Precision is a form of love.',
     emoji: '🎯',
   },
   carmen: {
@@ -174,11 +180,12 @@ export const AUNTIES: Record<string, Aunty> = {
     ingredient: 'Flaxseed gel, finger coiling, diffusing technique',
     win: 'Ay mami, LOOK at those curls! That\'s what I\'m talking about!',
     fail: 'No te preocupes, we try again. Every curl day is different.',
+    signOff: 'Every curl gets to sing.',
     emoji: '💃',
   },
   amara: {
     id: 'amara',
-    name: 'Amara',
+    name: 'Senayt',
     region: 'Ethiopian-Eritrean',
     title: 'The Steady One',
     specialty: 'Calm strength. Never panics, always delivers.',
@@ -200,10 +207,11 @@ export const AUNTIES: Record<string, Aunty> = {
       'Rest day means rest. Do not touch, twist, or fuss. Let it be.',
       'Henna strengthens without chemicals. Consider it for your next treatment.',
     ],
-    greeting: 'Selam, dear one. Let us build something strong.',
+    greeting: 'Senayt is here. Let us build something strong.',
     ingredient: 'Fenugreek protein treatments, castor oil, henna',
     win: 'Feel that strength? That is your hair remembering what it is.',
     fail: 'Your hair is tired, not broken. We will restore it, step by step.',
+    signOff: 'Strong roots, steady hands.',
     emoji: '💪',
   },
   salma: {
@@ -234,6 +242,7 @@ export const AUNTIES: Record<string, Aunty> = {
     ingredient: 'Argan oil, ghassoul clay, rose water, henna',
     win: 'See how calm your hair is now? When we are balanced, everything flows.',
     fail: 'Do not worry. Healing is not linear. We adjust the remedy.',
+    signOff: 'Balance is the whole remedy.',
     emoji: '🌿',
   },
 };

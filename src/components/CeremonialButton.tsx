@@ -25,7 +25,6 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withTiming,
-  withRepeat,
   withDelay,
   withSequence,
   Easing,
@@ -83,22 +82,26 @@ export function CeremonialButton({
   const isDisabled = disabled || loading;
   const canShimmer = shimmer && !isDisabled && variant === 'primary';
 
+  // Single shimmer sweep on mount; no idle loop.
+  // Additional sweeps fire on press-out (see handlePressOut).
   useEffect(() => {
     if (!canShimmer) {
-      idleShimmer.value = withTiming(-1, { duration: 0 });
+      idleShimmer.value = -1;
       return;
     }
-    idleShimmer.value = withRepeat(
-      withSequence(
-        withTiming(-1, { duration: 0 }),
-        withDelay(
-          1200,
-          withTiming(1.2, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
-        ),
-        withDelay(3200, withTiming(-1, { duration: 0 })),
-      ),
-      -1,
-      false,
+    idleShimmer.value = -1;
+    idleShimmer.value = withDelay(
+      600,
+      withTiming(1.2, { duration: 1000, easing: Easing.inOut(Easing.quad) }),
+    );
+  }, [canShimmer]);
+
+  const fireShimmer = useCallback(() => {
+    if (!canShimmer) return;
+    idleShimmer.value = -1;
+    idleShimmer.value = withDelay(
+      80,
+      withTiming(1.2, { duration: 900, easing: Easing.inOut(Easing.quad) }),
     );
   }, [canShimmer]);
 
@@ -115,7 +118,8 @@ export function CeremonialButton({
   const handlePressOut = useCallback(() => {
     scale.value = withSpring(1, SPRING);
     ringTighten.value = withTiming(0, { duration: 220 });
-  }, []);
+    fireShimmer();
+  }, [fireShimmer]);
 
   const handlePress = useCallback(() => {
     if (isDisabled) return;

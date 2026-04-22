@@ -31,7 +31,14 @@
     },
     "plugins": [
       "expo-font",
-      "expo-image"
+      "expo-image",
+      "expo-sharing",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Aunty Curl uses your approximate location to show humidity-aware hair tips on your home screen."
+        }
+      ]
     ],
     "extra": {
       "eas": {

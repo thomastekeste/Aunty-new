@@ -1,14 +1,16 @@
 /**
- * EditorialCard — Magazine-style selection card.
+ * EditorialCard — Framed answer bubble for consultation questions.
  *
- * Replaces OptionCard for the redesign. Visual signature:
- *   • aunty-tinted left bar (4px → 6px when selected)
- *   • warm dark glass surface with a subtle top-edge highlight
- *   • oversized icon zone (left of bar) for emoji/glyph
- *   • label in editorial serif, description in italic muted serif
- *   • on select: card lifts (shadow grows), bar thickens, gold checkmark
- *     badge drops in with a spring from the top-right corner
- *   • on press: spring scale 0.985 + opacity 0.9
+ *   • Proper card body: hairline border all around, radius 10, real vertical
+ *     presence so answers feel substantial, not like list rows.
+ *   • Left: no index number — answers are unordered choices.
+ *   • Middle: serif label (20pt) + italic muted description.
+ *   • Right: hairline ring → filled aunty-accent bullet with cream tick.
+ *   • Selected: accent-tinted fill + accent border + subtle elevation.
+ *   • Press: 0.99 scale + 0.9 opacity (no layout shift).
+ *   • Entrance: staggered fade-up.
+ *
+ * The `icon` prop is accepted for API compat but not rendered.
  */
 
 import React, { useCallback, useEffect } from 'react';
@@ -19,68 +21,65 @@ import Animated, {
   withSpring,
   withTiming,
   FadeInDown,
+  interpolate,
+  interpolateColor,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
   colors,
   auntyColors,
   fonts,
   fontSize,
   spacing,
-  radius,
-  salon,
 } from '../constants/theme';
 import type { AuntyId } from '../constants/aunties';
 
 interface Props {
   label: string;
   description?: string;
+  /** Kept for API compat — not rendered in the editorial design. */
   icon?: string | React.ReactNode;
   selected: boolean;
   onPress: () => void;
   auntyId: AuntyId;
   index?: number;
-  /** Compact mode = no icon zone, tighter padding (used for grids). */
+  /** Deprecated — retained for prop compatibility. */
   compact?: boolean;
-  /** Optional tag chip displayed top-right (e.g. "POPULAR"). */
+  /** Optional magazine-style tag (e.g. "MOST ASKED"). */
   tag?: string;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const PRESS_SPRING = { damping: 16, stiffness: 220, mass: 0.35 };
-const SELECT_SPRING = { damping: 14, stiffness: 180, mass: 0.6 };
+
+const BORDER_IDLE = 'rgba(254, 248, 236, 0.14)';
+const FILL_IDLE = 'rgba(254, 248, 236, 0.025)';
+const LABEL_IDLE = 'rgba(254, 248, 236, 0.92)';
+const LABEL_ACTIVE = colors.dark.text;
+const DESC_IDLE = 'rgba(254, 248, 236, 0.48)';
 
 export function EditorialCard({
   label,
   description,
-  icon,
   selected,
   onPress,
   auntyId,
   index = 0,
-  compact = false,
   tag,
 }: Props) {
   const ac = auntyColors[auntyId];
 
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
-  const lift = useSharedValue(selected ? 1 : 0);
-  const checkScale = useSharedValue(selected ? 1 : 0);
-  const barWidth = useSharedValue(selected ? salon.bar.widthSelected : salon.bar.width);
+  const sel = useSharedValue(selected ? 1 : 0);
 
   useEffect(() => {
-    lift.value = withTiming(selected ? 1 : 0, { duration: 220 });
-    barWidth.value = withTiming(selected ? salon.bar.widthSelected : salon.bar.width, { duration: 200 });
-    checkScale.value = selected
-      ? withSpring(1, SELECT_SPRING)
-      : withTiming(0, { duration: 160 });
+    sel.value = withTiming(selected ? 1 : 0, { duration: 220 });
   }, [selected]);
 
   const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.985, PRESS_SPRING);
-    opacity.value = withTiming(0.92, { duration: 90 });
+    scale.value = withSpring(0.99, PRESS_SPRING);
+    opacity.value = withTiming(0.88, { duration: 90 });
   }, []);
 
   const handlePressOut = useCallback(() => {
@@ -98,25 +97,42 @@ export function EditorialCard({
     opacity: opacity.value,
   }));
 
-  const cardLiftStyle = useAnimatedStyle(() => ({
-    shadowOpacity: 0.08 + lift.value * 0.32,
-    shadowRadius: 8 + lift.value * 18,
-    transform: [{ translateY: -lift.value * 2 }],
+  const cardStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      sel.value,
+      [0, 1],
+      [FILL_IDLE, `${ac.accent}14`], // ~8% accent tint when selected
+    ),
+    borderColor: interpolateColor(
+      sel.value,
+      [0, 1],
+      [BORDER_IDLE, ac.accent],
+    ),
   }));
 
-  const barStyle = useAnimatedStyle(() => ({
-    width: barWidth.value,
-    backgroundColor: ac.accent,
-    opacity: 0.5 + lift.value * 0.5,
+  const labelStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(sel.value, [0, 1], [LABEL_IDLE, LABEL_ACTIVE]),
   }));
 
-  const checkStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: checkScale.value }],
-    opacity: checkScale.value,
+  const bulletRingStyle = useAnimatedStyle(() => ({
+    opacity: 1 - sel.value,
+  }));
+
+  const bulletFillStyle = useAnimatedStyle(() => ({
+    opacity: sel.value,
+    transform: [{ scale: 0.6 + sel.value * 0.4 }],
+  }));
+
+  const accentBarStyle = useAnimatedStyle(() => ({
+    opacity: sel.value,
+    transform: [{ translateX: interpolate(sel.value, [0, 1], [-6, 0]) }],
   }));
 
   return (
-    <Animated.View entering={FadeInDown.delay(60 * index).duration(360)}>
+    <Animated.View
+      entering={FadeInDown.delay(50 * index).duration(340)}
+      style={styles.wrap}
+    >
       <AnimatedPressable
         onPress={handlePress}
         onPressIn={handlePressIn}
@@ -127,176 +143,148 @@ export function EditorialCard({
         accessibilityLabel={`${label}${selected ? ', selected' : ''}`}
         accessibilityHint={description}
       >
-        <Animated.View
-          style={[
-            styles.card,
-            compact && styles.cardCompact,
-            cardLiftStyle,
-            {
-              shadowColor: ac.accent,
-              backgroundColor: selected ? ac.accent + '14' : salon.card.surface,
-              borderColor: selected ? ac.accent + '55' : salon.card.border,
-            },
-          ]}
-        >
-          {/* aunty-tinted left bar */}
-          <Animated.View style={[styles.bar, barStyle]} />
-
-          {/* top-edge inner highlight */}
-          <LinearGradient
-            colors={['rgba(255, 250, 240, 0.07)', 'rgba(255, 250, 240, 0)']}
-            style={styles.topHighlight}
+        <Animated.View style={[styles.card, cardStyle]}>
+          {/* Left accent bar — slides in on selection */}
+          <Animated.View
             pointerEvents="none"
+            style={[styles.accentBar, accentBarStyle, { backgroundColor: ac.accent }]}
           />
 
-          <View style={[styles.body, compact && styles.bodyCompact]}>
-            {icon && !compact ? (
-              <View
-                style={[
-                  styles.iconZone,
-                  { backgroundColor: selected ? ac.accent + '22' : 'rgba(255, 250, 240, 0.04)' },
-                ]}
-              >
-                {typeof icon === 'string' ? (
-                  <Text style={styles.iconGlyph}>{icon}</Text>
-                ) : (
-                  icon
-                )}
-              </View>
-            ) : null}
-
-            <View style={styles.text}>
-              <Text
-                style={[
-                  styles.label,
-                  selected && { color: colors.dark.text },
-                ]}
+          {/* Label + description */}
+          <View style={styles.text}>
+            <View style={styles.labelRow}>
+              <Animated.Text
+                style={[styles.label, labelStyle]}
                 numberOfLines={2}
               >
                 {label}
-              </Text>
-              {description ? (
-                <Text style={styles.description} numberOfLines={2}>
-                  {description}
-                </Text>
+              </Animated.Text>
+              {tag ? (
+                <View style={[styles.tag, { borderColor: ac.accent }]}>
+                  <Text style={[styles.tagText, { color: ac.accent }]}>{tag}</Text>
+                </View>
               ) : null}
             </View>
+            {description ? (
+              <Text style={styles.description} numberOfLines={2}>
+                {description}
+              </Text>
+            ) : null}
           </View>
 
-          {tag ? (
-            <View style={[styles.tag, { backgroundColor: ac.accent }]}>
-              <Text style={styles.tagText}>{tag}</Text>
-            </View>
-          ) : null}
-
-          <Animated.View style={[styles.checkBadge, checkStyle, { backgroundColor: ac.accent }]}>
-            <Text style={styles.checkGlyph}>{'\u2713'}</Text>
-          </Animated.View>
+          {/* Selection bullet — hairline ring → filled accent */}
+          <View style={styles.bulletCol}>
+            <Animated.View
+              style={[
+                styles.bulletRing,
+                bulletRingStyle,
+                { borderColor: 'rgba(254, 248, 236, 0.32)' },
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.bulletFill,
+                bulletFillStyle,
+                { backgroundColor: ac.accent },
+              ]}
+            >
+              <Text style={styles.bulletTick}>{'\u2713'}</Text>
+            </Animated.View>
+          </View>
         </Animated.View>
       </AnimatedPressable>
     </Animated.View>
   );
 }
 
+const BULLET_COL_W = 28;
+const BULLET = 22;
+
 const styles = StyleSheet.create({
+  wrap: {
+    marginBottom: spacing.sm + 2,
+  },
   card: {
-    minHeight: 68,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    overflow: 'hidden',
-    marginBottom: spacing.sm,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  cardCompact: {
-    minHeight: 92,
-  },
-  bar: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-  },
-  topHighlight: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 14,
-  },
-  body: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md - 2,
-    paddingVertical: spacing.sm + 6,
-    paddingLeft: spacing.md + salon.bar.widthSelected + 2,
-    paddingRight: spacing.md + 32, // reserve for check badge
+    paddingVertical: spacing.md + 2,
+    paddingLeft: spacing.md + 4,
+    paddingRight: spacing.md,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    gap: spacing.sm,
+    minHeight: 64,
+    overflow: 'hidden',
   },
-  bodyCompact: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: spacing.xs,
+  accentBar: {
+    position: 'absolute',
+    left: 0,
+    top: 10,
+    bottom: 10,
+    width: 3,
+    borderTopRightRadius: 2,
+    borderBottomRightRadius: 2,
   },
-  iconZone: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.md,
+  text: {
+    flex: 1,
+    gap: 4,
+  },
+  labelRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: spacing.xs,
+    flexWrap: 'wrap',
   },
-  iconGlyph: { fontSize: 24 },
-  text: { flex: 1 },
   label: {
     fontFamily: fonts.serifSemiBold,
-    fontSize: 17,
-    color: colors.dark.text,
-    letterSpacing: -0.25,
-    lineHeight: 17 * 1.2,
+    fontSize: 20,
+    letterSpacing: -0.3,
+    lineHeight: 24,
+    flexShrink: 1,
   },
   description: {
     fontFamily: fonts.serifItalic,
-    fontSize: fontSize.sm,
-    color: colors.dark.textMuted,
-    marginTop: 3,
-    lineHeight: fontSize.sm * 1.4,
-    letterSpacing: 0.05,
+    fontSize: fontSize.sm + 1,
+    color: DESC_IDLE,
+    lineHeight: (fontSize.sm + 1) * 1.45,
+    letterSpacing: 0.08,
   },
   tag: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 2,
   },
   tagText: {
     fontFamily: fonts.bodySemiBold,
     fontSize: 9,
-    color: '#FFFFFF',
-    letterSpacing: 1.2,
+    letterSpacing: 1.4,
   },
-  checkBadge: {
-    position: 'absolute',
-    top: '50%',
-    right: 14,
-    marginTop: -13,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+  bulletCol: {
+    width: BULLET_COL_W,
+    height: BULLET + 4,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
   },
-  checkGlyph: {
+  bulletRing: {
+    position: 'absolute',
+    width: BULLET,
+    height: BULLET,
+    borderRadius: BULLET / 2,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+  },
+  bulletFill: {
+    position: 'absolute',
+    width: BULLET,
+    height: BULLET,
+    borderRadius: BULLET / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bulletTick: {
     color: '#FFFFFF',
-    fontSize: 14,
     fontFamily: fonts.bodyBold,
-    lineHeight: 16,
+    fontSize: 12,
+    lineHeight: 13,
   },
 });

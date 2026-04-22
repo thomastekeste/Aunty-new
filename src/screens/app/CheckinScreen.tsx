@@ -13,6 +13,7 @@ import {
   Pressable,
   TextInput,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
@@ -35,6 +36,19 @@ import { AUNTIES, type AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
 
 type Mood = CheckInMood;
+
+function CloseIcon({ size = 18, color = colors.dark.text }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M6 6L18 18M18 6L6 18"
+        stroke={color}
+        strokeWidth={2.2}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
 
 interface MoodOption {
   key: Mood;
@@ -156,11 +170,15 @@ export default function CheckInScreen() {
       {/* Top bar */}
       <View style={styles.topBar}>
         <Pressable onPress={() => navigation.goBack()} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="Close">
-          <Text style={styles.closeText}>X</Text>
+          <CloseIcon />
         </Pressable>
-        <Text style={styles.topTitle}>Weekly Check-in</Text>
+        <View style={styles.topTitleCol}>
+          <Text style={styles.topOverline}>{`WEEK ${weekNumber}`}</Text>
+          <Text style={styles.topTitle}>Weekly Check-in</Text>
+        </View>
         <View style={{ width: 44 }} />
       </View>
+      <View style={styles.topRule} />
 
       {/* Aunty avatar + question */}
       <Animated.View entering={FadeInDown.duration(300)} style={styles.questionSection}>
@@ -239,17 +257,33 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dark.surfaceLight,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.dark.border,
   },
-  closeText: {
+  topTitleCol: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  topOverline: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.md,
-    color: colors.dark.text,
+    fontSize: 10,
+    color: colors.primary,
+    letterSpacing: 2.4,
   },
   topTitle: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.md,
+    fontFamily: fonts.display,
+    fontSize: fontSize.lg,
     color: colors.dark.text,
-    letterSpacing: letterSpacing.wide,
+    letterSpacing: -0.2,
+  },
+  topRule: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.primary,
+    opacity: 0.35,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    marginTop: -spacing.sm,
   },
   questionSection: {
     alignItems: 'center',

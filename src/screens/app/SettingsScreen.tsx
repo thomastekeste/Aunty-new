@@ -12,15 +12,21 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
-  Switch,
   Alert,
-  Platform,
   Linking,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  interpolate,
+  interpolateColor,
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
@@ -62,11 +68,111 @@ function getHairProfileSummary(profile: Record<string, any>): string {
   return parts.length > 0 ? parts.join(' \u00b7 ') : 'Not set';
 }
 
+// ─── Icons ──────────────────────────────────────────────────────
+
+function ChevronLeft({ size = 22, color = colors.ink }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M15 6L9 12L15 18"
+        stroke={color}
+        strokeWidth={2.2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function ChevronRight({ size = 18, color = colors.muted }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M9 6L15 12L9 18"
+        stroke={color}
+        strokeWidth={2.2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+// ─── Brand-tuned toggle (replaces system Switch) ────────────────
+
+function BrandSwitch({
+  value,
+  onValueChange,
+}: {
+  value: boolean;
+  onValueChange: (v: boolean) => void;
+}) {
+  const progress = useSharedValue(value ? 1 : 0);
+
+  useEffect(() => {
+    progress.value = withTiming(value ? 1 : 0, { duration: 220 });
+  }, [value]);
+
+  const trackStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      progress.value,
+      [0, 1],
+      [colors.border, colors.primary],
+    ),
+  }));
+
+  const thumbStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(progress.value, [0, 1], [2, 22]) }],
+  }));
+
+  const handlePress = () => {
+    Haptics.selectionAsync().catch(() => {});
+    onValueChange(!value);
+  };
+
+  return (
+    <Pressable
+      onPress={handlePress}
+      hitSlop={8}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value }}
+    >
+      <Animated.View style={[brandSwitchStyles.track, trackStyle]}>
+        <Animated.View style={[brandSwitchStyles.thumb, thumbStyle]} />
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+const brandSwitchStyles = StyleSheet.create({
+  track: {
+    width: 46,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+    padding: 2,
+  },
+  thumb: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#2D1B0E',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+});
+
 // ─── Section Components ─────────────────────────────────────────
 
 function SectionHeader({ title }: { title: string }) {
   return (
-    <Text style={styles.sectionHeader}>{title.toUpperCase()}</Text>
+    <View style={styles.sectionHeaderRow}>
+      <Text style={styles.sectionHeader}>{title.toUpperCase()}</Text>
+      <View style={styles.sectionHeaderRule} />
+    </View>
   );
 }
 
@@ -107,7 +213,7 @@ function ListRow({
       {rightElement ? (
         rightElement
       ) : onPress && showChevron ? (
-        <Text style={styles.chevron}>{'\u203a'}</Text>
+        <ChevronRight />
       ) : null}
     </Pressable>
   );
@@ -193,11 +299,12 @@ export default function SettingsScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Text style={styles.backArrow}>{'\u2039'}</Text>
+            <ChevronLeft />
           </Pressable>
           <Text style={[typography.h2]}>Settings</Text>
           <View style={{ width: 44 }} />
         </View>
+        <View style={styles.headerRule} />
 
         {/* ─── Profile Section ─────────────────────────── */}
         <Animated.View entering={FadeInDown.delay(100).duration(400)}>
@@ -226,20 +333,18 @@ export default function SettingsScreen() {
               <AuntyAvatar auntyId={auntyId} size={44} showRing />
               <View style={{ flex: 1 }}>
                 <Text style={styles.auntyRowName}>{aunty.name}</Text>
-                <Text style={styles.auntyRowTitle}>{aunty.title} — {aunty.region}</Text>
+                <Text style={styles.auntyRowTitle}>{aunty.title}</Text>
               </View>
-              <Text style={styles.auntyRowChevron}>›</Text>
+              <ChevronRight />
             </Pressable>
             <View style={styles.divider} />
             <ListRow
               label="Notifications"
               showChevron={false}
               rightElement={
-                <Switch
+                <BrandSwitch
                   value={notificationsEnabled}
                   onValueChange={handleToggleNotifications}
-                  trackColor={{ false: colors.border, true: colors.primary }}
-                  thumbColor={notificationsEnabled ? colors.primaryLight : colors.surface}
                 />
               }
             />
@@ -319,7 +424,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  headerRule: {
+    marginHorizontal: spacing.lg,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.primary,
+    opacity: 0.35,
+    marginBottom: spacing.xs,
   },
   backButton: {
     width: 44,
@@ -331,20 +443,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  backArrow: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.xl,
-    color: colors.ink,
-    marginTop: -2,
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xl,
+    marginBottom: spacing.sm,
   },
   sectionHeader: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.xs,
     color: colors.primary,
     letterSpacing: letterSpacing.widest,
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.xl,
-    marginBottom: spacing.sm,
+  },
+  sectionHeaderRule: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.primary,
+    opacity: 0.3,
   },
   card: {
     backgroundColor: colors.surface,
@@ -374,12 +491,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.muted,
   },
-  chevron: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.xl,
-    color: colors.muted,
-    marginLeft: spacing.sm,
-  },
   divider: {
     height: 1,
     backgroundColor: colors.borderLight,
@@ -403,12 +514,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.muted,
     marginTop: 1,
-  },
-  auntyRowChevron: {
-    fontFamily: fonts.bodyBold,
-    fontSize: fontSize.xl,
-    color: colors.muted,
-    lineHeight: 24,
   },
   version: {
     fontFamily: fonts.body,

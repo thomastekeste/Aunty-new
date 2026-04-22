@@ -92,11 +92,11 @@ export default function PorosityTestScreen() {
         entering={FadeInDown.delay(200).duration(400)}
         style={styles.instruction}
         accessibilityRole="text"
-        accessibilityLabel="If you don't know your porosity, try the water glass test. Drop a clean strand of hair into a glass of room-temperature water. Wait 2 to 4 minutes, then see whether it floats at the top, hovers in the middle, or sinks to the bottom."
+        accessibilityLabel="If you do not know your porosity, try the water glass test. Drop a clean strand of hair into a glass of room-temperature water. Wait 2 to 4 minutes, then see whether it floats at the top, hovers in the middle, or sinks to the bottom."
       >
         <Text style={styles.instructionIcon}>{'\uD83E\uDDEA'}</Text>
         <View style={styles.instructionTextWrap}>
-          <Text style={styles.instructionTitle}>Don't know yours? Try the water test</Text>
+          <Text style={styles.instructionTitle}>{"Don't know yours? Try the water test"}</Text>
           <Text style={styles.instructionBody}>
             Drop a clean strand (a piece from your brush works) into a glass of
             room-temperature water. Wait 2-4 minutes — does it float at the top,

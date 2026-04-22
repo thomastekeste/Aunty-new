@@ -73,7 +73,7 @@ function getStatusForAunty(auntyId: AuntyId, name: string, profile: any): string
     case 'carmen':
       return `Carmen is selecting for ${goal}…`;
     case 'amara':
-      return 'Amara is laying the foundation…';
+      return 'Senayt is laying the foundation…';
     case 'salma':
       return `${name}, Salma is finalizing your plan…`;
     default:

@@ -76,6 +76,16 @@ export default function SendOffScreen() {
         >
           {aunty.name}
         </Animated.Text>
+        <Animated.Text
+          entering={FadeIn.delay(520).duration(420)}
+          style={styles.tagline}
+        >
+          {aunty.signOff}
+        </Animated.Text>
+        <Animated.View
+          entering={FadeIn.delay(620).duration(420)}
+          style={[styles.nameRule, { backgroundColor: ac.accent }]}
+        />
 
         <View style={styles.bubbleWrap}>
           <SpeechBubble
@@ -83,6 +93,7 @@ export default function SendOffScreen() {
             holdMs={1900}
             fadeMs={420}
             shimmer
+            quoteMarkColor={ac.accent}
             textStyle={[styles.line, { color: colors.dark.text }]}
             onComplete={handleComplete}
           />
@@ -114,6 +125,19 @@ const styles = StyleSheet.create({
     fontFamily: fonts.serifBold,
     fontSize: fontSize.xxl,
     letterSpacing: -0.4,
+    marginBottom: 4,
+  },
+  tagline: {
+    fontFamily: fonts.serifItalic,
+    fontSize: fontSize.md,
+    color: colors.dark.textMuted,
+    letterSpacing: 0.2,
+    marginBottom: spacing.md,
+  },
+  nameRule: {
+    width: 48,
+    height: StyleSheet.hairlineWidth * 2,
+    opacity: 0.6,
     marginBottom: spacing.xl,
   },
   bubbleWrap: { width: '100%', minHeight: 200, justifyContent: 'center' },

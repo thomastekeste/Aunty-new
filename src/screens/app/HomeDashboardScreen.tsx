@@ -35,6 +35,7 @@ import {
 } from '../../constants/theme';
 import { AUNTIES, type AuntyId, getAuntyQuoteForSession, getAuntyTipForToday } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { useLocalHumidity, getHumidityOneLiner } from '../../hooks/useLocalHumidity';
 import type { RitualDayType } from '../../types';
 
 const DAILY_RITUAL: Record<number, { type: RitualDayType; label: string; purpose: string; time: string }> = {
@@ -84,6 +85,21 @@ function getGreeting(): string {
   if (h < 12) return 'Good morning';
   if (h < 17) return 'Good afternoon';
   return 'Good evening';
+}
+
+const MASTHEAD_MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+const MASTHEAD_DAYS = [
+  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+];
+
+function getMastheadDate(): { weekday: string; dateLine: string } {
+  const d = new Date();
+  const weekday = MASTHEAD_DAYS[d.getDay()];
+  const dateLine = `${MASTHEAD_MONTHS[d.getMonth()]} ${d.getDate()} \u00b7 ${d.getFullYear()}`;
+  return { weekday, dateLine };
 }
 
 function getWeekDates(): Array<{ date: number; dateObj: Date }> {
@@ -233,6 +249,8 @@ export default function HomeDashboardScreen() {
 
   const [weekNumber, setWeekNumber] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const { percent: outdoorHumidity, band: humidityBand } = useLocalHumidity();
+  const humidityLine = getHumidityOneLiner(outdoorHumidity, humidityBand);
 
   useEffect(() => {
     let cancelled = false;
@@ -277,19 +295,34 @@ export default function HomeDashboardScreen() {
     return <HomeScreenSkeleton paddingTop={insets.top} />;
   }
 
+  const masthead = getMastheadDate();
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
       >
+        {/* ─── Editorial masthead ─────────────────── */}
+        <Animated.View entering={FadeIn.duration(420)} style={styles.masthead}>
+          <Text style={styles.mastheadWeekday}>{masthead.weekday.toUpperCase()}</Text>
+          <View style={styles.mastheadCenter}>
+            <View style={styles.mastheadHairline} />
+            <Text style={styles.mastheadDate}>{masthead.dateLine}</Text>
+            <View style={styles.mastheadHairline} />
+          </View>
+          <Text style={styles.mastheadWeek}>WEEK {weekNumber}</Text>
+        </Animated.View>
+
         <Animated.View entering={FadeIn.duration(380)} style={styles.topBar}>
           <View style={styles.topBarLeft}>
             <AuntyAvatar auntyId={auntyId} size={44} showRing />
             <View style={styles.greetingCol}>
-              <Text style={styles.greetingSub}>Week {weekNumber}</Text>
               <Text style={styles.greeting} numberOfLines={1}>
                 {getGreeting()}, {name}
+              </Text>
+              <Text style={[styles.greetingSignOff, { color: ac.accent }]} numberOfLines={1}>
+                {aunty.signOff}
               </Text>
             </View>
           </View>
@@ -322,7 +355,7 @@ export default function HomeDashboardScreen() {
             >
               <View style={styles.heroTop}>
                 <View style={styles.heroOverlineRow}>
-                  <Text style={styles.heroOverline}>TODAY'S RITUAL</Text>
+                  <Text style={styles.heroOverline}>TODAY'S CHECK-IN</Text>
                   <View style={styles.heroTimePill}>
                     <Text style={styles.heroTimeText}>{today.time}</Text>
                   </View>
@@ -333,8 +366,9 @@ export default function HomeDashboardScreen() {
               </View>
               <Text style={styles.heroLabel}>{today.label}</Text>
               <Text style={styles.heroPurpose}>{today.purpose}</Text>
+              {humidityLine ? <Text style={styles.heroHumidity}>{humidityLine}</Text> : null}
               <View style={styles.heroCta}>
-                <Text style={styles.heroCtaText}>Start Ritual</Text>
+                <Text style={styles.heroCtaText}>Start Check-In</Text>
                 <ChevronRightIcon color="#FFFFFF" size={17} />
               </View>
             </LinearGradient>
@@ -464,6 +498,52 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: 1,
   },
+  greetingSignOff: {
+    fontFamily: fonts.serifItalic,
+    fontSize: fontSize.sm,
+    marginTop: 2,
+    letterSpacing: 0.1,
+  },
+
+  // ── Editorial masthead ──
+  masthead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  mastheadWeekday: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    letterSpacing: 2.6,
+  },
+  mastheadCenter: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  mastheadHairline: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.primary,
+    opacity: 0.45,
+  },
+  mastheadDate: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 10,
+    color: colors.muted,
+    letterSpacing: 1.6,
+  },
+  mastheadWeek: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    letterSpacing: 2.6,
+  },
   settingsBtn: {
     width: 44,
     height: 44,
@@ -527,6 +607,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: 'rgba(255, 255, 255, 0.92)',
     lineHeight: fontSize.md * 1.45,
+  },
+  heroHumidity: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: 'rgba(255, 255, 255, 0.8)',
+    lineHeight: fontSize.xs * 1.5,
+    marginTop: 4,
   },
   heroCta: {
     flexDirection: 'row',

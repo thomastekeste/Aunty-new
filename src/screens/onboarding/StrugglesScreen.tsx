@@ -1,5 +1,5 @@
 /**
- * StrugglesScreen — Amara hosts the struggle selection.
+ * StrugglesScreen — Senayt hosts the struggle selection.
  *
  * "Tell me where it hurts."
  * Multi-select for common hair struggles.

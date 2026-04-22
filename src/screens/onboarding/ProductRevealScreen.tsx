@@ -16,6 +16,7 @@ import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { CeremonialButton } from '../../components/CeremonialButton';
+import { EditorialHeader } from '../../components/EditorialHeader';
 import { PaywallModal } from '../../components/PaywallModal';
 import { AUNTIES, type AuntyId } from '../../constants/aunties';
 import { PRODUCTS, type Product, type ProductCategory } from '../../constants/products';
@@ -164,17 +165,15 @@ export default function ProductRevealScreen() {
   // ─── POST-PAYWALL: Tabs + Full Products ──────────────────────
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.md }]}>
-      {/* Header — single block, no competing summary */}
-      <View style={styles.header}>
-        <Text style={styles.overline}>YOUR RECOMMENDATIONS</Text>
-        <Text style={styles.titleSmall}>Products For You</Text>
-        <Text style={styles.headerMeta}>
-          {products.length} picks for {curlLabel} hair · {scopeLabel} · {budgetLabel}
-        </Text>
-        <Text style={[styles.byAunty, { color: ac.text }]}>
-          Curated by Aunty {chosenAunty.name}
-        </Text>
-      </View>
+      <EditorialHeader
+        overline="Your Recommendations"
+        title="Products For You"
+        meta={`${products.length} picks`}
+        subtitle={`Curated by ${chosenAunty.name} for ${curlLabel} hair`}
+      />
+      <Text style={styles.postHeaderMeta}>
+        {`${scopeLabel} \u00b7 ${budgetLabel}`}
+      </Text>
 
       {/* Category tabs */}
       {tabs.length > 0 && (
@@ -293,7 +292,6 @@ const styles = StyleSheet.create({
 
   // Pre-paywall
   prePaywall: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, gap: spacing.lg },
-  overline: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, letterSpacing: letterSpacing.widest, color: colors.primary },
   title: { fontFamily: fonts.display, fontSize: fontSize.xxl, color: colors.ink, letterSpacing: letterSpacing.tight, lineHeight: fontSize.xxl * 1.15, marginTop: spacing.xs },
   subtitle: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.muted, marginTop: spacing.sm, lineHeight: fontSize.md * 1.5 },
 
@@ -309,10 +307,15 @@ const styles = StyleSheet.create({
   skipText: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.muted },
 
   // Post-paywall
-  header: { paddingHorizontal: spacing.lg, marginBottom: spacing.md, gap: 2 },
-  titleSmall: { fontFamily: fonts.display, fontSize: fontSize.xxl, color: colors.ink, letterSpacing: letterSpacing.tight, marginTop: spacing.xs },
-  headerMeta: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.muted, marginTop: spacing.xs },
-  byAunty: { fontFamily: fonts.bodyMedium, fontSize: fontSize.xs, marginTop: 2, letterSpacing: 0.2 },
+  postHeaderMeta: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 10,
+    color: colors.primary,
+    letterSpacing: 2.4,
+    textTransform: 'uppercase',
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
 
   tabScroll: { maxHeight: 48, marginBottom: spacing.sm },
   tabRow: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: 'center' },

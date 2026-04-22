@@ -39,6 +39,17 @@ export interface QA {
   auntyId: AuntyId;
 }
 
+export interface Dispatch {
+  id: string;
+  title: string;
+  source: string;      // publication/brand name
+  url: string;         // external link
+  topic: string;       // short tag: "Porosity", "Ingredients", etc.
+  note: string;        // 1-sentence editorial note / why it matters
+  endorsedBy: AuntyId; // which aunty recommends it
+  readTime: string;
+}
+
 // ─── The Method ─────────────────────────────────────────────────
 
 export const METHOD_ARTICLES: Article[] = [
@@ -247,7 +258,7 @@ export const APPROVED_CREATORS: Creator[] = [
     endorsedBy: 'carmen',
     curlTypes: '2c–3b',
   },
-  // Amara's picks — strength & repair
+  // Senayt's picks — strength & repair
   {
     id: 'c-afrocenchix',
     name: 'Afrocenchix',
@@ -331,6 +342,75 @@ export const COUNCIL_QA: QA[] = [
     question: 'How do I reduce frizz without weighing my hair down?',
     answer: 'Frizz is individual strands that didn\'t join a curl clump. Prevention starts in the shower: apply styler to dripping wet hair, don\'t touch it while drying. If you diffuse, use low heat and don\'t move the diffuser. Touching your hair while it dries is the number one cause of frizz.',
     auntyId: 'fatou',
+  },
+];
+
+// ─── Dispatches — curated reading from around the web ───────────
+//
+// External essays and guides the Council recommends. Magazine-style
+// "further reading". URLs point at publication hubs, not specific
+// articles, to stay evergreen.
+
+export const LIBRARY_DISPATCHES: Dispatch[] = [
+  {
+    id: 'd-porosity-nc',
+    title: 'Understanding Hair Porosity',
+    source: 'NaturallyCurly',
+    url: 'https://www.naturallycurly.com/',
+    topic: 'Porosity',
+    note: 'A practical primer. If our porosity article is the "why," this one is the "how to test it at home."',
+    endorsedBy: 'marcia',
+    readTime: '6 min',
+  },
+  {
+    id: 'd-protein-byrdie',
+    title: 'Signs of Protein Overload',
+    source: 'Byrdie',
+    url: 'https://www.byrdie.com/hair',
+    topic: 'Protein vs. Moisture',
+    note: 'Straight talk on when protein treatments start working against you. Worth re-reading seasonally.',
+    endorsedBy: 'amara',
+    readTime: '5 min',
+  },
+  {
+    id: 'd-humectants-curlynikki',
+    title: 'Glycerin, Humidity & Dew Points',
+    source: 'CurlyNikki',
+    url: 'https://www.curlynikki.com/',
+    topic: 'Humectants',
+    note: 'The climate map for humectants. If you\u2019ve ever wondered why the same product behaves differently in July and February — this.',
+    endorsedBy: 'salma',
+    readTime: '7 min',
+  },
+  {
+    id: 'd-scalp-allure',
+    title: 'The Scalp Microbiome, Explained',
+    source: 'Allure',
+    url: 'https://www.allure.com/topic/hair',
+    topic: 'Scalp Health',
+    note: 'Healthy hair is downstream of a healthy scalp. Good science, well written.',
+    endorsedBy: 'fatou',
+    readTime: '8 min',
+  },
+  {
+    id: 'd-protective-essence',
+    title: 'Protective Styling Without Damage',
+    source: 'Essence',
+    url: 'https://www.essence.com/hair/',
+    topic: 'Protective Styles',
+    note: 'How to install, how long to leave in, and when it stops being "protective." Balanced, not dogmatic.',
+    endorsedBy: 'ngozi',
+    readTime: '6 min',
+  },
+  {
+    id: 'd-cgm-reference',
+    title: 'The Curly Girl Method — The Reference',
+    source: 'NaturallyCurly',
+    url: 'https://www.naturallycurly.com/curlreading',
+    topic: 'Method',
+    note: 'The method the whole movement pivots on, in its full form. Take what serves you, leave what doesn\u2019t.',
+    endorsedBy: 'denise',
+    readTime: '10 min',
   },
 ];
 

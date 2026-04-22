@@ -13,22 +13,13 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
-  Dimensions,
-  Modal,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { Button } from '../../components/Button';
@@ -40,7 +31,6 @@ import {
   spacing,
   radius,
   shadows,
-  gradients,
   letterSpacing,
 } from '../../constants/theme';
 import { AUNTIES, RITUAL_HOSTS, type AuntyId } from '../../constants/aunties';
@@ -54,60 +44,19 @@ import {
   toDateKey,
   type RitualLogEntry,
 } from '../../services/ritualLog';
-import type { RitualDayType } from '../../types';
-
-const { width: SCREEN_W } = Dimensions.get('window');
-const GRID_PAD = spacing.lg;
-const GAP = 6;
-const CELL_SIZE = Math.floor((SCREEN_W - GRID_PAD * 2 - GAP * 6) / 7);
-
-const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-// ─── Ritual data ────────────────────────────────────────────────
-
-const WEEKLY_PATTERN: Record<number, { type: RitualDayType; label: string }> = {
-  0: { type: 'rest', label: 'Rest' },
-  1: { type: 'wash', label: 'Wash' },
-  2: { type: 'scalp', label: 'Scalp' },
-  3: { type: 'protect', label: 'Protect' },
-  4: { type: 'refresh', label: 'Refresh' },
-  5: { type: 'style', label: 'Style' },
-  6: { type: 'protein', label: 'Strength' },
-};
-
-const TYPE_COLORS: Record<RitualDayType, string> = {
-  wash: colors.jewel.amber,
-  style: colors.jewel.rose,
-  refresh: colors.jewel.plum,
-  rest: colors.jewel.teal,
-  scalp: colors.jewel.emerald,
-  protein: colors.jewel.sienna,
-  protect: colors.jewel.indigo,
-};
-
-const TYPE_GRADIENTS: Record<RitualDayType, readonly [string, string]> = {
-  wash: ['#D4A04A', '#B8862E'],
-  style: ['#C2456E', '#9E3058'],
-  refresh: ['#7B3F6B', '#5C2A4E'],
-  rest: ['#2A7B7B', '#1A5C5C'],
-  scalp: ['#1A7A4A', '#0A5C30'],
-  protein: ['#B85C2A', '#8A3A10'],
-  protect: ['#3D5A99', '#2A4070'],
-};
-
-const TYPE_DETAILS: Record<RitualDayType, { purpose: string; time: string; steps: string[] }> = {
-  wash: { purpose: 'Deep cleanse & moisture reset', time: '45 min', steps: ['Pre-poo with oil', 'Sulfate-free shampoo', 'Deep condition under cap', 'Rinse, detangle, seal'] },
-  style: { purpose: 'Define & celebrate your curls', time: '25 min', steps: ['Take down style', 'Fluff & shape', 'Define with gel', 'Diffuse or air dry'] },
-  refresh: { purpose: 'Mid-week touch-up', time: '10 min', steps: ['Light mist', 'Re-twist edges', 'Seal ends with oil'] },
-  rest: { purpose: 'Let your hair breathe', time: '5 min', steps: ['Gentle scalp massage', 'Refresh edges if needed'] },
-  scalp: { purpose: 'Nourish the roots', time: '15 min', steps: ['Apply scalp oil blend', 'Firm circular massage'] },
-  protein: { purpose: 'Rebuild & strengthen', time: '20 min', steps: ['Protein treatment on lengths', 'Rinse & light condition'] },
-  protect: { purpose: 'Low-manipulation styling', time: '30 min', steps: ['Moisturize sections', 'Twist or braid', 'Edge care & silk wrap'] },
-};
+import { RitualActionSheetModal } from './ritual/RitualActionSheetModal';
+import {
+  RITUAL_CELL_SIZE as CELL_SIZE,
+  RITUAL_GAP as GAP,
+  RITUAL_GRID_PAD as GRID_PAD,
+  DAY_LETTERS,
+  MONTH_NAMES,
+  WEEKLY_PATTERN,
+  TYPE_COLORS,
+  TYPE_GRADIENTS,
+  TYPE_DETAILS,
+  getMonthDays,
+} from './ritual/ritualConstants';
 
 // ─── SVG Icons ──────────────────────────────────────────────────
 
@@ -142,14 +91,6 @@ function PlayIcon({ color = '#FFFFFF', size = 16 }: { color?: string; size?: num
       <Path d="M5 3L19 12L5 21V3Z" fill={color} />
     </Svg>
   );
-}
-
-// ─── Helpers ────────────────────────────────────────────────────
-
-function getMonthDays(year: number, month: number) {
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  return { firstDay, daysInMonth };
 }
 
 // ─── Component ──────────────────────────────────────────────────
@@ -276,14 +217,13 @@ export default function RitualScreen() {
       >
         {/* ─── Header ──────────────────────────────────────── */}
         <Animated.View entering={FadeIn.duration(400)} style={styles.header}>
-          <Text style={styles.overline}>YOUR RITUAL</Text>
+          <Text style={styles.overline}>CHECK-IN</Text>
           <Text style={styles.title}>Hair Calendar</Text>
         </Animated.View>
 
         {/* ─── Streak Banner ───────────────────────────────── */}
         <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.streakBanner}>
           <View style={styles.streakLeft}>
-            <Text style={styles.streakFlame}>🔥</Text>
             <View>
               <Text style={styles.streakCount}>{streak.current} day{streak.current !== 1 ? 's' : ''}</Text>
               <Text style={styles.streakLabel}>current streak</Text>
@@ -304,7 +244,7 @@ export default function RitualScreen() {
           <Animated.View entering={FadeInDown.delay(150).duration(400)} style={[styles.eowCard, { borderLeftColor: ac.accent }]}>
             <AuntyAvatar auntyId={auntyId} size={36} showRing />
             <Text style={styles.eowText}>
-              You showed up {weekStats.done} of 7 days this week. That's how hair changes.
+              You showed up {weekStats.done} of 7 days this week. That{"\u2019"}s how hair changes.
             </Text>
           </Animated.View>
         )}
@@ -506,7 +446,7 @@ export default function RitualScreen() {
               <View style={styles.detailCta}>
                 {!isPast(selectedDay) && (
                   <Button
-                    label={isToday(selectedDay) ? 'Start Ritual' : 'Preview Ritual'}
+                    label={isToday(selectedDay) ? 'Start Check-In' : 'Preview Check-In'}
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                       navigation.navigate('RitualSteps');
@@ -522,7 +462,7 @@ export default function RitualScreen() {
                     style={styles.markCompleteBtn}
                     onPress={() => handleMarkComplete(selectedDay)}
                     accessibilityRole="button"
-                    accessibilityLabel="Mark ritual as complete"
+                    accessibilityLabel="Mark check-in as complete"
                   >
                     <Text style={styles.markCompleteBtnText}>✓ Mark Complete</Text>
                   </Pressable>
@@ -540,72 +480,18 @@ export default function RitualScreen() {
         )}
       </ScrollView>
 
-      {/* ─── Day Action Sheet ───────────────────────────── */}
-      <Modal
+      <RitualActionSheetModal
         visible={actionSheetDay !== null}
-        transparent
-        animationType="slide"
-        onRequestClose={closeActionSheet}
-      >
-        <Pressable style={styles.sheetOverlay} onPress={closeActionSheet}>
-          <Pressable style={styles.sheetContainer} onPress={() => {}}>
-            {actionSheetDay && actionSheetRitual && (
-              <>
-                <View style={styles.sheetHandle} />
-                <Text style={styles.sheetTitle}>
-                  {new Date(viewYear, viewMonth, actionSheetDay).toLocaleDateString('en-US', {
-                    weekday: 'long', month: 'short', day: 'numeric',
-                  })}
-                </Text>
-                <Text style={[styles.sheetRitualLabel, { color: TYPE_COLORS[actionSheetRitual.type] }]}>
-                  {actionSheetRitual.label} Day
-                </Text>
-
-                <View style={styles.sheetActions}>
-                  {getDayStatus(actionSheetDay) !== 'completed' && (
-                    <Pressable
-                      style={[styles.sheetAction, styles.sheetActionPrimary]}
-                      onPress={() => handleMarkComplete(actionSheetDay)}
-                    >
-                      <Text style={styles.sheetActionPrimaryText}>✓ Mark Complete</Text>
-                    </Pressable>
-                  )}
-
-                  <Pressable
-                    style={styles.sheetAction}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                      navigation.navigate('RitualSteps');
-                      closeActionSheet();
-                    }}
-                  >
-                    <Text style={styles.sheetActionText}>▶ View Ritual Steps</Text>
-                  </Pressable>
-
-                  <Text style={styles.sheetSkipLabel}>SKIP THIS DAY</Text>
-                  <View style={styles.skipReasonRow}>
-                    {(['traveling', 'busy', 'not-feeling-it'] as const).map((r) => (
-                      <Pressable
-                        key={r}
-                        style={styles.skipReasonPill}
-                        onPress={() => handleSkip(actionSheetDay, r)}
-                      >
-                        <Text style={styles.skipReasonText}>
-                          {r === 'traveling' ? '✈ Traveling' : r === 'busy' ? '⏰ Too busy' : '💤 Not feeling it'}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </View>
-
-                <Pressable style={styles.sheetCancel} onPress={closeActionSheet}>
-                  <Text style={styles.sheetCancelText}>Cancel</Text>
-                </Pressable>
-              </>
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
+        actionSheetDay={actionSheetDay}
+        viewYear={viewYear}
+        viewMonth={viewMonth}
+        actionSheetRitual={actionSheetRitual}
+        onClose={closeActionSheet}
+        onMarkComplete={handleMarkComplete}
+        onViewSteps={() => navigation.navigate('RitualSteps')}
+        onSkip={handleSkip}
+        getDayStatus={getDayStatus}
+      />
     </View>
   );
 }
@@ -972,106 +858,4 @@ const styles = StyleSheet.create({
     lineHeight: 12,
   },
 
-  // Action sheet
-  sheetOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  sheetContainer: {
-    backgroundColor: colors.canvas,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxxl,
-    paddingTop: spacing.md,
-  },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.border,
-    alignSelf: 'center',
-    marginBottom: spacing.md,
-  },
-  sheetTitle: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.xs,
-    color: colors.muted,
-    letterSpacing: letterSpacing.widest,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
-  },
-  sheetRitualLabel: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.xl,
-    letterSpacing: letterSpacing.tight,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-  },
-  sheetActions: {
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  sheetAction: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  sheetActionPrimary: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  sheetActionPrimaryText: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.base,
-    color: colors.ink,
-  },
-  sheetActionText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: fontSize.base,
-    color: colors.ink,
-  },
-  sheetSkipLabel: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.xs,
-    color: colors.muted,
-    letterSpacing: letterSpacing.widest,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  skipReasonRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-  },
-  skipReasonPill: {
-    backgroundColor: colors.canvasDeep,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
-  },
-  skipReasonText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: fontSize.sm,
-    color: colors.inkLight,
-  },
-  sheetCancel: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  sheetCancelText: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.base,
-    color: colors.muted,
-  },
 });

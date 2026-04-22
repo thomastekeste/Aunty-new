@@ -93,7 +93,6 @@ export default function ChangeAuntyScreen() {
                   </View>
                   <Text style={[styles.auntyName, active && { color: cardAc.accent }]}>{aunty.name}</Text>
                   <Text style={styles.auntyTitle} numberOfLines={1}>{aunty.title}</Text>
-                  <Text style={styles.auntyRegion}>{aunty.region}</Text>
                   {active && (
                     <View style={[styles.selectedBadge, { backgroundColor: cardAc.accent }]}>
                       <Text style={styles.selectedBadgeText}>✓</Text>

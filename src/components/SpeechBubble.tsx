@@ -39,6 +39,11 @@ interface Props {
   shimmer?: boolean;
   /** Run shimmer only once on a single line that holds. Default false. */
   loopShimmer?: boolean;
+  /**
+   * Editorial pull-quote ornament above the text (a serif open-quote glyph).
+   * Pass a color (usually the aunty's accent) to show it, omit to hide.
+   */
+  quoteMarkColor?: string;
   textStyle?: StyleProp<TextStyle>;
   containerStyle?: StyleProp<ViewStyle>;
   onComplete?: () => void;
@@ -59,6 +64,7 @@ export function SpeechBubble({
   fadeMs = 320,
   shimmer = true,
   loopShimmer = false,
+  quoteMarkColor,
   textStyle,
   containerStyle,
   onComplete,
@@ -125,6 +131,14 @@ export function SpeechBubble({
   if (index >= lines.length) {
     return (
       <View style={containerStyle}>
+        {quoteMarkColor ? (
+          <Text
+            accessible={false}
+            style={[styles.quoteMark, { color: quoteMarkColor }]}
+          >
+            {'\u201C'}
+          </Text>
+        ) : null}
         <Text style={textStyle}>{lines[lines.length - 1]}</Text>
       </View>
     );
@@ -134,6 +148,14 @@ export function SpeechBubble({
 
   return (
     <View style={containerStyle}>
+      {quoteMarkColor ? (
+        <Text
+          accessible={false}
+          style={[styles.quoteMark, { color: quoteMarkColor }]}
+        >
+          {'\u201C'}
+        </Text>
+      ) : null}
       <Animated.View style={lineAnimatedStyle}>
         {shimmer ? (
           <MaskedView
@@ -162,3 +184,15 @@ export function SpeechBubble({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  quoteMark: {
+    fontFamily: 'PlusJakartaSans_700Bold',
+    fontSize: 56,
+    lineHeight: 42,
+    textAlign: 'center',
+    opacity: 0.45,
+    marginBottom: 4,
+    letterSpacing: -2,
+  },
+});

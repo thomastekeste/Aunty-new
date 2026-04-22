@@ -5,8 +5,15 @@
  * haptic feedback, and inline SVG path icons.
  */
 
-import React, { useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  Platform,
+  LayoutChangeEvent,
+} from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -14,6 +21,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withSpring,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
@@ -23,10 +31,8 @@ import {
   fonts,
   fontSize,
   spacing,
-  radius,
   shadows,
   gradients,
-  animation,
 } from '../constants/theme';
 
 // ─── Tab Config ─────────────────────────────────────────────────
@@ -56,7 +62,7 @@ const TABS: TabDef[] = [
   },
   {
     key: 'Ritual',
-    label: 'Ritual',
+    label: 'Check-In',
     icon: (color: string) => (
       <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
         <Path
@@ -139,6 +145,8 @@ const TABS: TabDef[] = [
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
+const INDICATOR_WIDTH = 24;
+
 function TabButton({
   tab,
   isActive,
@@ -189,22 +197,46 @@ function TabButton({
       >
         {tab.label}
       </Text>
-      {isActive && (
-        <View style={styles.activeDotContainer}>
-          <LinearGradient
-            colors={[...gradients.gold]}
-            style={styles.activeDot}
-          />
-        </View>
-      )}
     </AnimatedPressable>
   );
 }
 
-export function TabBar({ state, navigation, descriptors }: BottomTabBarProps) {
+export function TabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const bottomPadding = Platform.OS === 'ios' ? insets.bottom : spacing.sm;
   const tabBarHeight = Platform.OS === 'ios' ? 82 : 66;
+
+  const [rowWidth, setRowWidth] = useState(0);
+  const tabCount = state.routes.length;
+  const tabWidth = tabCount > 0 ? rowWidth / tabCount : 0;
+
+  const indicatorX = useSharedValue(0);
+
+  useEffect(() => {
+    if (tabWidth <= 0) return;
+    const targetX = state.index * tabWidth + (tabWidth - INDICATOR_WIDTH) / 2;
+    indicatorX.value = withSpring(targetX, {
+      damping: 22,
+      stiffness: 220,
+      mass: 0.6,
+    });
+  }, [state.index, tabWidth]);
+
+  // Snap instantly on first layout so the bar doesn't fly in
+  useEffect(() => {
+    if (tabWidth <= 0) return;
+    if (indicatorX.value === 0 && state.index > 0) {
+      indicatorX.value = state.index * tabWidth + (tabWidth - INDICATOR_WIDTH) / 2;
+    }
+  }, [tabWidth]);
+
+  const indicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: indicatorX.value }],
+  }));
+
+  const handleRowLayout = useCallback((e: LayoutChangeEvent) => {
+    setRowWidth(e.nativeEvent.layout.width);
+  }, []);
 
   const handlePress = useCallback(
     (routeName: string, isFocused: boolean) => {
@@ -226,7 +258,26 @@ export function TabBar({ state, navigation, descriptors }: BottomTabBarProps) {
         },
       ]}
     >
-      <View style={styles.tabRow}>
+      {/* Sliding gold indicator — sits above the tab row */}
+      {tabWidth > 0 ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.indicatorWrap,
+            { width: INDICATOR_WIDTH, top: 0 },
+            indicatorStyle,
+          ]}
+        >
+          <LinearGradient
+            colors={[...gradients.gold]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.indicatorBar}
+          />
+        </Animated.View>
+      ) : null}
+
+      <View style={styles.tabRow} onLayout={handleRowLayout}>
         {state.routes.map((route, index) => {
           const tab = TABS.find((t) => t.key === route.name) ?? TABS[index];
           if (!tab) return null;
@@ -272,14 +323,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     letterSpacing: 0.2,
   },
-  activeDotContainer: {
+  indicatorWrap: {
     position: 'absolute',
-    bottom: -2,
-    alignItems: 'center',
+    height: 3,
+    overflow: 'hidden',
   },
-  activeDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+  indicatorBar: {
+    flex: 1,
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
   },
 });

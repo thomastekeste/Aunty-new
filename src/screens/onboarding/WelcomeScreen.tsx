@@ -57,7 +57,7 @@ const INTROS: Record<AuntyId, string[]> = {
     "Tell me about yours and let's make them shine.",
   ],
   amara: [
-    "I'm Amara.",
+    "I'm Senayt.",
     'I know textured hair — the strength it takes, the patience it needs.',
     "Show me yours and we'll build something solid.",
   ],
@@ -152,7 +152,7 @@ export function WelcomeScreen() {
                           ]}
                           accessibilityRole="button"
                           accessibilityState={{ selected: sel }}
-                          accessibilityLabel={`${a.name}, ${a.region}`}
+                          accessibilityLabel={a.name}
                         >
                           {/* aunty-tinted top bar */}
                           <View style={[styles.cardBar, { backgroundColor: c.accent }]} />
@@ -161,7 +161,6 @@ export function WelcomeScreen() {
                             <Text style={[styles.cardName, sel && { color: c.accent }]}>
                               {a.name}
                             </Text>
-                            <Text style={styles.cardRegion}>{a.region}</Text>
                           </View>
                         </PressableScale>
                       </Animated.View>
@@ -176,39 +175,50 @@ export function WelcomeScreen() {
 
         {/* ─── PHASE 2+3: Aunty introduces herself ──────── */}
         {phase >= 2 && ac && selectedId && (
-          <Animated.View entering={FadeIn.duration(320)} style={styles.introSection}>
-            <Animated.View
-              entering={FadeIn.delay(60).duration(320)}
-              style={styles.avatarWrap}
-            >
-              <View style={[styles.avatarGlow, { backgroundColor: ac.accent }]} />
-              <AuntyAvatar auntyId={selectedId} size={84} showRing glowing />
-            </Animated.View>
+          <Animated.View
+            entering={FadeIn.duration(320)}
+            style={[
+              styles.introSection,
+              { paddingBottom: insets.bottom + spacing.lg },
+            ]}
+          >
+            {/* Centered tableau — avatar, name, speech all float in the middle */}
+            <View style={styles.introCenter}>
+              <Animated.View
+                entering={FadeIn.delay(60).duration(320)}
+                style={styles.avatarWrap}
+              >
+                <View style={[styles.avatarGlow, { backgroundColor: ac.accent }]} />
+                <AuntyAvatar auntyId={selectedId} size={84} showRing glowing />
+              </Animated.View>
 
-            <Animated.Text
-              entering={FadeIn.delay(140).duration(280)}
-              style={[styles.auntyName, { color: ac.accent }]}
-            >
-              {AUNTIES[selectedId].name}
-            </Animated.Text>
-            <Animated.Text
-              entering={FadeIn.delay(200).duration(260)}
-              style={styles.auntyRegion}
-            >
-              {AUNTIES[selectedId].region}
-            </Animated.Text>
+              <Animated.Text
+                entering={FadeIn.delay(140).duration(280)}
+                style={[styles.auntyName, { color: ac.accent }]}
+              >
+                {AUNTIES[selectedId].name}
+              </Animated.Text>
+              <Animated.Text
+                entering={FadeIn.delay(200).duration(260)}
+                style={styles.auntyRegion}
+              >
+                {AUNTIES[selectedId].title}
+              </Animated.Text>
 
-            <View style={styles.bubbleWrap}>
-              <SpeechBubble
-                lines={lines}
-                holdMs={1200}
-                fadeMs={240}
-                shimmer
-                textStyle={styles.bubbleText}
-                onComplete={handleSpeechComplete}
-              />
+              <View style={styles.bubbleWrap}>
+                <SpeechBubble
+                  lines={lines}
+                  holdMs={1200}
+                  fadeMs={240}
+                  shimmer
+                  quoteMarkColor={ac.accent}
+                  textStyle={styles.bubbleText}
+                  onComplete={handleSpeechComplete}
+                />
+              </View>
             </View>
 
+            {/* Button pinned at the bottom — centered tableau keeps its middle position */}
             {phase >= 3 && (
               <Animated.View entering={FadeInDown.delay(80).duration(360)} style={styles.btnWrap}>
                 <CeremonialButton
@@ -308,12 +318,15 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
 
-  // Intro phase
+  // Intro phase — tableau centered vertically, CTA pinned to bottom
   introSection: {
     flex: 1,
     paddingHorizontal: spacing.xl,
+  },
+  introCenter: {
+    flex: 1,
     alignItems: 'center',
-    paddingTop: spacing.lg,
+    justifyContent: 'center',
   },
   avatarWrap: {
     alignItems: 'center',
@@ -354,6 +367,6 @@ const styles = StyleSheet.create({
   },
   btnWrap: {
     width: '100%',
-    marginTop: spacing.xl,
+    marginTop: spacing.md,
   },
 });

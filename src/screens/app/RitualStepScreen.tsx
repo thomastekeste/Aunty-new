@@ -251,7 +251,7 @@ export default function RitualStepScreen() {
             </Animated.View>
           </View>
           <Animated.Text entering={FadeInDown.delay(100).springify().damping(12).stiffness(180)} style={styles.completeTitle}>
-            Ritual Complete!
+            Check-In Complete!
           </Animated.Text>
           <Animated.Text entering={FadeInDown.delay(200).duration(400)} style={[styles.completeLabel, { color: todayColor }]}>
             {today.label}
@@ -312,7 +312,7 @@ export default function RitualStepScreen() {
       {/* Bottom: Complete Step button */}
       <View style={styles.bottomAction}>
         <Button
-          label={currentStep < totalSteps - 1 ? 'Complete Step' : 'Finish Ritual'}
+          label={currentStep < totalSteps - 1 ? 'Complete Step' : 'Finish Check-In'}
           onPress={handleCompleteStep}
           variant="primary"
           size="lg"

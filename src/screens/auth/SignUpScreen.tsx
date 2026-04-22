@@ -200,20 +200,32 @@ export default function SignUpScreen() {
             </Pressable>
           </Animated.View>
 
-          {/* Dev-only: skip auth + onboarding, land straight on Home */}
+          {/* Dev-only: skip auth buttons */}
           {__DEV__ && (
             <Animated.View entering={FadeIn.delay(800).duration(300)} style={styles.devArea}>
               <Pressable
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
                   devBypassAuth();
-                  completeOnboarding();
+                  // No completeOnboarding() — goes through full onboarding flow
                 }}
                 style={styles.devBtn}
                 accessibilityRole="button"
-                accessibilityLabel="Skip to app (dev only)"
+                accessibilityLabel="Skip sign in, go through onboarding (dev only)"
               >
-                <Text style={styles.devBtnText}>⚡ Skip to App</Text>
+                <Text style={styles.devBtnText}>⚡ Skip Sign In</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                  devBypassAuth();
+                  completeOnboarding();
+                }}
+                style={[styles.devBtn, { marginTop: 8, opacity: 0.5 }]}
+                accessibilityRole="button"
+                accessibilityLabel="Skip everything to app (dev only)"
+              >
+                <Text style={styles.devBtnText}>⚡ Skip Everything</Text>
               </Pressable>
             </Animated.View>
           )}

@@ -25,7 +25,7 @@ export function AuntyAvatar({ auntyId, size = 56, showRing = true, glowing = fal
   return (
     <View
       accessibilityRole="image"
-      accessibilityLabel={aunty ? `${aunty.name}, ${aunty.title}, ${aunty.region}` : `Aunty ${auntyId}`}
+      accessibilityLabel={aunty ? `${aunty.name}, ${aunty.title}` : `Aunty ${auntyId}`}
       style={[
         styles.container,
         {
@@ -33,6 +33,8 @@ export function AuntyAvatar({ auntyId, size = 56, showRing = true, glowing = fal
           height: outerSize,
           borderRadius: outerSize / 2,
         },
+        // soft warm ambient shadow under every portrait
+        !glowing && styles.ambient,
         showRing && {
           borderWidth: ringWidth,
           borderColor: ac?.accent ?? '#D4A04A',
@@ -42,11 +44,20 @@ export function AuntyAvatar({ auntyId, size = 56, showRing = true, glowing = fal
           shadowOffset: { width: 0, height: 0 },
           shadowOpacity: 0.5,
           shadowRadius: 12,
+          elevation: 6,
         },
       ]}
     >
       <View style={[styles.inner, { width: size, height: size, borderRadius: size / 2 }]}>
         <AuntyPortrait auntyId={auntyId} size={size} />
+        {/* hairline inner border — keeps the portrait from looking pasted on */}
+        <View
+          pointerEvents="none"
+          style={[
+            styles.innerBorder,
+            { width: size, height: size, borderRadius: size / 2 },
+          ]}
+        />
       </View>
     </View>
   );
@@ -58,7 +69,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 2,
   },
+  ambient: {
+    shadowColor: '#2D1B0E',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.14,
+    shadowRadius: 8,
+    elevation: 3,
+  },
   inner: {
     overflow: 'hidden',
+  },
+  innerBorder: {
+    position: 'absolute',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(45, 27, 14, 0.22)',
   },
 });

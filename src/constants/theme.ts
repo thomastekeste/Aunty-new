@@ -120,10 +120,14 @@ export const auntyColors: Record<
 
 // ─── Typography ──────────────────────────────────────────────────
 // Single family: Plus Jakarta Sans across the board.
-// `serif*` and `display*` tokens are kept so screens that adopted
-// the editorial naming continue to compile — they just resolve to
-// Jakarta weights now (no Fraunces).
+//
+// NOTE on naming: the `serif*` and `display*` tokens exist for historical
+// reasons — earlier iterations planned Fraunces for editorial headlines.
+// We reverted to Jakarta everywhere, so all of these tokens resolve to
+// Jakarta weights. They're kept so existing screens keep compiling, and
+// the honest `heading*` aliases are preferred for new code.
 export const fonts = {
+  // Legacy aliases (resolve to Jakarta — see note above).
   serif: 'PlusJakartaSans_400Regular',
   serifMedium: 'PlusJakartaSans_500Medium',
   serifSemiBold: 'PlusJakartaSans_600SemiBold',
@@ -135,10 +139,16 @@ export const fonts = {
   displayMedium: 'PlusJakartaSans_600SemiBold',
   displayItalic: 'PlusJakartaSans_600SemiBold',
 
+  // Body scale (preferred).
   body: 'PlusJakartaSans_400Regular',
   bodyMedium: 'PlusJakartaSans_500Medium',
   bodySemiBold: 'PlusJakartaSans_600SemiBold',
   bodyBold: 'PlusJakartaSans_700Bold',
+
+  // Heading scale (preferred for new code — honest names).
+  heading: 'PlusJakartaSans_700Bold',
+  headingMedium: 'PlusJakartaSans_600SemiBold',
+  headingRegular: 'PlusJakartaSans_500Medium',
 };
 
 export const fontSize = {

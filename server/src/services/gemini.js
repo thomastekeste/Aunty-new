@@ -83,7 +83,7 @@ const AUNTIES = {
   },
   amara: {
     id: 'amara',
-    name: 'Selam',
+    name: 'Senayt',
     region: 'Ethiopian-Eritrean',
     title: 'The Strength Builder',
     specialty: 'Protein balance & hair strengthening',
@@ -92,7 +92,7 @@ const AUNTIES = {
     personality:
       "Strong, steady, nurturing. She builds your hair's resilience from the inside out.",
     quote: 'Strength is not force. It is patience. It is protein. It is rest.',
-    greeting: 'Selam, dear one. Let us build something strong.',
+    greeting: 'Senayt, dear one. Let us build something strong.',
     ingredient: 'Fenugreek protein treatments, castor oil, henna',
   },
   salma: {
@@ -178,7 +178,7 @@ Generate a JSON response with this exact structure:
     "denise": "Denise's 2-4 sentence response IN AAVE with cultural wisdom about protection/retention...",
     "fatou": "Fatou's 2-4 sentence response IN FRENCH-ACCENTED ENGLISH about technique...",
     "carmen": "Carmen's 2-4 sentence response IN SPANGLISH about curl definition/joy...",
-    "amara": "Selam's 2-4 sentence response IN EAST AFRICAN ENGLISH about protein/strength...",
+    "amara": "Senayt's 2-4 sentence response IN EAST AFRICAN ENGLISH about protein/strength...",
     "salma": "Salma's 2-4 sentence response IN DARIJA-ACCENTED ENGLISH about holistic balance..."
   },
   "consensus": "A 2-3 sentence summary of what all aunties agree on — the collective verdict for this user's hair. Written as if Denise (the elder) is delivering the group's conclusion.",

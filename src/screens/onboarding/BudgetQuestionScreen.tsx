@@ -124,7 +124,7 @@ export default function BudgetQuestionScreen() {
             {SCOPE_OPTIONS.map((opt, i) => {
               const selected = scope === opt.key;
               return (
-                <Animated.View key={opt.key} entering={FadeInDown.delay(80 + i * 50)}>
+                <Animated.View key={opt.key} style={{ flex: 1 }} entering={FadeInDown.delay(80 + i * 50)}>
                   <PressableScale
                     onPress={() => handleScopeSelect(opt.key)}
                     haptic="medium"
@@ -176,7 +176,7 @@ export default function BudgetQuestionScreen() {
             {BUDGET_OPTIONS.map((opt, i) => {
               const selected = budget === opt.key;
               return (
-                <Animated.View key={opt.key} entering={FadeInDown.delay(80 + i * 50)}>
+                <Animated.View key={opt.key} style={{ flex: 1 }} entering={FadeInDown.delay(80 + i * 50)}>
                   <PressableScale
                     onPress={() => handleBudgetSelect(opt.key)}
                     haptic="medium"
@@ -238,10 +238,6 @@ export default function BudgetQuestionScreen() {
             />
           </Animated.View>
         )}
-
-        <Text style={styles.progress}>
-          {step === 1 ? 'Part 1 of 2' : 'Part 2 of 2'}
-        </Text>
       </View>
     </LinearGradient>
   );
@@ -256,51 +252,52 @@ const styles = StyleSheet.create({
 
   optionsContainer: { flex: 1, paddingHorizontal: spacing.lg },
   question: { fontFamily: fonts.display, fontSize: fontSize.xl, color: colors.dark.text, letterSpacing: -0.4, marginBottom: spacing.xs },
-  hint: { fontFamily: fonts.serifItalic, fontSize: fontSize.xs, color: colors.dark.textMuted, marginTop: 2, marginBottom: spacing.md },
+  hint: { fontFamily: fonts.serifItalic, fontSize: fontSize.sm, color: colors.dark.textMuted, marginTop: 2, marginBottom: spacing.md },
 
-  // Scope cards
-  scopeGrid: { gap: spacing.xs },
+  // Scope cards — stretch to fill available vertical space
+  scopeGrid: { flex: 1, gap: spacing.sm, paddingBottom: spacing.sm },
   scopeCard: {
+    flex: 1,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: 'rgba(254, 248, 236, 0.10)',
     backgroundColor: 'rgba(255, 250, 240, 0.04)',
-    padding: spacing.sm,
-    paddingLeft: spacing.sm + 6,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md + 2,
+    justifyContent: 'center',
     position: 'relative',
     overflow: 'hidden',
   },
-  scopeTag: { position: 'absolute', top: -1, right: spacing.sm, paddingHorizontal: spacing.xs, paddingVertical: 2, borderBottomLeftRadius: radius.sm, borderBottomRightRadius: radius.sm },
-  scopeTagText: { fontFamily: fonts.bodySemiBold, fontSize: 9, color: '#fff', letterSpacing: 1.4 },
-  scopeLabel: { fontFamily: fonts.serifSemiBold, fontSize: fontSize.md, color: colors.dark.text, marginBottom: spacing.xs, letterSpacing: -0.2 },
-  scopeItems: { gap: 2 },
-  scopeItemRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  scopeItemDot: { width: 4, height: 4, borderRadius: 2 },
-  scopeItemText: { fontFamily: fonts.serifItalic, fontSize: fontSize.xs, color: colors.dark.textMuted },
-  checkCircle: { position: 'absolute', top: spacing.sm, right: spacing.sm, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  checkText: { fontFamily: fonts.bodyBold, fontSize: 11, color: '#fff' },
+  scopeTag: { position: 'absolute', top: 0, right: spacing.md, paddingHorizontal: spacing.sm, paddingVertical: 3, borderBottomLeftRadius: radius.sm, borderBottomRightRadius: radius.sm },
+  scopeTagText: { fontFamily: fonts.bodySemiBold, fontSize: 9.5, color: '#fff', letterSpacing: 1.5 },
+  scopeLabel: { fontFamily: fonts.serifSemiBold, fontSize: fontSize.lg, color: colors.dark.text, marginBottom: spacing.xs + 2, letterSpacing: -0.3 },
+  scopeItems: { gap: 3 },
+  scopeItemRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2 },
+  scopeItemDot: { width: 5, height: 5, borderRadius: 2.5 },
+  scopeItemText: { fontFamily: fonts.serifItalic, fontSize: fontSize.sm, color: colors.dark.textMuted, letterSpacing: 0.1 },
+  checkCircle: { position: 'absolute', top: spacing.md, right: spacing.md, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  checkText: { fontFamily: fonts.bodyBold, fontSize: 12, color: '#fff' },
 
-  // Budget cards
-  budgetGrid: { gap: spacing.xs },
+  // Budget cards — stretch to fill available vertical space
+  budgetGrid: { flex: 1, gap: spacing.sm, paddingBottom: spacing.sm },
   budgetCard: {
+    flex: 1,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: 'rgba(254, 248, 236, 0.10)',
     backgroundColor: 'rgba(255, 250, 240, 0.04)',
-    padding: spacing.sm,
-    paddingLeft: spacing.sm + 6,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md + 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 56,
   },
-  budgetLabel: { fontFamily: fonts.serifSemiBold, fontSize: fontSize.md, color: colors.dark.text, letterSpacing: -0.2 },
-  budgetSub: { fontFamily: fonts.serifItalic, fontSize: fontSize.xs, color: colors.dark.textMuted, marginTop: 1 },
-  budgetCheck: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  budgetLabel: { fontFamily: fonts.serifSemiBold, fontSize: fontSize.lg, color: colors.dark.text, letterSpacing: -0.3 },
+  budgetSub: { fontFamily: fonts.serifItalic, fontSize: fontSize.sm, color: colors.dark.textMuted, marginTop: 2, letterSpacing: 0.1 },
+  budgetCheck: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
 
-  backLink: { marginTop: spacing.md, paddingVertical: spacing.xs, alignSelf: 'flex-start' },
-  backText: { fontFamily: fonts.serifMedium, fontSize: fontSize.xs, letterSpacing: 0.2 },
+  backLink: { marginTop: spacing.sm, paddingVertical: spacing.xs, alignSelf: 'flex-start' },
+  backText: { fontFamily: fonts.serifMedium, fontSize: fontSize.sm, letterSpacing: 0.2 },
 
-  footer: { paddingHorizontal: spacing.lg, gap: spacing.xs },
-  progress: { fontFamily: fonts.serifItalic, fontSize: fontSize.xs, color: colors.dark.textMuted, textAlign: 'center', marginTop: 2 },
+  footer: { paddingHorizontal: spacing.lg },
 });

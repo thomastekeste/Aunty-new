@@ -1,24 +1,23 @@
 /**
- * LearnScreen — The Council Teaches.
+ * LearnScreen — Library.
  *
- * Home view: featured article hero, 4 category cards (2×2), quick Q&A.
- * Category view: full content list for selected category.
- * Progressive disclosure — curated home, drill into sections.
+ * Concise. Search + filter + scannable cards.
+ * No masthead ceremony, no cover story, no ornament rules.
+ * Just: find what you need, read it.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   ScrollView,
   Pressable,
   StyleSheet,
-  Dimensions,
   Modal,
   Linking,
+  TextInput,
 } from 'react-native';
-import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
@@ -34,10 +33,11 @@ import {
   PRODUCT_ARTICLES,
   APPROVED_CREATORS,
   COUNCIL_QA,
-  type ContentCategory,
+  LIBRARY_DISPATCHES,
   type Article,
   type Creator,
   type QA,
+  type Dispatch,
 } from '../../constants/education';
 import {
   colors,
@@ -46,238 +46,124 @@ import {
   fontSize,
   spacing,
   radius,
-  shadows,
-  gradients,
-  letterSpacing,
 } from '../../constants/theme';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const GRID_GAP = spacing.sm;
-const CARD_W = (SCREEN_WIDTH - spacing.lg * 2 - GRID_GAP) / 2;
-const CREATOR_CARD_W = 220;
+// ─── Icons ──────────────────────────────────────────────────────
 
-// ─── SVG Icons ──────────────────────────────────────────────────
-
-function BookIcon({ color, size = 20 }: { color: string; size?: number }) {
+function Icon({ d, size = 16, color = colors.muted, strokeWidth = 2 }: { d: string; size?: number; color?: string; strokeWidth?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M2 4C2 4 5 2 12 2C19 2 22 4 22 4V20C22 20 19 18 12 18C5 18 2 20 2 20V4Z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M12 2V18" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Path d={d} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
 
-function FlaskIcon({ color, size = 20 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M9 3H15M10 3V10L4 19C3.5 19.8 4.1 21 5 21H19C19.9 21 20.5 19.8 20 19L14 10V3" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+const LOCK_D = 'M17 11V7C17 4.24 14.76 2 12 2C9.24 2 7 4.24 7 7V11M5 11H19C19.55 11 20 11.45 20 12V20C20 21.1 19.1 22 18 22H6C4.9 22 4 21.1 4 20V12C4 11.45 4.45 11 5 11Z';
+const SEARCH_D = 'M11 19A8 8 0 1011 3a8 8 0 000 16zM21 21l-4.35-4.35';
+const EXTERNAL_D = 'M18 13V19C18 20.1 17.1 21 16 21H5C3.9 21 3 20.1 3 19V8C3 6.9 3.9 6 5 6H11M15 3H21M21 3V9M21 3L10 14';
+const CLOSE_D = 'M6 6L18 18M18 6L6 18';
+
+// ─── Filters ────────────────────────────────────────────────────
+
+type Filter = 'all' | 'method' | 'ingredients' | 'creators' | 'qa' | 'reading';
+
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'method', label: 'Method' },
+  { key: 'ingredients', label: 'Ingredients' },
+  { key: 'creators', label: 'Creators' },
+  { key: 'qa', label: 'Q&A' },
+  { key: 'reading', label: 'Reading' },
+];
+
+// ─── Shared helpers ─────────────────────────────────────────────
+
+function getCreatorUrl(c: Creator): string {
+  const h = c.handle.replace('@', '');
+  return c.platform === 'instagram'
+    ? `https://instagram.com/${h}`
+    : c.platform === 'tiktok'
+    ? `https://tiktok.com/@${h}`
+    : `https://youtube.com/@${h}`;
 }
 
-function UsersIcon({ color, size = 20 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M17 21V19C17 16.7909 15.2091 15 13 15H5C2.79086 15 1 16.7909 1 19V21" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke={color} strokeWidth={2} />
-      <Path d="M23 21V19C23 17.1362 21.7252 15.5701 20 15.126" stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Path d="M16 3.12602C17.7252 3.57006 19 5.13616 19 7C19 8.86384 17.7252 10.4299 16 10.874" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
+const PLATFORM_LABEL: Record<string, string> = {
+  youtube: 'YouTube',
+  instagram: 'Instagram',
+  tiktok: 'TikTok',
+};
 
-function HelpIcon({ color, size = 20 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke={color} strokeWidth={2} />
-      <Path d="M9 9C9 7.34315 10.3431 6 12 6C13.6569 6 15 7.34315 15 9C15 10.6569 13.6569 12 12 12V14" stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Path d="M12 18H12.01" stroke={color} strokeWidth={2.5} strokeLinecap="round" />
-    </Svg>
-  );
-}
+// ─── Section header ─────────────────────────────────────────────
 
-function LockIcon() {
+function SectionHeader({ label, count }: { label: string; count: number }) {
   return (
-    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-      <Path d="M17 11V7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7V11M5 11H19C19.5523 11 20 11.4477 20 12V20C20 21.1046 19.1046 22 18 22H6C4.89543 22 4 21.1046 4 20V12C4 11.4477 4.44772 11 5 11Z" stroke={colors.muted} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-function ChevronLeft({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M15 18L9 12L15 6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-function PlatformBadge({ platform }: { platform: string }) {
-  const label = platform === 'youtube' ? 'YT' : platform === 'instagram' ? 'IG' : 'TT';
-  const bg = platform === 'youtube' ? '#FF0000' : platform === 'instagram' ? '#E1306C' : '#000000';
-  return (
-    <View style={[styles.platformBadge, { backgroundColor: bg }]}>
-      <Text style={styles.platformText}>{label}</Text>
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionLabel}>{label}</Text>
+      <Text style={styles.sectionCount}>{count}</Text>
     </View>
   );
 }
 
-// ─── Category Grid Card ─────────────────────────────────────────
-
-const CATEGORY_CONFIG: Record<ContentCategory, {
-  label: string;
-  description: string;
-  icon: (color: string) => React.ReactNode;
-  count: number;
-}> = {
-  method: {
-    label: 'The Method',
-    description: 'Hair science foundations',
-    icon: (c) => <BookIcon color={c} />,
-    count: METHOD_ARTICLES.length,
-  },
-  products: {
-    label: 'Product School',
-    description: 'Ingredient intelligence',
-    icon: (c) => <FlaskIcon color={c} />,
-    count: PRODUCT_ARTICLES.length,
-  },
-  people: {
-    label: 'Approved People',
-    description: 'Creators we trust',
-    icon: (c) => <UsersIcon color={c} />,
-    count: APPROVED_CREATORS.length,
-  },
-  qa: {
-    label: 'Ask the Council',
-    description: 'Common questions answered',
-    icon: (c) => <HelpIcon color={c} />,
-    count: COUNCIL_QA.length,
-  },
-};
-
-function CategoryCard({
-  category,
-  accentColor,
-  index,
-  onPress,
-}: {
-  category: ContentCategory;
-  accentColor: string;
-  index: number;
-  onPress: () => void;
-}) {
-  const config = CATEGORY_CONFIG[category];
-  return (
-    <Animated.View entering={FadeInUp.delay(100 + index * 50).duration(350)}>
-      <Pressable
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          onPress();
-        }}
-        style={styles.categoryCard}
-        accessibilityRole="button"
-        accessibilityLabel={`${config.label}: ${config.count} items`}
-      >
-        <View style={[styles.categoryIconWrap, { backgroundColor: accentColor + '15' }]}>
-          {config.icon(accentColor)}
-        </View>
-        <Text style={styles.categoryLabel}>{config.label}</Text>
-        <Text style={styles.categoryDesc}>{config.description}</Text>
-        <View style={styles.categoryFooter}>
-          <Text style={[styles.categoryCount, { color: accentColor }]}>{config.count} articles</Text>
-          <Text style={[styles.categoryArrow, { color: accentColor }]}>{'\u2192'}</Text>
-        </View>
-      </Pressable>
-    </Animated.View>
-  );
-}
-
-// ─── Featured Hero Card ─────────────────────────────────────────
-
-function FeaturedCard({ article, auntyId }: { article: Article; auntyId: AuntyId }) {
-  const ac = auntyColors[article.auntyId];
-  const aunty = AUNTIES[article.auntyId];
-
-  return (
-    <Animated.View entering={FadeIn.delay(100).duration(500)}>
-      <LinearGradient
-        colors={[ac.accent + '18', ac.accent + '08']}
-        style={styles.featuredCard}
-      >
-        <View style={styles.featuredBadge}>
-          <View style={[styles.featuredDot, { backgroundColor: ac.accent }]} />
-          <Text style={[styles.featuredBadgeText, { color: ac.accent }]}>
-            FEATURED
-          </Text>
-        </View>
-        <Text style={styles.featuredTitle}>{article.title}</Text>
-        <Text style={styles.featuredTeaser}>{article.teaser}</Text>
-        <View style={styles.featuredMeta}>
-          <AuntyAvatar auntyId={article.auntyId} size={28} showRing />
-          <View>
-            <Text style={[styles.featuredAunty, { color: ac.accent }]}>{aunty.name}</Text>
-            <Text style={styles.featuredTime}>{article.readTime} read</Text>
-          </View>
-        </View>
-      </LinearGradient>
-    </Animated.View>
-  );
-}
-
-// ─── Article Card (compact for lists) ───────────────────────────
+// ─── Article card ───────────────────────────────────────────────
 
 function ArticleCard({
   article,
-  index,
   onPress,
+  index,
 }: {
   article: Article;
-  index: number;
   onPress: (a: Article) => void;
+  index: number;
 }) {
   const ac = auntyColors[article.auntyId];
   const aunty = AUNTIES[article.auntyId];
 
   return (
-    <Animated.View entering={FadeInDown.delay(50 + index * 40).duration(350)}>
+    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 30).duration(250)}>
       <Pressable
-        onPress={() => onPress(article)}
-        style={[styles.articleCard, { borderLeftColor: ac.accent }]}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onPress(article);
+        }}
+        style={({ pressed }) => [styles.articleCard, pressed && { opacity: 0.65 }]}
         accessibilityRole="button"
         accessibilityLabel={`Read: ${article.title}`}
       >
-        <View style={styles.articleTop}>
-          <Text style={styles.articleTitle}>{article.title}</Text>
-          {article.isPremium && <LockIcon />}
-        </View>
-        <Text style={styles.articleTeaser} numberOfLines={2}>{article.teaser}</Text>
-        <View style={styles.articleMeta}>
-          <AuntyAvatar auntyId={article.auntyId} size={22} />
-          <Text style={[styles.articleAunty, { color: ac.accent }]}>{aunty.name}</Text>
-          <View style={styles.dot} />
-          <Text style={styles.articleTime}>{article.readTime}</Text>
-          <View style={styles.dot} />
-          <Text style={styles.readCta}>Read {'\u2192'}</Text>
+        <View style={[styles.articleBar, { backgroundColor: ac.accent }]} />
+        <View style={styles.articleBody}>
+          <View style={styles.articleTopRow}>
+            <Text style={[styles.articleCategory, { color: ac.accent }]}>
+              {article.category === 'method' ? 'METHOD' : 'INGREDIENTS'}
+            </Text>
+            {article.isPremium && (
+              <View style={styles.articleLock}>
+                <Icon d={LOCK_D} size={10} color={colors.muted} />
+                <Text style={styles.articleLockText}>Members</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.articleTitle} numberOfLines={2}>
+            {article.title}
+          </Text>
+          <Text style={styles.articleTeaser} numberOfLines={2}>
+            {article.teaser}
+          </Text>
+          <View style={styles.articleMeta}>
+            <Text style={[styles.articleAunty, { color: ac.accent }]}>
+              Aunty {aunty.name}
+            </Text>
+            <Text style={styles.articleDot}>·</Text>
+            <Text style={styles.articleTime}>{article.readTime}</Text>
+          </View>
         </View>
       </Pressable>
     </Animated.View>
   );
 }
 
-// ─── Creator Card ───────────────────────────────────────────────
+// ─── Creator row ────────────────────────────────────────────────
 
-function getCreatorUrl(creator: Creator): string {
-  const handle = creator.handle.replace('@', '');
-  switch (creator.platform) {
-    case 'youtube': return `https://www.youtube.com/@${handle}`;
-    case 'instagram': return `https://www.instagram.com/${handle}`;
-    case 'tiktok': return `https://www.tiktok.com/@${handle}`;
-    default: return `https://www.youtube.com/@${handle}`;
-  }
-}
-
-function CreatorCard({ creator, index }: { creator: Creator; index: number }) {
+function CreatorRow({ creator, index }: { creator: Creator; index: number }) {
   const ac = auntyColors[creator.endorsedBy];
   const aunty = AUNTIES[creator.endorsedBy];
 
@@ -287,58 +173,60 @@ function CreatorCard({ creator, index }: { creator: Creator; index: number }) {
   }, [creator]);
 
   return (
-    <Animated.View entering={FadeInDown.delay(50 + index * 40).duration(350)}>
+    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 30).duration(250)}>
       <Pressable
         onPress={handlePress}
-        style={[styles.creatorCard, { borderTopColor: ac.accent }]}
+        style={({ pressed }) => [styles.creatorRow, pressed && { opacity: 0.65 }]}
         accessibilityRole="link"
         accessibilityLabel={`Visit ${creator.name} on ${creator.platform}`}
       >
-        <View style={styles.creatorHeader}>
-          <PlatformBadge platform={creator.platform} />
-          <Text style={styles.creatorCurlTypes}>{creator.curlTypes}</Text>
+        <View style={styles.creatorMain}>
+          <Text style={styles.creatorName}>{creator.name}</Text>
+          <Text style={styles.creatorHandle}>
+            {creator.handle} · {PLATFORM_LABEL[creator.platform] ?? creator.platform}
+          </Text>
+          <Text style={styles.creatorFocus} numberOfLines={1}>
+            {creator.focus}
+          </Text>
+          <Text style={[styles.creatorEndorsed, { color: ac.accent }]}>
+            Aunty {aunty.name}&rsquo;s pick · {creator.curlTypes}
+          </Text>
         </View>
-        <Text style={styles.creatorName}>{creator.name}</Text>
-        <Text style={styles.creatorHandle}>{creator.handle}</Text>
-        <Text style={styles.creatorFocus} numberOfLines={2}>{creator.focus}</Text>
-        <View style={styles.creatorEndorsed}>
-          <AuntyAvatar auntyId={creator.endorsedBy} size={20} />
-          <Text style={[styles.creatorEndorsedText, { color: ac.accent }]}>{aunty.name} approved</Text>
-        </View>
-        <Text style={[styles.creatorVisit, { color: ac.accent }]}>Visit {'\u2192'}</Text>
+        <Icon d={EXTERNAL_D} size={14} color={colors.muted} />
       </Pressable>
     </Animated.View>
   );
 }
 
-// ─── QA Card ────────────────────────────────────────────────────
+// ─── Q&A accordion ──────────────────────────────────────────────
 
-function QACard({ qa, index }: { qa: QA; index: number }) {
-  const [expanded, setExpanded] = useState(false);
+function QARow({ qa, index }: { qa: QA; index: number }) {
+  const [open, setOpen] = useState(false);
   const ac = auntyColors[qa.auntyId];
   const aunty = AUNTIES[qa.auntyId];
 
   return (
-    <Animated.View entering={FadeInDown.delay(50 + index * 40).duration(350)}>
+    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 30).duration(250)}>
       <Pressable
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          setExpanded(!expanded);
+          setOpen((v) => !v);
         }}
-        style={styles.qaCard}
+        style={({ pressed }) => [styles.qaRow, pressed && { opacity: 0.75 }]}
         accessibilityRole="button"
-        accessibilityState={{ expanded }}
+        accessibilityState={{ expanded: open }}
       >
         <View style={styles.qaHeader}>
-          <AuntyAvatar auntyId={qa.auntyId} size={24} />
           <Text style={styles.qaQuestion}>{qa.question}</Text>
-          <Text style={styles.qaChevron}>{expanded ? '\u2212' : '\u002B'}</Text>
+          <Text style={[styles.qaToggle, { color: open ? ac.accent : colors.muted }]}>
+            {open ? '−' : '+'}
+          </Text>
         </View>
-        {expanded && (
-          <Animated.View entering={FadeIn.duration(250)} style={styles.qaBody}>
+        {open && (
+          <Animated.View entering={FadeIn.duration(180)}>
             <Text style={styles.qaAnswer}>{qa.answer}</Text>
-            <Text style={[styles.qaAunty, { color: ac.accent }]}>
-              {'\u2014 '} Aunty {aunty.name}
+            <Text style={[styles.qaAttrib, { color: ac.accent }]}>
+              — Aunty {aunty.name}
             </Text>
           </Animated.View>
         )}
@@ -347,276 +235,346 @@ function QACard({ qa, index }: { qa: QA; index: number }) {
   );
 }
 
-// ─── Section Header with optional back ──────────────────────────
+// ─── Dispatch (external reading) ────────────────────────────────
 
-function SectionHeader({
-  overline,
-  title,
-  count,
-  onBack,
-}: {
-  overline: string;
-  title: string;
-  count?: number;
-  onBack?: () => void;
-}) {
+function DispatchRow({ dispatch, index }: { dispatch: Dispatch; index: number }) {
+  const ac = auntyColors[dispatch.endorsedBy];
+  const aunty = AUNTIES[dispatch.endorsedBy];
+
+  const handlePress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Linking.openURL(dispatch.url).catch(() => {});
+  }, [dispatch.url]);
+
   return (
-    <View style={styles.sectionHeader}>
-      {onBack && (
-        <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            onBack();
-          }}
-          style={styles.backButton}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Back to all categories"
-        >
-          <ChevronLeft color={colors.ink} />
-          <Text style={styles.backText}>All</Text>
-        </Pressable>
-      )}
-      <Text style={styles.sectionOverline}>{overline}</Text>
-      <View style={styles.sectionTitleRow}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {count !== undefined && (
-          <View style={styles.sectionCountBadge}>
-            <Text style={styles.sectionCountText}>{count}</Text>
-          </View>
-        )}
-      </View>
-    </View>
-  );
-}
-
-// ─── Quick Q&A Preview (home view) ──────────────────────────────
-
-function QuickQAPreview({ onSeeAll }: { onSeeAll: () => void }) {
-  const preview = COUNCIL_QA.slice(0, 3);
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <View style={styles.sectionTitleRow}>
-          <View>
-            <Text style={styles.sectionOverline}>QUICK ANSWERS</Text>
-            <Text style={styles.sectionTitle}>Ask the Council</Text>
-          </View>
-          <Pressable onPress={onSeeAll} hitSlop={8}>
-            <Text style={styles.seeAll}>See all {COUNCIL_QA.length} {'\u2192'}</Text>
-          </Pressable>
+    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 30).duration(250)}>
+      <Pressable
+        onPress={handlePress}
+        style={({ pressed }) => [styles.dispatchRow, pressed && { opacity: 0.65 }]}
+        accessibilityRole="link"
+        accessibilityLabel={`Open ${dispatch.title} on ${dispatch.source}`}
+      >
+        <View style={styles.dispatchMain}>
+          <Text style={[styles.dispatchSource, { color: ac.accent }]}>
+            {dispatch.source.toUpperCase()} · {dispatch.topic.toUpperCase()}
+          </Text>
+          <Text style={styles.dispatchTitle} numberOfLines={2}>
+            {dispatch.title}
+          </Text>
+          <Text style={styles.dispatchNote} numberOfLines={2}>
+            {dispatch.note}
+          </Text>
+          <Text style={styles.dispatchMeta}>
+            Aunty {aunty.name} · {dispatch.readTime}
+          </Text>
         </View>
-      </View>
-      <View style={styles.qaList}>
-        {preview.map((qa, i) => (
-          <QACard key={qa.id} qa={qa} index={i} />
-        ))}
-      </View>
-    </View>
+        <Icon d={EXTERNAL_D} size={14} color={colors.muted} />
+      </Pressable>
+    </Animated.View>
   );
 }
 
-// ─── Empty Category Fallback ────────────────────────────────────
-
-function EmptyCategory({ auntyId, label }: { auntyId: AuntyId; label: string }) {
-  const aunty = AUNTIES[auntyId];
-  return (
-    <View style={styles.emptyCategory}>
-      <AuntyAvatar auntyId={auntyId} size={48} showRing glowing />
-      <Text style={styles.emptyCategoryTitle}>Coming soon</Text>
-      <Text style={styles.emptyCategoryText}>
-        {aunty.name} is writing {label} for you. Check back soon.
-      </Text>
-    </View>
-  );
-}
-
-// ─── Main Screen ────────────────────────────────────────────────
+// ─── Main screen ─────────────────────────────────────────────────
 
 export default function LearnScreen() {
   const insets = useSafeAreaInsets();
   const { state } = useOnboarding();
   const { isActive: isSubscribed } = useSubscription();
   const auntyId: AuntyId = state.data.chosenAuntyId || 'denise';
-  const aunty = AUNTIES[auntyId];
   const ac = auntyColors[auntyId];
 
-  const [activeCategory, setActiveCategory] = useState<ContentCategory | null>(null);
+  const [filter, setFilter] = useState<Filter>('all');
+  const [query, setQuery] = useState('');
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
 
-  const handleArticlePress = useCallback((article: Article) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (article.isPremium && !isSubscribed) {
-      setShowPaywall(true);
-    } else {
-      setSelectedArticle(article);
-    }
-  }, [isSubscribed]);
+  const q = query.trim().toLowerCase();
 
-  // Pick featured article from user's aunty, or first one
-  const allArticles = [...METHOD_ARTICLES, ...PRODUCT_ARTICLES];
-  const featured = allArticles.length > 0
-    ? allArticles.find((a) => a.auntyId === auntyId) || allArticles[0]
+  // Filter content by query
+  const methodList = useMemo(
+    () =>
+      q
+        ? METHOD_ARTICLES.filter(
+            (a) =>
+              a.title.toLowerCase().includes(q) || a.teaser.toLowerCase().includes(q),
+          )
+        : METHOD_ARTICLES,
+    [q],
+  );
+  const ingredientsList = useMemo(
+    () =>
+      q
+        ? PRODUCT_ARTICLES.filter(
+            (a) =>
+              a.title.toLowerCase().includes(q) || a.teaser.toLowerCase().includes(q),
+          )
+        : PRODUCT_ARTICLES,
+    [q],
+  );
+  const creatorsList = useMemo(
+    () =>
+      q
+        ? APPROVED_CREATORS.filter(
+            (c) =>
+              c.name.toLowerCase().includes(q) ||
+              c.focus.toLowerCase().includes(q) ||
+              c.handle.toLowerCase().includes(q),
+          )
+        : APPROVED_CREATORS,
+    [q],
+  );
+  const qaList = useMemo(
+    () =>
+      q
+        ? COUNCIL_QA.filter(
+            (x) =>
+              x.question.toLowerCase().includes(q) || x.answer.toLowerCase().includes(q),
+          )
+        : COUNCIL_QA,
+    [q],
+  );
+  const dispatchList = useMemo(
+    () =>
+      q
+        ? LIBRARY_DISPATCHES.filter(
+            (d) =>
+              d.title.toLowerCase().includes(q) ||
+              d.source.toLowerCase().includes(q) ||
+              d.topic.toLowerCase().includes(q),
+          )
+        : LIBRARY_DISPATCHES,
+    [q],
+  );
+
+  const showMethod = filter === 'all' || filter === 'method';
+  const showIngredients = filter === 'all' || filter === 'ingredients';
+  const showCreators = filter === 'all' || filter === 'creators';
+  const showQA = filter === 'all' || filter === 'qa';
+  const showReading = filter === 'all' || filter === 'reading';
+
+  const hasAny =
+    (showMethod && methodList.length) ||
+    (showIngredients && ingredientsList.length) ||
+    (showCreators && creatorsList.length) ||
+    (showQA && qaList.length) ||
+    (showReading && dispatchList.length);
+
+  const handleArticlePress = useCallback(
+    (a: Article) => {
+      if (a.isPremium && !isSubscribed) setShowPaywall(true);
+      else setSelectedArticle(a);
+    },
+    [isSubscribed],
+  );
+
+  // Article detail modal
+  const articleModal = selectedArticle
+    ? (() => {
+        const a = selectedArticle;
+        const ac2 = auntyColors[a.auntyId];
+        const aAunty = AUNTIES[a.auntyId];
+        return (
+          <Modal
+            visible
+            animationType="slide"
+            presentationStyle="pageSheet"
+            onRequestClose={() => setSelectedArticle(null)}
+          >
+            <View style={[styles.modalContainer, { paddingTop: insets.top + spacing.sm }]}>
+              <View style={styles.modalNav}>
+                <Pressable
+                  onPress={() => setSelectedArticle(null)}
+                  style={styles.modalDoneBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close"
+                >
+                  <Text style={styles.modalDoneText}>Done</Text>
+                </Pressable>
+              </View>
+              <ScrollView
+                contentContainerStyle={[
+                  styles.modalContent,
+                  { paddingBottom: insets.bottom + 60 },
+                ]}
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={[styles.modalCategory, { color: ac2.accent }]}>
+                  {a.category === 'method' ? 'METHOD' : 'INGREDIENTS'} · {a.readTime}
+                </Text>
+                <Text style={styles.modalTitle}>{a.title}</Text>
+                <Text style={styles.modalTeaser}>{a.teaser}</Text>
+                <View style={styles.modalMeta}>
+                  <AuntyAvatar auntyId={a.auntyId} size={32} showRing />
+                  <View>
+                    <Text style={[styles.modalAuntyName, { color: ac2.accent }]}>
+                      Aunty {aAunty.name}
+                    </Text>
+                    <Text style={styles.modalAuntyTitle}>{aAunty.title}</Text>
+                  </View>
+                </View>
+                <Text style={styles.modalBody}>{a.body}</Text>
+              </ScrollView>
+            </View>
+          </Modal>
+        );
+      })()
     : null;
 
-  const goBack = () => setActiveCategory(null);
-
-  // ─── Article Detail Modal (shared between both views) ────────
-  const articleModal = selectedArticle ? (() => {
-    const a = selectedArticle;
-    const ac2 = auntyColors[a.auntyId];
-    const aAunty = AUNTIES[a.auntyId];
-    return (
-      <Modal
-        visible
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setSelectedArticle(null)}
-      >
-        <View style={[styles.modalContainer, { paddingTop: insets.top + spacing.md }]}>
-          <Pressable style={styles.modalClose} onPress={() => setSelectedArticle(null)} accessibilityRole="button" accessibilityLabel="Close article">
-            <Text style={styles.modalCloseText}>Done</Text>
-          </Pressable>
-          <ScrollView
-            contentContainerStyle={[styles.modalContent, { paddingBottom: insets.bottom + 60 }]}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={[styles.modalAccentBar, { backgroundColor: ac2.accent }]} />
-            <Text style={styles.modalCategory}>{a.category.toUpperCase()} · {a.readTime}</Text>
-            <Text style={styles.modalTitle}>{a.title}</Text>
-            <Text style={styles.modalTeaser}>{a.teaser}</Text>
-            <View style={styles.modalMeta}>
-              <AuntyAvatar auntyId={a.auntyId} size={32} showRing />
-              <View>
-                <Text style={[styles.modalAuntyName, { color: ac2.accent }]}>{aAunty.name}</Text>
-                <Text style={styles.modalAuntyTitle}>{aAunty.title}</Text>
-              </View>
-            </View>
-            <View style={styles.modalDivider} />
-            <Text style={styles.modalBody}>{a.body}</Text>
-          </ScrollView>
-        </View>
-      </Modal>
-    );
-  })() : null;
-
-  // ─── Category Detail View ───────────────────────────────────
-  if (activeCategory) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <ScrollView
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
-          showsVerticalScrollIndicator={false}
-        >
-          {activeCategory === 'method' && (
-            <>
-              <SectionHeader overline="FOUNDATIONS" title="The Method" count={METHOD_ARTICLES.length} onBack={goBack} />
-              {METHOD_ARTICLES.length > 0 ? (
-                <View style={styles.articleList}>
-                  {METHOD_ARTICLES.map((a, i) => <ArticleCard key={a.id} article={a} index={i} onPress={handleArticlePress} />)}
-                </View>
-              ) : (
-                <EmptyCategory auntyId={auntyId} label="method articles" />
-              )}
-            </>
-          )}
-
-          {activeCategory === 'products' && (
-            <>
-              <SectionHeader overline="INGREDIENT SCHOOL" title="Product Knowledge" count={PRODUCT_ARTICLES.length} onBack={goBack} />
-              {PRODUCT_ARTICLES.length > 0 ? (
-                <View style={styles.articleList}>
-                  {PRODUCT_ARTICLES.map((a, i) => <ArticleCard key={a.id} article={a} index={i} onPress={handleArticlePress} />)}
-                </View>
-              ) : (
-                <EmptyCategory auntyId={auntyId} label="product articles" />
-              )}
-            </>
-          )}
-
-          {activeCategory === 'people' && (
-            <>
-              <SectionHeader overline="AUNTY APPROVED" title="People We Trust" count={APPROVED_CREATORS.length} onBack={goBack} />
-              {APPROVED_CREATORS.length > 0 ? (
-                <View style={styles.creatorGrid}>
-                  {APPROVED_CREATORS.map((c, i) => <CreatorCard key={c.id} creator={c} index={i} />)}
-                </View>
-              ) : (
-                <EmptyCategory auntyId={auntyId} label="creator recommendations" />
-              )}
-            </>
-          )}
-
-          {activeCategory === 'qa' && (
-            <>
-              <SectionHeader overline="ASK THE COUNCIL" title="Common Questions" count={COUNCIL_QA.length} onBack={goBack} />
-              {COUNCIL_QA.length > 0 ? (
-                <View style={styles.qaList}>
-                  {COUNCIL_QA.map((q, i) => <QACard key={q.id} qa={q} index={i} />)}
-                </View>
-              ) : (
-                <EmptyCategory auntyId={auntyId} label="answers" />
-              )}
-            </>
-          )}
-        </ScrollView>
-        {articleModal}
-        {showPaywall && (
-          <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
-        )}
-      </View>
-    );
-  }
-
-  // ─── Home View ──────────────────────────────────────────────
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <Animated.View entering={FadeIn.duration(400)} style={styles.header}>
-          <View style={styles.headerRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.headerOverline}>LEARN</Text>
-              <Text style={styles.headerTitle}>The Council{'\n'}Teaches</Text>
-            </View>
-            <AuntyAvatar auntyId={auntyId} size={48} showRing glowing />
-          </View>
-          <Text style={styles.headerSub}>Everything {aunty.name} wants you to know.</Text>
-        </Animated.View>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerRow}>
+          <Text style={styles.headerTitle}>Learn</Text>
+          <AuntyAvatar auntyId={auntyId} size={32} showRing glowing />
+        </View>
 
-        {/* Featured Article */}
-        {featured && (
-          <View style={styles.featuredWrap}>
-            <FeaturedCard article={featured} auntyId={auntyId} />
+        {/* Search */}
+        <View style={styles.searchWrap}>
+          <Icon d={SEARCH_D} size={15} color={colors.muted} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search articles, creators, questions…"
+            placeholderTextColor={colors.muted}
+            style={styles.searchInput}
+            returnKeyType="search"
+            autoCorrect={false}
+            autoCapitalize="none"
+            accessibilityLabel="Search library"
+          />
+          {query.length > 0 && (
+            <Pressable
+              onPress={() => setQuery('')}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+            >
+              <Icon d={CLOSE_D} size={14} color={colors.muted} />
+            </Pressable>
+          )}
+        </View>
+
+        {/* Filters */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+          keyboardShouldPersistTaps="handled"
+        >
+          {FILTERS.map(({ key, label }) => {
+            const active = filter === key;
+            return (
+              <Pressable
+                key={key}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setFilter(key);
+                }}
+                style={[
+                  styles.filterPill,
+                  active && { backgroundColor: ac.accent, borderColor: ac.accent },
+                ]}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+              >
+                <Text style={[styles.filterText, active && styles.filterTextActive]}>
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Feed */}
+      <ScrollView
+        contentContainerStyle={[styles.feed, { paddingBottom: insets.bottom + 100 }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {!hasAny && (
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>
+              {q ? `No results for "${query}"` : 'Nothing here yet.'}
+            </Text>
           </View>
         )}
 
-        {/* Category Grid */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionOverline}>BROWSE</Text>
-            <Text style={styles.sectionTitle}>Topics</Text>
-          </View>
-          <View style={styles.categoryGrid}>
-            {(['method', 'products', 'people', 'qa'] as ContentCategory[]).map((cat, i) => (
-              <CategoryCard
-                key={cat}
-                category={cat}
-                accentColor={ac.accent}
+        {showMethod && methodList.length > 0 && (
+          <View style={styles.section}>
+            <SectionHeader label="The Method" count={methodList.length} />
+            {methodList.map((a, i) => (
+              <ArticleCard
+                key={a.id}
+                article={a}
                 index={i}
-                onPress={() => setActiveCategory(cat)}
+                onPress={handleArticlePress}
               />
             ))}
           </View>
-        </View>
+        )}
 
-        {/* Quick Q&A */}
-        <QuickQAPreview onSeeAll={() => setActiveCategory('qa')} />
+        {showIngredients && ingredientsList.length > 0 && (
+          <View style={styles.section}>
+            <SectionHeader label="Ingredients" count={ingredientsList.length} />
+            {ingredientsList.map((a, i) => (
+              <ArticleCard
+                key={a.id}
+                article={a}
+                index={i}
+                onPress={handleArticlePress}
+              />
+            ))}
+          </View>
+        )}
+
+        {showCreators && creatorsList.length > 0 && (
+          <View style={styles.section}>
+            <SectionHeader label="Creators" count={creatorsList.length} />
+            {creatorsList.map((c, i) => (
+              <CreatorRow key={c.id} creator={c} index={i} />
+            ))}
+          </View>
+        )}
+
+        {showQA && qaList.length > 0 && (
+          <View style={styles.section}>
+            <SectionHeader label="Q&A" count={qaList.length} />
+            {qaList.map((x, i) => (
+              <QARow key={x.id} qa={x} index={i} />
+            ))}
+          </View>
+        )}
+
+        {showReading && dispatchList.length > 0 && (
+          <View style={styles.section}>
+            <SectionHeader label="Further Reading" count={dispatchList.length} />
+            {dispatchList.map((d, i) => (
+              <DispatchRow key={d.id} dispatch={d} index={i} />
+            ))}
+          </View>
+        )}
+
+        {/* Premium nudge (unobtrusive, only when relevant) */}
+        {!isSubscribed && (filter === 'all' || filter === 'method' || filter === 'ingredients') && (
+          <Pressable
+            onPress={() => setShowPaywall(true)}
+            style={[styles.nudge, { borderColor: ac.accent + '40' }]}
+            accessibilityRole="button"
+            accessibilityLabel="Unlock members-only articles"
+          >
+            <Text style={styles.nudgeText}>
+              <Text style={{ color: ac.accent, fontFamily: fonts.bodySemiBold }}>
+                Members
+              </Text>
+              {' '}unlock deeper methods and ingredient deep-dives.
+            </Text>
+            <Text style={[styles.nudgeCta, { color: ac.accent }]}>Unlock →</Text>
+          </Pressable>
+        )}
       </ScrollView>
+
       {articleModal}
       {showPaywall && (
         <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
@@ -629,115 +587,378 @@ export default function LearnScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas },
-  content: { paddingTop: spacing.sm },
 
   // Header
-  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm },
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  headerOverline: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.primary, letterSpacing: letterSpacing.widest, marginBottom: spacing.xs },
-  headerTitle: { fontFamily: fonts.display, fontSize: fontSize.xxxl, color: colors.ink, letterSpacing: letterSpacing.tight, lineHeight: fontSize.xxxl * 1.1 },
-  headerSub: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.muted, marginTop: spacing.sm },
-
-  // Featured
-  featuredWrap: { paddingHorizontal: spacing.lg, marginTop: spacing.lg, marginBottom: spacing.xl },
-  featuredCard: { borderRadius: radius.xl, padding: spacing.xl, gap: spacing.sm },
-  featuredBadge: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
-  featuredDot: { width: 6, height: 6, borderRadius: 3 },
-  featuredBadgeText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, letterSpacing: letterSpacing.widest },
-  featuredTitle: { fontFamily: fonts.display, fontSize: fontSize.xxl, color: colors.ink, letterSpacing: letterSpacing.tight, lineHeight: fontSize.xxl * 1.15 },
-  featuredTeaser: { fontFamily: fonts.body, fontSize: fontSize.base, color: colors.inkLight, lineHeight: fontSize.base * 1.5 },
-  featuredMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  featuredAunty: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.sm },
-  featuredTime: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.muted },
-
-  // Category Grid
-  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP, paddingHorizontal: spacing.lg },
-  categoryCard: {
-    width: CARD_W,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    gap: spacing.xs,
-    ...shadows.sm,
+  header: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.canvas,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
-  categoryIconWrap: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  categoryLabel: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.base, color: colors.ink, marginTop: spacing.xs },
-  categoryDesc: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.muted, lineHeight: fontSize.sm * 1.4 },
-  categoryFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm },
-  categoryCount: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs },
-  categoryArrow: { fontFamily: fonts.bodyBold, fontSize: fontSize.lg },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  headerTitle: {
+    fontFamily: fonts.display,
+    fontSize: fontSize.xxl,
+    color: colors.ink,
+    letterSpacing: -0.5,
+  },
 
-  // Section
-  section: { marginBottom: spacing.xl },
-  sectionHeader: { paddingHorizontal: spacing.lg, marginBottom: spacing.md },
-  sectionOverline: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.muted, letterSpacing: letterSpacing.widest, marginBottom: spacing.xs },
-  sectionTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  sectionTitle: { fontFamily: fonts.display, fontSize: fontSize.xxl, color: colors.ink, letterSpacing: letterSpacing.tight },
-  sectionCountBadge: { backgroundColor: colors.canvasDeep, borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 2, marginLeft: spacing.sm },
-  sectionCountText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.muted },
-  seeAll: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.sm, color: colors.primary },
+  // Search
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs + 2,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 10,
+    marginBottom: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    padding: 0,
+  },
 
-  // Back button
-  backButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.md, minHeight: 44 },
-  backText: { fontFamily: fonts.bodyMedium, fontSize: fontSize.base, color: colors.ink },
+  // Filters
+  filterRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+  },
+  filterPill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  filterText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+  },
+  filterTextActive: {
+    color: '#FFFFFF',
+    fontFamily: fonts.bodySemiBold,
+  },
 
-  // Article cards
-  articleList: { paddingHorizontal: spacing.lg, gap: spacing.sm },
-  articleCard: { backgroundColor: colors.surface, borderRadius: radius.lg, borderLeftWidth: 3, padding: spacing.md, gap: spacing.sm, ...shadows.sm },
-  articleTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  articleTitle: { fontFamily: fonts.display, fontSize: fontSize.lg, color: colors.ink, letterSpacing: letterSpacing.tight, flex: 1 },
-  articleTeaser: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkLight, lineHeight: fontSize.sm * 1.5 },
-  articleMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
-  articleAunty: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs },
-  dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: colors.muted },
-  articleTime: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.muted },
+  // Feed
+  feed: { paddingTop: spacing.md },
+  section: { marginBottom: spacing.lg },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  sectionLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    letterSpacing: 2,
+  },
+  sectionCount: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+  },
 
-  // Creator cards — grid in detail, horizontal in home
-  creatorGrid: { paddingHorizontal: spacing.lg, gap: spacing.sm },
-  creatorCard: { backgroundColor: colors.surface, borderRadius: radius.lg, borderTopWidth: 3, padding: spacing.md, gap: spacing.xs, ...shadows.sm },
-  creatorHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  platformBadge: { borderRadius: radius.sm, paddingHorizontal: 6, paddingVertical: 2 },
-  platformText: { fontFamily: fonts.bodySemiBold, fontSize: 9, color: '#FFFFFF', letterSpacing: letterSpacing.wide },
-  creatorCurlTypes: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.muted },
-  creatorName: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.base, color: colors.ink, marginTop: spacing.xs },
-  creatorHandle: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.muted },
-  creatorFocus: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkLight, lineHeight: fontSize.sm * 1.4, marginTop: spacing.xs },
-  creatorEndorsed: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm },
-  creatorEndorsedText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs },
+  empty: {
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontFamily: fonts.serifItalic,
+    fontStyle: 'italic',
+    fontSize: fontSize.sm,
+    color: colors.muted,
+  },
 
-  // Q&A cards
-  qaList: { paddingHorizontal: spacing.lg, gap: spacing.sm },
-  qaCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, ...shadows.sm },
-  qaHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  qaQuestion: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.base, color: colors.ink, flex: 1, lineHeight: fontSize.base * 1.4 },
-  qaChevron: { fontFamily: fonts.bodyBold, fontSize: fontSize.xl, color: colors.muted, lineHeight: fontSize.xl },
-  qaBody: { marginTop: spacing.md, paddingLeft: spacing.xl + spacing.sm },
-  qaAnswer: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkLight, lineHeight: fontSize.sm * 1.6 },
-  qaAunty: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, fontStyle: 'italic', marginTop: spacing.md },
+  // Article card
+  articleCard: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+  },
+  articleBar: { width: 3, alignSelf: 'stretch' },
+  articleBody: { flex: 1, padding: spacing.md },
+  articleTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  articleCategory: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 10,
+    letterSpacing: 1.8,
+  },
+  articleLock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  articleLockText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 10,
+    color: colors.muted,
+    letterSpacing: 0.3,
+  },
+  articleTitle: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: fontSize.md + 1,
+    color: colors.ink,
+    letterSpacing: -0.2,
+    lineHeight: (fontSize.md + 1) * 1.25,
+    marginBottom: 4,
+  },
+  articleTeaser: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: fontSize.sm * 1.45,
+    marginBottom: spacing.xs + 2,
+  },
+  articleMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  articleAunty: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+  },
+  articleDot: { fontSize: fontSize.sm, color: colors.muted },
+  articleTime: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+  },
 
-  // Empty category
-  emptyCategory: { alignItems: 'center', paddingVertical: spacing.xxxl, paddingHorizontal: spacing.xl, gap: spacing.md },
-  emptyCategoryTitle: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.lg, color: colors.ink },
-  emptyCategoryText: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.muted, textAlign: 'center', lineHeight: fontSize.md * 1.5 },
+  // Creator
+  creatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  creatorMain: { flex: 1 },
+  creatorName: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: fontSize.md,
+    color: colors.ink,
+    letterSpacing: -0.2,
+  },
+  creatorHandle: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    marginTop: 1,
+  },
+  creatorFocus: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    marginTop: 4,
+  },
+  creatorEndorsed: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 11,
+    letterSpacing: 0.2,
+    marginTop: 4,
+  },
 
-  // Read CTA in article meta
-  readCta: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.primary },
+  // Q&A
+  qaRow: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.xs,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: radius.md,
+  },
+  qaHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  qaQuestion: {
+    flex: 1,
+    fontFamily: fonts.serifSemiBold,
+    fontSize: fontSize.sm + 1,
+    color: colors.ink,
+    lineHeight: (fontSize.sm + 1) * 1.4,
+    letterSpacing: -0.1,
+  },
+  qaToggle: {
+    fontFamily: fonts.display,
+    fontSize: fontSize.lg,
+    lineHeight: fontSize.lg,
+    width: 16,
+    textAlign: 'center',
+  },
+  qaAnswer: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: fontSize.sm * 1.55,
+    marginTop: spacing.sm,
+  },
+  qaAttrib: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 11,
+    marginTop: 6,
+    letterSpacing: 0.2,
+  },
 
-  // Creator visit CTA
-  creatorVisit: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, marginTop: spacing.xs },
+  // Dispatch
+  dispatchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  dispatchMain: { flex: 1 },
+  dispatchSource: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  dispatchTitle: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: fontSize.md,
+    color: colors.ink,
+    letterSpacing: -0.2,
+    lineHeight: fontSize.md * 1.25,
+    marginBottom: 4,
+  },
+  dispatchNote: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: fontSize.sm * 1.45,
+    marginBottom: 4,
+  },
+  dispatchMeta: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+  },
 
-  // Article detail modal
+  // Nudge
+  nudge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+  },
+  nudgeText: {
+    flex: 1,
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: fontSize.sm * 1.4,
+  },
+  nudgeCta: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+  },
+
+  // Modal
   modalContainer: { flex: 1, backgroundColor: colors.canvas },
-  modalClose: { alignSelf: 'flex-end', paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, minHeight: 44, justifyContent: 'center' },
-  modalCloseText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.base, color: colors.primary },
-  modalContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
-  modalAccentBar: { width: 40, height: 4, borderRadius: 2, marginBottom: spacing.md },
-  modalCategory: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.muted, letterSpacing: letterSpacing.widest, marginBottom: spacing.sm },
-  modalTitle: { fontFamily: fonts.display, fontSize: fontSize.xxl, color: colors.ink, letterSpacing: letterSpacing.tight, lineHeight: fontSize.xxl * 1.15, marginBottom: spacing.sm },
-  modalTeaser: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.inkLight, lineHeight: fontSize.md * 1.55, fontStyle: 'italic', marginBottom: spacing.lg },
-  modalMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
-  modalAuntyName: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.sm },
-  modalAuntyTitle: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.muted, marginTop: 2 },
-  modalDivider: { height: 1, backgroundColor: colors.borderLight, marginBottom: spacing.lg },
-  modalBody: { fontFamily: fonts.body, fontSize: fontSize.base, color: colors.ink, lineHeight: fontSize.base * 1.7 },
+  modalNav: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  modalDoneBtn: { paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
+  modalDoneText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.primary,
+  },
+  modalContent: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  modalCategory: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 11,
+    letterSpacing: 2,
+    marginBottom: spacing.sm,
+  },
+  modalTitle: {
+    fontFamily: fonts.display,
+    fontSize: 30,
+    lineHeight: 34,
+    color: colors.ink,
+    letterSpacing: -0.5,
+    marginBottom: spacing.sm,
+  },
+  modalTeaser: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    lineHeight: fontSize.md * 1.5,
+    color: colors.inkLight,
+    marginBottom: spacing.md,
+  },
+  modalMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  modalAuntyName: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: fontSize.sm,
+  },
+  modalAuntyTitle: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    marginTop: 1,
+  },
+  modalBody: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    lineHeight: fontSize.md * 1.65,
+    color: colors.ink,
+  },
 });

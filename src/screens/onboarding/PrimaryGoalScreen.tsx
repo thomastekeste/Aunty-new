@@ -1,8 +1,11 @@
 /**
  * PrimaryGoalScreen — Carmen hosts goal selection.
  *
- * "What does your dream hair look like?"
- * Seven goal options as rich cards, single select.
+ * "What would change everything?"
+ * Seven goal options, multi-select up to 2:
+ *   - First pick = primaryGoal (the big one)
+ *   - Second pick = stored in secondaryGoals
+ *   - Tapping a selected card deselects it
  */
 
 import React, { useState } from 'react';
@@ -13,7 +16,6 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SalonFrame } from '../../components/SalonFrame';
 import { EditorialCard } from '../../components/EditorialCard';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { AUNTIES } from '../../constants/aunties';
 import type { OnboardingStackParamList, PrimaryGoal } from '../../types';
 import { spacing } from '../../constants/theme';
 
@@ -36,19 +38,50 @@ const GOAL_OPTIONS: GoalOption[] = [
   { value: 'transition', label: 'Transitioning', description: 'Going natural.', icon: '' },
 ];
 
+const MAX_SELECTIONS = 2;
+
 export default function PrimaryGoalScreen() {
   const navigation = useNavigation<Nav>();
   const { state, updateHairProfile } = useOnboarding();
   const auntyId = state.data.chosenAuntyId || 'denise';
-  const [selected, setSelected] = useState<PrimaryGoal | undefined>(
-    state.data.hairProfile.primaryGoal
-  );
+
+  // Hydrate from existing state: primary first, then secondaries (in order).
+  const initialPicks: PrimaryGoal[] = [
+    state.data.hairProfile.primaryGoal,
+    ...(state.data.hairProfile.secondaryGoals || []),
+  ].filter((g): g is PrimaryGoal => !!g).slice(0, MAX_SELECTIONS);
+
+  const [picks, setPicks] = useState<PrimaryGoal[]>(initialPicks);
+
+  const togglePick = (goal: PrimaryGoal) => {
+    setPicks((curr) => {
+      if (curr.includes(goal)) {
+        return curr.filter((g) => g !== goal);
+      }
+      if (curr.length >= MAX_SELECTIONS) {
+        // Replace the second pick, keep the first (primary) anchored.
+        return [curr[0], goal];
+      }
+      return [...curr, goal];
+    });
+  };
 
   const handleContinue = () => {
-    if (!selected) return;
-    updateHairProfile({ primaryGoal: selected });
+    if (picks.length === 0) return;
+    const [primary, ...rest] = picks;
+    updateHairProfile({
+      primaryGoal: primary,
+      secondaryGoals: rest,
+    });
     navigation.navigate('Validation2');
   };
+
+  const ctaLabel =
+    picks.length === 0
+      ? 'Pick up to 2'
+      : picks.length === 1
+        ? "That's my dream"
+        : 'These are my dreams';
 
   return (
     <SalonFrame
@@ -57,28 +90,31 @@ export default function PrimaryGoalScreen() {
       speakerVerb="is curious"
       step={4}
       totalSteps={7}
-      ctaLabel="That's my dream"
-      ctaDisabled={!selected}
+      ctaLabel={ctaLabel}
+      ctaDisabled={picks.length === 0}
       onCtaPress={handleContinue}
     >
       <Animated.View
         entering={FadeInDown.duration(400)}
         style={styles.options}
         accessibilityRole="radiogroup"
-        accessibilityLabel="Primary hair goal options"
+        accessibilityLabel={`Primary hair goal options — choose up to ${MAX_SELECTIONS}`}
       >
-        {GOAL_OPTIONS.map((goal, index) => (
-          <EditorialCard
-            key={goal.value}
-            label={goal.label}
-            description={goal.description}
-            icon={goal.icon}
-            selected={selected === goal.value}
-            onPress={() => setSelected(goal.value)}
-            auntyId={auntyId}
-            index={index}
-          />
-        ))}
+        {GOAL_OPTIONS.map((goal, index) => {
+          const selected = picks.includes(goal.value);
+          return (
+            <EditorialCard
+              key={goal.value}
+              label={goal.label}
+              description={goal.description}
+              icon={goal.icon}
+              selected={selected}
+              onPress={() => togglePick(goal.value)}
+              auntyId={auntyId}
+              index={index}
+            />
+          );
+        })}
       </Animated.View>
     </SalonFrame>
   );

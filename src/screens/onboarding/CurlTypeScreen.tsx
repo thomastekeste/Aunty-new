@@ -119,12 +119,11 @@ function CurlCard({
     <Animated.View entering={FadeInDown.delay(60 * index).duration(400)}>
       <PressableScale
         onPress={onPress}
-        scaleTo={0.96}
+        scaleTo={0.97}
         style={[
           styles.card,
           selected && {
             borderColor: ac.accent,
-            backgroundColor: ac.accent + '1F',
           },
         ]}
         accessibilityRole="button"
@@ -138,9 +137,15 @@ function CurlCard({
             color={selected ? ac.accent : 'rgba(254, 248, 236, 0.72)'}
           />
         </Animated.View>
-        <Text style={[styles.cardLabel, selected && { color: colors.dark.text }]}>
+        <Text style={[styles.cardLabel, selected && { color: ac.accent }]}>
           {option.label}
         </Text>
+        <View
+          style={[
+            styles.cardUnderline,
+            selected && { backgroundColor: ac.accent, opacity: 0.7 },
+          ]}
+        />
         <Text style={styles.cardDesc} numberOfLines={1}>{option.description}</Text>
       </PressableScale>
     </Animated.View>
@@ -198,9 +203,15 @@ export default function CurlTypeScreen() {
       {selected && (
         <Animated.View
           entering={FadeInDown.duration(300)}
-          style={[styles.selectedHint, { borderLeftColor: auntyColors[auntyId].accent }]}
+          style={styles.pullQuoteWrap}
         >
-          <Text style={[styles.selectedHintText, { color: auntyColors[auntyId].accent }]}>
+          <View
+            style={[
+              styles.pullQuoteRule,
+              { backgroundColor: auntyColors[auntyId].accent },
+            ]}
+          />
+          <Text style={styles.pullQuoteText}>
             {selected.startsWith('2')
               ? 'Beautiful. Let\u2019s work with that.'
               : selected.startsWith('3')
@@ -231,21 +242,28 @@ const styles = StyleSheet.create({
   },
   card: {
     width: CARD_WIDTH,
-    backgroundColor: 'rgba(255, 250, 240, 0.04)',
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(254, 248, 236, 0.10)',
+    backgroundColor: 'transparent',
+    borderRadius: radius.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(254, 248, 236, 0.14)',
     paddingTop: spacing.md,
     paddingBottom: spacing.sm + 2,
     paddingHorizontal: spacing.xs,
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   cardLabel: {
     fontFamily: fonts.serifBold,
     fontSize: fontSize.lg,
     color: colors.dark.text,
     letterSpacing: -0.4,
+  },
+  cardUnderline: {
+    width: 18,
+    height: StyleSheet.hairlineWidth * 2,
+    backgroundColor: 'rgba(254, 248, 236, 0.18)',
+    marginTop: 2,
+    marginBottom: 2,
   },
   iconWrap: {
     alignItems: 'center',
@@ -260,17 +278,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 14,
   },
-  selectedHint: {
-    backgroundColor: 'rgba(255, 250, 240, 0.05)',
-    borderRadius: radius.md,
-    borderLeftWidth: 3,
-    padding: spacing.sm,
-    marginTop: spacing.xs,
+  pullQuoteWrap: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm + 2,
+    paddingLeft: 2,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.sm,
   },
-  selectedHintText: {
+  pullQuoteRule: {
+    width: StyleSheet.hairlineWidth * 3,
+    alignSelf: 'stretch',
+    marginTop: 4,
+    marginBottom: 4,
+    opacity: 0.8,
+  },
+  pullQuoteText: {
+    flex: 1,
     fontFamily: fonts.serifItalic,
-    fontSize: fontSize.sm,
-    textAlign: 'center',
-    lineHeight: fontSize.sm * 1.5,
+    fontSize: 17,
+    lineHeight: 24,
+    letterSpacing: -0.15,
+    color: 'rgba(254, 248, 236, 0.82)',
   },
 });
