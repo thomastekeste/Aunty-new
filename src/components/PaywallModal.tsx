@@ -17,7 +17,6 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useSubscription } from '../context/SubscriptionContext';
 import {
@@ -27,7 +26,6 @@ import {
   spacing,
   radius,
   shadows,
-  gradients,
   letterSpacing,
 } from '../constants/theme';
 import { PaywallFeatureCarousel } from './PaywallFeatureCarousel';
@@ -135,14 +133,14 @@ export function PaywallModal({ visible, onClose, onSubscribe, onRestore }: Props
 
           <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
             {/* Hook */}
-            <LinearGradient colors={[...gradients.gold]} style={styles.hook}>
+            <View style={styles.hook}>
               <Text style={styles.hookOverline}>MADE FOR TEXTURED HAIR</Text>
               <Text style={styles.hookTitle}>Stop guessing.{'\n'}Start knowing.</Text>
               <Text style={styles.hookSub}>
                 Generic advice wastes your time and money. This app was built specifically for coily, curly, and textured hair.
               </Text>
               <Text style={styles.hookUrgency}>Introductory pricing — won't last forever.</Text>
-            </LinearGradient>
+            </View>
 
             {/* Feature carousel — sweep through every tab of the app */}
             <PaywallFeatureCarousel cardWidth={SCREEN_W} />
@@ -189,7 +187,7 @@ export function PaywallModal({ visible, onClose, onSubscribe, onRestore }: Props
             <View style={styles.pricing}>
               {/* Primary CTA — yearly with trial */}
               <Pressable onPress={handleYearly} style={styles.yearlyBtn}>
-                <LinearGradient colors={[...gradients.gold]} style={styles.yearlyGradient}>
+                <View style={styles.yearlyGradient}>
                   <View style={styles.bestValue}>
                     <Text style={styles.bestValueText}>
                       {yearlyHasIntroOffer ? `${trialDays} DAYS FREE` : 'BEST VALUE'}
@@ -200,7 +198,7 @@ export function PaywallModal({ visible, onClose, onSubscribe, onRestore }: Props
                     {yearlyHasIntroOffer ? `Then ${yearlyPrice}` : yearlyPrice}
                   </Text>
                   <Text style={styles.yearlySub}>Cancel anytime in Settings</Text>
-                </LinearGradient>
+                </View>
               </Pressable>
 
               {/* More options toggle */}
@@ -244,6 +242,16 @@ export function PaywallModal({ visible, onClose, onSubscribe, onRestore }: Props
               <Text style={styles.restoreText}>Restore Purchases</Text>
             </Pressable>
 
+            {/* Maybe later */}
+            <Pressable
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onClose(); }}
+              style={styles.maybeLaterBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Maybe later"
+            >
+              <Text style={styles.maybeLaterText}>Maybe later</Text>
+            </Pressable>
+
             {yearlyHasIntroOffer && (
               <Text style={styles.legalText}>
                 Free trial starts on activation. Subscription auto-renews at {yearlyPrice} unless cancelled at least 24 hours before the end of the trial period.
@@ -281,7 +289,7 @@ const styles = StyleSheet.create({
 
   pricing: { paddingHorizontal: spacing.lg, gap: spacing.md },
   yearlyBtn: { borderRadius: radius.lg, overflow: 'hidden', ...shadows.gold },
-  yearlyGradient: { paddingVertical: spacing.lg, alignItems: 'center', borderRadius: radius.lg },
+  yearlyGradient: { paddingVertical: spacing.lg, alignItems: 'center', borderRadius: radius.lg, backgroundColor: colors.primary },
   bestValue: { backgroundColor: 'rgba(45,27,14,0.2)', paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, marginBottom: spacing.sm },
   bestValueText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.ink, letterSpacing: letterSpacing.wider },
   yearlyCtaLabel: { fontFamily: fonts.display, fontSize: fontSize.xl, color: colors.ink, marginBottom: 2 },
@@ -314,4 +322,6 @@ const styles = StyleSheet.create({
 
   restore: { alignItems: 'center', paddingVertical: spacing.sm },
   restoreText: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.dark.textMuted, textDecorationLine: 'underline' },
+  maybeLaterBtn: { alignItems: 'center', paddingVertical: spacing.md, paddingBottom: spacing.lg },
+  maybeLaterText: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.dark.textMuted, opacity: 0.6 },
 });
