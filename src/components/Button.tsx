@@ -1,10 +1,10 @@
 /**
- * Button — Premium tactile button with variants, haptic feedback, and spring animation.
+ * Button — Solid-fill button with variants, haptic feedback, and spring animation.
+ * No gradient — flat solid backgrounds only.
  */
 
 import React, { useCallback } from 'react';
 import { Pressable, Text, StyleSheet, ActivityIndicator, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   useSharedValue,
@@ -12,7 +12,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { colors, fonts, fontSize, spacing, radius, shadows, gradients, animation } from '../constants/theme';
+import { colors, fonts, fontSize, spacing, radius, shadows, animation } from '../constants/theme';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'dark' | 'accent';
 
@@ -49,20 +49,12 @@ export function Button({
 
   const handlePressIn = useCallback(() => {
     opacity.value = withTiming(0.84, { duration: animation.fast });
-    scale.value = withSpring(0.985, {
-      damping: 16,
-      stiffness: 220,
-      mass: 0.35,
-    });
+    scale.value = withSpring(0.985, { damping: 16, stiffness: 220, mass: 0.35 });
   }, []);
 
   const handlePressOut = useCallback(() => {
     opacity.value = withTiming(1, { duration: animation.normal });
-    scale.value = withSpring(1, {
-      damping: 16,
-      stiffness: 220,
-      mass: 0.35,
-    });
+    scale.value = withSpring(1, { damping: 16, stiffness: 220, mass: 0.35 });
   }, []);
 
   const handlePress = useCallback(() => {
@@ -76,15 +68,15 @@ export function Button({
   const fontSizes = { sm: fontSize.sm, md: fontSize.md, lg: fontSize.base };
   const isDisabled = disabled || loading;
 
-  const gradientColors = {
-    primary: gradients.gold,
-    accent: gradients.accent,
-    dark: gradients.dark,
-    secondary: [colors.canvas, colors.canvas] as const,
-    ghost: ['transparent', 'transparent'] as const,
+  const bgColors: Record<Variant, string> = {
+    primary: colors.primary,
+    accent: colors.accent ?? colors.primary,
+    dark: colors.ink,
+    secondary: colors.canvas,
+    ghost: 'transparent',
   };
 
-  const textColors = {
+  const textColors: Record<Variant, string> = {
     primary: colors.ink,
     accent: '#FFFFFF',
     dark: colors.canvas,
@@ -111,14 +103,16 @@ export function Button({
       accessibilityLabel={label}
       accessibilityState={{ disabled: isDisabled }}
     >
-      <LinearGradient
-        colors={[...gradientColors[variant]]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+      <View
         style={[
-          styles.gradient,
-          { height: heights[size], borderRadius: radius.lg },
+          styles.btn,
+          {
+            height: heights[size],
+            borderRadius: radius.lg,
+            backgroundColor: bgColors[variant],
+          },
           variant === 'secondary' && styles.secondaryBorder,
+          variant === 'ghost' && styles.ghostBorder,
           isDisabled && styles.disabled,
           shadowStyle[variant],
         ]}
@@ -142,16 +136,14 @@ export function Button({
             </Text>
           </View>
         )}
-      </LinearGradient>
+      </View>
     </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
-  fullWidth: {
-    width: '100%',
-  },
-  gradient: {
+  fullWidth: { width: '100%' },
+  btn: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
@@ -170,6 +162,9 @@ const styles = StyleSheet.create({
   secondaryBorder: {
     borderWidth: 1.5,
     borderColor: colors.primary,
+  },
+  ghostBorder: {
+    borderWidth: 0,
   },
   disabled: {
     opacity: 0.42,
