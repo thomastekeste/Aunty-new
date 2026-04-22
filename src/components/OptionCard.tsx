@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconText: {
-    fontSize: 22,
+    fontSize: fontSize.xl,
   },
   textContainer: {
     flex: 1,
@@ -243,8 +243,8 @@ const styles = StyleSheet.create({
   },
   checkText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: fontSize.xs,
     fontFamily: fonts.bodyBold,
-    lineHeight: 13,
+    lineHeight: fontSize.xs + 2,
   },
 });

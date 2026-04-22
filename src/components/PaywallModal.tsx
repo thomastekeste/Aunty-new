@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   compValueText: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.dark.textMuted },
 
   // Legal + restore
-  legalText: { fontFamily: fonts.body, fontSize: 10, color: colors.dark.textMuted, textAlign: 'center', paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, lineHeight: 14, opacity: 0.6 },
+  legalText: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.dark.textMuted, textAlign: 'center', paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, lineHeight: fontSize.xs + 4, opacity: 0.6 },
 
   restore: { alignItems: 'center', paddingVertical: spacing.sm },
   restoreText: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.dark.textMuted, textDecorationLine: 'underline' },

@@ -79,13 +79,13 @@ const styles = StyleSheet.create({
   },
   overline: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: 11,
+    fontSize: fontSize.xs,
     letterSpacing: 3.2,
     color: colors.primary,
   },
   title: {
     fontFamily: fonts.serifBold,
-    fontSize: 34,
+    fontSize: fontSize.xxl,
     color: colors.dark.text,
     marginTop: spacing.sm,
   },

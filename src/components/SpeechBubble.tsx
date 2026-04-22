@@ -23,7 +23,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
-import { gradients } from '../constants/theme';
+import { gradients, fontSize } from '../constants/theme';
 
 interface Props {
   lines: string[];
@@ -188,8 +188,8 @@ export function SpeechBubble({
 const styles = StyleSheet.create({
   quoteMark: {
     fontFamily: 'PlusJakartaSans_700Bold',
-    fontSize: 56,
-    lineHeight: 42,
+    fontSize: fontSize.display,
+    lineHeight: fontSize.display - 8,
     textAlign: 'center',
     opacity: 0.45,
     marginBottom: 4,

@@ -190,10 +190,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.canvasDeep,
   },
   statusBadgeGlyph: {
-    fontSize: 8,
+    fontSize: fontSize.xs,
     color: '#FFFFFF',
     fontFamily: fonts.bodyBold,
-    lineHeight: 10,
+    lineHeight: fontSize.xs + 2,
   },
   dayRitual: {
     fontFamily: fonts.body,

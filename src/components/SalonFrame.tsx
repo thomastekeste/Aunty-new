@@ -236,14 +236,14 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.55 },
   backChevron: {
     fontFamily: fonts.body,
-    fontSize: 18,
-    lineHeight: 18,
+    fontSize: fontSize.lg,
+    lineHeight: fontSize.lg,
     color: colors.dark.text,
     marginTop: -1,
   },
   backLabel: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: 10.5,
+    fontSize: fontSize.xs,
     letterSpacing: 2.2,
     color: colors.dark.textMuted,
   },
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   // ── Overline / Headline / Byline ─────────────────────────────
   overline: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: 10.5,
+    fontSize: fontSize.xs,
     letterSpacing: 2.6,
     color: 'rgba(254, 248, 236, 0.5)',
     paddingHorizontal: spacing.lg,
@@ -294,8 +294,8 @@ const styles = StyleSheet.create({
   },
   question: {
     fontFamily: fonts.displayMedium,
-    fontSize: 36,
-    lineHeight: 36 * 1.08,
+    fontSize: fontSize.xxl,
+    lineHeight: fontSize.xxl * 1.08,
     letterSpacing: -0.9,
     color: colors.dark.text,
     paddingHorizontal: spacing.lg,
@@ -315,19 +315,19 @@ const styles = StyleSheet.create({
   },
   byline: {
     fontFamily: fonts.serifItalic,
-    fontSize: 14,
+    fontSize: fontSize.sm,
     color: 'rgba(254, 248, 236, 0.58)',
     letterSpacing: 0.1,
     flexShrink: 1,
   },
   bylineName: {
     fontFamily: fonts.serifSemiBold,
-    fontSize: 14,
+    fontSize: fontSize.sm,
     letterSpacing: -0.1,
   },
   bylineVerb: {
     fontFamily: fonts.serifItalic,
-    fontSize: 14,
+    fontSize: fontSize.sm,
     color: 'rgba(254, 248, 236, 0.48)',
   },
 
