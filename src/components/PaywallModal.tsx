@@ -272,10 +272,10 @@ const styles = StyleSheet.create({
   scroll: { paddingBottom: spacing.xxl },
 
   hook: { paddingHorizontal: spacing.lg, paddingTop: spacing.xxl + spacing.md, paddingBottom: spacing.xl, alignItems: 'center' },
-  hookOverline: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.ink, letterSpacing: letterSpacing.widest, marginBottom: spacing.sm },
-  hookTitle: { fontFamily: fonts.display, fontSize: fontSize.xxxl, color: colors.ink, textAlign: 'center', letterSpacing: letterSpacing.tight, lineHeight: fontSize.xxxl * 1.1 },
-  hookSub: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.inkLight, textAlign: 'center', marginTop: spacing.md, lineHeight: fontSize.md * 1.5, paddingHorizontal: spacing.md },
-  hookUrgency: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.sm, color: colors.ink, marginTop: spacing.md, opacity: 0.7 },
+  hookOverline: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.primary, letterSpacing: letterSpacing.widest, marginBottom: spacing.sm },
+  hookTitle: { fontFamily: fonts.display, fontSize: fontSize.xxxl, color: colors.dark.text, textAlign: 'center', letterSpacing: letterSpacing.tight, lineHeight: fontSize.xxxl * 1.1 },
+  hookSub: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.dark.textMuted, textAlign: 'center', marginTop: spacing.md, lineHeight: fontSize.md * 1.5, paddingHorizontal: spacing.md },
+  hookUrgency: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.sm, color: colors.primary, marginTop: spacing.md, opacity: 0.85 },
 
   values: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xl, gap: spacing.lg },
   valueRow: { flexDirection: 'row', gap: spacing.md },
