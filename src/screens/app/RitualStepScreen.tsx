@@ -69,42 +69,43 @@ interface StepDetail {
   name: string;
   description: string;
   auntyMessage: string;
+  duration?: string;
 }
 
 const TYPE_STEPS: Record<RitualDayType, StepDetail[]> = {
   wash: [
-    { name: 'Pre-Poo with Oil', description: 'Apply a generous amount of oil to dry hair, focusing on ends. This protects your strands during the cleanse.', auntyMessage: 'Start slow, baby. The oil is your armor before the water hits.' },
-    { name: 'Sulfate-Free Shampoo', description: 'Gently massage shampoo into your scalp. Let the suds run down the length -- no rough scrubbing.', auntyMessage: 'Focus on the scalp, not the ends. Your ends been through enough.' },
-    { name: 'Deep Condition Under Cap', description: 'Apply deep conditioner section by section. Cover with a plastic cap and sit for 20-30 minutes.', auntyMessage: 'This is the magic step. Do not rush it. Let that moisture sink deep.' },
-    { name: 'Rinse, Detangle, Seal', description: 'Rinse with cool water, detangle with a wide-tooth comb, then seal with your leave-in and oil.', auntyMessage: 'Gentle hands now. Every strand you save today is growth tomorrow.' },
+    { name: 'Pre-Poo with Oil', duration: '5 min', description: 'Apply a generous amount of oil to dry hair, focusing on ends. This protects your strands during the cleanse.', auntyMessage: 'Start slow, baby. The oil is your armor before the water hits.' },
+    { name: 'Sulfate-Free Shampoo', duration: '5 min', description: 'Gently massage shampoo into your scalp. Let the suds run down the length -- no rough scrubbing.', auntyMessage: 'Focus on the scalp, not the ends. Your ends been through enough.' },
+    { name: 'Deep Condition Under Cap', duration: '25 min', description: 'Apply deep conditioner section by section. Cover with a plastic cap and sit for 20-30 minutes.', auntyMessage: 'This is the magic step. Do not rush it. Let that moisture sink deep.' },
+    { name: 'Rinse, Detangle, Seal', duration: '10 min', description: 'Rinse with cool water, detangle with a wide-tooth comb, then seal with your leave-in and oil.', auntyMessage: 'Gentle hands now. Every strand you save today is growth tomorrow.' },
   ],
   style: [
-    { name: 'Take Down Style', description: 'Carefully remove any protective styling from the previous days. Be gentle with knots.', auntyMessage: 'Take your time here. No yanking -- we are not in a rush.' },
-    { name: 'Fluff & Shape', description: 'Use your fingers or a pick to lift roots and shape your curl pattern.', auntyMessage: 'This is where the magic happens. Let those curls breathe and shine!' },
-    { name: 'Define with Gel', description: 'Apply your styling gel or cream in sections, scrunching upward to encourage curl formation.', auntyMessage: 'Scrunch, do not pull. Let your curls find their own rhythm.' },
-    { name: 'Diffuse or Air Dry', description: 'Use a diffuser on low heat, or let your hair air dry if you have the time.', auntyMessage: 'Patience is the secret ingredient. Your curls are worth the wait.' },
+    { name: 'Take Down Style', duration: '5 min', description: 'Carefully remove any protective styling from the previous days. Be gentle with knots.', auntyMessage: 'Take your time here. No yanking -- we are not in a rush.' },
+    { name: 'Fluff & Shape', duration: '5 min', description: 'Use your fingers or a pick to lift roots and shape your curl pattern.', auntyMessage: 'This is where the magic happens. Let those curls breathe and shine!' },
+    { name: 'Define with Gel', duration: '5 min', description: 'Apply your styling gel or cream in sections, scrunching upward to encourage curl formation.', auntyMessage: 'Scrunch, do not pull. Let your curls find their own rhythm.' },
+    { name: 'Diffuse or Air Dry', duration: '10 min', description: 'Use a diffuser on low heat, or let your hair air dry if you have the time.', auntyMessage: 'Patience is the secret ingredient. Your curls are worth the wait.' },
   ],
   refresh: [
-    { name: 'Light Mist', description: 'Spray a water and conditioner mix lightly over your hair. Do not saturate.', auntyMessage: 'Just a light touch -- we are refreshing, not starting over.' },
-    { name: 'Re-Twist Edges', description: 'Smooth and re-twist your edges and any frizzy sections.', auntyMessage: 'The edges frame the face. A little attention here goes a long way.' },
-    { name: 'Seal Ends with Oil', description: 'Apply a small amount of oil to your ends to lock in the moisture from the mist.', auntyMessage: 'Those ends are the oldest part of your hair. They deserve the most love.' },
+    { name: 'Light Mist', duration: '2 min', description: 'Spray a water and conditioner mix lightly over your hair. Do not saturate.', auntyMessage: 'Just a light touch -- we are refreshing, not starting over.' },
+    { name: 'Re-Twist Edges', duration: '5 min', description: 'Smooth and re-twist your edges and any frizzy sections.', auntyMessage: 'The edges frame the face. A little attention here goes a long way.' },
+    { name: 'Seal Ends with Oil', duration: '3 min', description: 'Apply a small amount of oil to your ends to lock in the moisture from the mist.', auntyMessage: 'Those ends are the oldest part of your hair. They deserve the most love.' },
   ],
   rest: [
-    { name: 'Gentle Scalp Massage', description: 'Use your fingertips to gently massage your scalp for 3-5 minutes. No products needed.', auntyMessage: 'Rest does not mean neglect. This massage keeps the blood flowing to your roots.' },
-    { name: 'Refresh Edges If Needed', description: 'A tiny bit of water or edge control if needed. Otherwise, leave it be.', auntyMessage: 'Your hair is resting today. Honor that. Less is more.' },
+    { name: 'Gentle Scalp Massage', duration: '4 min', description: 'Use your fingertips to gently massage your scalp for 3-5 minutes. No products needed.', auntyMessage: 'Rest does not mean neglect. This massage keeps the blood flowing to your roots.' },
+    { name: 'Refresh Edges If Needed', duration: '1 min', description: 'A tiny bit of water or edge control if needed. Otherwise, leave it be.', auntyMessage: 'Your hair is resting today. Honor that. Less is more.' },
   ],
   scalp: [
-    { name: 'Apply Scalp Oil Blend', description: 'Part your hair in sections and apply your scalp oil directly to the scalp.', auntyMessage: 'Everything starts from the root. Feed it well and watch what grows.' },
-    { name: 'Firm Circular Massage', description: 'Use your fingertips in firm circular motions across your entire scalp for 5-10 minutes.', auntyMessage: 'Feel that? That is the blood flowing, waking up those follicles.' },
+    { name: 'Apply Scalp Oil Blend', duration: '5 min', description: 'Part your hair in sections and apply your scalp oil directly to the scalp.', auntyMessage: 'Everything starts from the root. Feed it well and watch what grows.' },
+    { name: 'Firm Circular Massage', duration: '10 min', description: 'Use your fingertips in firm circular motions across your entire scalp for 5-10 minutes.', auntyMessage: 'Feel that? That is the blood flowing, waking up those follicles.' },
   ],
   protein: [
-    { name: 'Protein Treatment on Lengths', description: 'Apply protein treatment from mid-shaft to ends. Avoid the scalp unless directed.', auntyMessage: 'Strength comes from within, but sometimes your hair needs a little extra help.' },
-    { name: 'Rinse & Light Condition', description: 'Rinse the protein treatment thoroughly, then follow with a light conditioner to maintain softness.', auntyMessage: 'Balance is everything. Protein without moisture is brittleness. We do both.' },
+    { name: 'Protein Treatment on Lengths', duration: '10 min', description: 'Apply protein treatment from mid-shaft to ends. Avoid the scalp unless directed.', auntyMessage: 'Strength comes from within, but sometimes your hair needs a little extra help.' },
+    { name: 'Rinse & Light Condition', duration: '10 min', description: 'Rinse the protein treatment thoroughly, then follow with a light conditioner to maintain softness.', auntyMessage: 'Balance is everything. Protein without moisture is brittleness. We do both.' },
   ],
   protect: [
-    { name: 'Moisturize Sections', description: 'Divide hair into sections and apply your leave-in conditioner and cream.', auntyMessage: 'Moisturized hair is happy hair. Do not skip any section.' },
-    { name: 'Twist or Braid', description: 'Create your protective style -- twists, braids, or whichever suits you today.', auntyMessage: 'This style is your shield for the next few days. Make it secure but not too tight.' },
-    { name: 'Edge Care & Silk Wrap', description: 'Lay your edges gently, then wrap with a silk scarf or bonnet.', auntyMessage: 'Protect what you have built. A silk wrap is your hair\'s best friend at night.' },
+    { name: 'Moisturize Sections', duration: '5 min', description: 'Divide hair into sections and apply your leave-in conditioner and cream.', auntyMessage: 'Moisturized hair is happy hair. Do not skip any section.' },
+    { name: 'Twist or Braid', duration: '20 min', description: 'Create your protective style -- twists, braids, or whichever suits you today.', auntyMessage: 'This style is your shield for the next few days. Make it secure but not too tight.' },
+    { name: 'Edge Care & Silk Wrap', duration: '5 min', description: 'Lay your edges gently, then wrap with a silk scarf or bonnet.', auntyMessage: 'Protect what you have built. A silk wrap is your hair\'s best friend at night.' },
   ],
 };
 
@@ -301,7 +302,14 @@ export default function RitualStepScreen() {
 
       {/* Center content */}
       <Animated.View key={currentStep} entering={FadeInDown.duration(300)} style={styles.centerContent}>
-        <Text style={styles.stepName}>{step.name}</Text>
+        <View style={styles.stepNameRow}>
+          <Text style={styles.stepName}>{step.name}</Text>
+          {step.duration && (
+            <View style={[styles.durationBadge, { backgroundColor: todayColor + '20' }]}>
+              <Text style={[styles.durationText, { color: todayColor }]}>{step.duration}</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.stepDescription}>{step.description}</Text>
 
         {/* Aunty encouragement */}
@@ -382,12 +390,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     justifyContent: 'center',
   },
+  stepNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    flexWrap: 'wrap',
+  },
   stepName: {
     fontFamily: fonts.display,
     fontSize: fontSize.xxl,
     color: colors.dark.text,
     letterSpacing: letterSpacing.tight,
-    marginBottom: spacing.md,
+  },
+  durationBadge: {
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs,
+  },
+  durationText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
   },
   stepDescription: {
     fontFamily: fonts.body,

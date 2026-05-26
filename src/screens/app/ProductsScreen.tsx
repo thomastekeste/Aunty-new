@@ -181,9 +181,18 @@ export default function ProductsScreen() {
   const filtered = useMemo(() => {
     return PRODUCTS.filter((p) => {
       if (profile.curlType && p.curlTypes.length > 0 && !p.curlTypes.includes(profile.curlType)) return false;
+      if (profile.porosity && p.porosity.length > 0 && !p.porosity.includes(profile.porosity)) return false;
       return true;
     });
-  }, [profile.curlType]);
+  }, [profile.curlType, profile.porosity]);
+
+  const isMatchedForUser = useCallback((p: Product) => {
+    let score = 0;
+    if (profile.curlType && p.curlTypes.includes(profile.curlType)) score++;
+    if (profile.porosity && p.porosity.includes(profile.porosity)) score++;
+    if (profile.primaryGoal && p.goals.includes(profile.primaryGoal)) score++;
+    return score >= 2;
+  }, [profile.curlType, profile.porosity, profile.primaryGoal]);
 
   const grouped = useMemo(() => groupByCategory(filtered), [filtered]);
   const tabs = useMemo(() => Array.from(grouped.keys()), [grouped]);
@@ -201,7 +210,7 @@ export default function ProductsScreen() {
         <Text style={styles.overline}>AUNTY'S PICKS</Text>
         <Text style={styles.title}>Your Products</Text>
         <Text style={styles.subtitle}>
-          Matched to {profile.curlType || 'your'} hair
+          Matched to {[profile.curlType, profile.porosity ? `${profile.porosity} porosity` : null].filter(Boolean).join(', ') || 'your'} hair
         </Text>
       </View>
 
@@ -254,7 +263,7 @@ export default function ProductsScreen() {
               <Text style={styles.sectionLabel}>Premium Picks</Text>
             </View>
             {premiumProducts.map((p, i) => (
-              <ProductCard key={p.id} product={p} index={i} isPremium />
+              <ProductCard key={p.id} product={p} index={i} isPremium isMatched={isMatchedForUser(p)} />
             ))}
           </View>
         )}
@@ -273,6 +282,7 @@ export default function ProductsScreen() {
                 key={p.id}
                 product={p}
                 index={premiumProducts.length + i}
+                isMatched={isMatchedForUser(p)}
               />
             ))}
           </View>
@@ -301,10 +311,12 @@ function ProductCard({
   product: p,
   index,
   isPremium = false,
+  isMatched = false,
 }: {
   product: Product;
   index: number;
   isPremium?: boolean;
+  isMatched?: boolean;
 }) {
   const ac = auntyColors[p.recommendedBy];
   const aunty = AUNTIES[p.recommendedBy];
@@ -338,8 +350,13 @@ function ProductCard({
           {/* Description + Tags inline */}
           <Text style={styles.cardDesc} numberOfLines={2}>{p.description}</Text>
 
-          {(p.isBudgetFriendly || isPremium) && (
+          {(p.isBudgetFriendly || isPremium || isMatched) && (
             <View style={styles.tagRow}>
+              {isMatched && (
+                <View style={styles.matchedPill}>
+                  <Text style={styles.matchedPillText}>Matched for You</Text>
+                </View>
+              )}
               {p.isBudgetFriendly && (
                 <View style={styles.budgetPill}>
                   <LeafIcon size={11} />
@@ -573,6 +590,22 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   premiumPillText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.primaryDeep,
+  },
+  matchedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(212, 160, 74, 0.20)',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.primaryMuted,
+  },
+  matchedPillText: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.xs,
     color: colors.primaryDeep,

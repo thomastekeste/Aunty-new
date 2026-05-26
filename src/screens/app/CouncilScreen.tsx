@@ -6,7 +6,7 @@
  * Calls Gemini API or falls back to local personality-based responses.
  */
 
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import Animated, {
@@ -79,21 +80,43 @@ export default function CouncilScreen() {
   const name = state.data.name || 'Queen';
   const hairProfile = state.data.hairProfile || {};
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: `${aunty.greeting} Ask me anything about your hair journey.`,
-      sender: 'aunty',
-      timestamp: getTimestamp(),
-    },
-  ]);
+  const STORAGE_KEY = `chat_history_${auntyId}`;
+  const MAX_MESSAGES = 50;
+
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const isSendingRef = useRef(false);
 
-  // Cap conversation history to last 50 messages to prevent unbounded growth
-  const MAX_MESSAGES = 50;
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const saved: Message[] = JSON.parse(raw);
+          if (saved.length > 0) {
+            setMessages(saved.slice(-MAX_MESSAGES));
+            setIsLoaded(true);
+            return;
+          }
+        }
+      } catch {}
+      setMessages([{
+        id: '1',
+        text: `${aunty.greeting} Ask me anything about your hair journey.`,
+        sender: 'aunty',
+        timestamp: getTimestamp(),
+      }]);
+      setIsLoaded(true);
+    })();
+  }, [auntyId]);
+
+  useEffect(() => {
+    if (!isLoaded || messages.length === 0) return;
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-MAX_MESSAGES))).catch(() => {});
+  }, [messages, isLoaded]);
 
   const handleSend = useCallback(async () => {
     const trimmed = inputText.trim();
@@ -197,6 +220,24 @@ export default function CouncilScreen() {
             <Text style={[typography.caption, { color: ac.accent }]}>{aunty.title}</Text>
             <Text style={styles.aiDisclosure}>AI-powered character</Text>
           </View>
+          {messages.length > 1 && (
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setMessages([{
+                  id: Date.now().toString(),
+                  text: `${aunty.greeting} Ask me anything about your hair journey.`,
+                  sender: 'aunty',
+                  timestamp: getTimestamp(),
+                }]);
+              }}
+              style={styles.newChatBtn}
+              accessibilityRole="button"
+              accessibilityLabel="New conversation"
+            >
+              <Text style={styles.newChatText}>New</Text>
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -286,6 +327,19 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.muted,
     marginTop: 2,
+  },
+  newChatBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+  },
+  newChatText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.primary,
   },
   messageList: {
     paddingHorizontal: spacing.lg,

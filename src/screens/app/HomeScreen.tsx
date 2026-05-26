@@ -27,7 +27,7 @@ import Animated, {
   withRepeat,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import {
@@ -243,6 +243,8 @@ export default function HomeScreen() {
 
   const [weekNumber, setWeekNumber] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [completedDates, setCompletedDates] = useState<Set<string>>(new Set());
+  const [todayCompleted, setTodayCompleted] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -256,6 +258,21 @@ export default function HomeScreen() {
       setIsLoading(false);
     })();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        try {
+          const keys = await AsyncStorage.getAllKeys();
+          const ritualKeys = keys.filter((k) => k.startsWith('ritual_completed_'));
+          const dates = ritualKeys.map((k) => k.replace('ritual_completed_', ''));
+          setCompletedDates(new Set(dates));
+          const todayKey = new Date().toISOString().split('T')[0];
+          setTodayCompleted(dates.includes(todayKey));
+        } catch {}
+      })();
+    }, []),
+  );
 
   if (isLoading) {
     return <HomeScreenSkeleton paddingTop={insets.top} />;
@@ -320,8 +337,17 @@ export default function HomeScreen() {
               <Text style={styles.heroLabel}>{today.label}</Text>
               <Text style={styles.heroPurpose}>{today.purpose}</Text>
               <View style={styles.heroCta}>
-                <Text style={styles.heroCtaText}>Start Ritual</Text>
-                <ChevronRightIcon color="#FFFFFF" size={18} />
+                {todayCompleted ? (
+                  <>
+                    <CheckIcon color="#FFFFFF" size={14} />
+                    <Text style={styles.heroCtaText}>Completed</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.heroCtaText}>Start Ritual</Text>
+                    <ChevronRightIcon color="#FFFFFF" size={18} />
+                  </>
+                )}
               </View>
             </LinearGradient>
           </PressableCard>
@@ -346,6 +372,11 @@ export default function HomeScreen() {
               const dayRitual = DAILY_RITUAL[i];
               const dc = TYPE_COLORS[dayRitual.type];
               const dg = TYPE_GRADIENTS[dayRitual.type];
+
+              const weekDate = new Date();
+              weekDate.setDate(weekDate.getDate() - dayOfWeek + i);
+              const dateKey = weekDate.toISOString().split('T')[0];
+              const dayCompleted = completedDates.has(dateKey);
 
               if (isToday) {
                 return (
@@ -381,15 +412,15 @@ export default function HomeScreen() {
                   <View
                     style={[
                       styles.dayIconCircle,
-                      isPast
+                      dayCompleted
                         ? { backgroundColor: dc + '20' }
                         : { backgroundColor: colors.borderLight },
                     ]}
                   >
-                    {isPast ? (
+                    {dayCompleted ? (
                       <CheckIcon color={dc} size={13} />
                     ) : (
-                      <RitualTypeIcon type={dayRitual.type} size={14} color={colors.muted} />
+                      <RitualTypeIcon type={dayRitual.type} size={14} color={isPast ? dc + '60' : colors.muted} />
                     )}
                   </View>
                   <Text
@@ -470,8 +501,34 @@ export default function HomeScreen() {
           </View>
         </Animated.View>
 
+        {/* ─── Your Journey ────────────────────────────────── */}
+        <Animated.View entering={FadeInDown.delay(260).duration(400)}>
+          <PressableCard
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              navigation.navigate('Journey');
+            }}
+            accessibilityLabel="View your hair journey and progress"
+          >
+            <View style={styles.journeyCard}>
+              <View style={styles.journeyLeft}>
+                <View style={[styles.journeyIconCircle, { backgroundColor: ac.accent + '15' }]}>
+                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                    <Path d="M22 12H18L15 21L9 3L6 12H2" stroke={ac.accent} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                  </Svg>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.journeyTitle}>Your Journey</Text>
+                  <Text style={styles.journeySub}>Track progress, streaks & milestones</Text>
+                </View>
+              </View>
+              <ChevronRightIcon color={ac.accent} size={18} />
+            </View>
+          </PressableCard>
+        </Animated.View>
+
         {/* ─── Weekly Check-in ─────────────────────────────── */}
-        <Animated.View entering={FadeInDown.delay(275).duration(400)}>
+        <Animated.View entering={FadeInDown.delay(290).duration(400)}>
           <PressableCard
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -888,6 +945,45 @@ const styles = StyleSheet.create({
   chipText: {
     fontFamily: fonts.bodyMedium,
     fontSize: fontSize.sm,
+  },
+
+  // Journey card
+  journeyCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...shadows.sm,
+  },
+  journeyLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  journeyIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  journeyTitle: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.md,
+    color: colors.ink,
+  },
+  journeySub: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.muted,
+    marginTop: 2,
   },
 
   // Check-in

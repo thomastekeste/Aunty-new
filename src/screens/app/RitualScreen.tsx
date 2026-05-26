@@ -6,7 +6,7 @@
  * Warm editorial design, SVG icons, spring animations.
  */
 
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
   Pressable,
   Dimensions,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
@@ -26,7 +27,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { Button } from '../../components/Button';
@@ -154,8 +155,22 @@ export default function RitualScreen() {
   const [viewMonth, setViewMonth] = useState(now.getMonth());
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [selectedDay, setSelectedDay] = useState<number | null>(now.getDate());
+  const [completedDates, setCompletedDates] = useState<Set<string>>(new Set());
 
   const scrollRef = useRef<ScrollView>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        try {
+          const keys = await AsyncStorage.getAllKeys();
+          const ritualKeys = keys.filter((k) => k.startsWith('ritual_completed_'));
+          const dates = ritualKeys.map((k) => k.replace('ritual_completed_', ''));
+          setCompletedDates(new Set(dates));
+        } catch {}
+      })();
+    }, []),
+  );
 
   const { firstDay, daysInMonth } = useMemo(
     () => getMonthDays(viewYear, viewMonth),
@@ -173,6 +188,12 @@ export default function RitualScreen() {
   const getRitualForDay = (day: number) => {
     const date = new Date(viewYear, viewMonth, day);
     return WEEKLY_PATTERN[date.getDay()];
+  };
+
+  const isDayCompleted = (day: number) => {
+    const d = new Date(viewYear, viewMonth, day);
+    const key = d.toISOString().split('T')[0];
+    return completedDates.has(key);
   };
 
   const selectedRitual = selectedDay ? getRitualForDay(selectedDay) : null;
@@ -306,6 +327,7 @@ export default function RitualScreen() {
             }
 
             // Normal or past cell
+            const completed = isDayCompleted(day);
             return (
               <Pressable
                 key={i}
@@ -313,18 +335,24 @@ export default function RitualScreen() {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setSelectedDay(day);
                 }}
-                accessibilityLabel={`${day}, ${ritual.label} day`}
+                accessibilityLabel={`${day}, ${ritual.label} day${completed ? ', completed' : ''}`}
               >
-                <View style={styles.cell}>
+                <View style={[styles.cell, completed && { backgroundColor: color + '12' }]}>
                   <Text style={[styles.cellDay, pastMark && { color: colors.ink }]}>
                     {day}
                   </Text>
-                  <View
-                    style={[
-                      styles.cellDot,
-                      { backgroundColor: pastMark ? color : color + '40' },
-                    ]}
-                  />
+                  {completed ? (
+                    <Svg width={10} height={10} viewBox="0 0 24 24" fill="none">
+                      <Path d="M20 6L9 17L4 12" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+                    </Svg>
+                  ) : (
+                    <View
+                      style={[
+                        styles.cellDot,
+                        { backgroundColor: pastMark ? color : color + '40' },
+                      ]}
+                    />
+                  )}
                 </View>
               </Pressable>
             );
@@ -405,8 +433,15 @@ export default function RitualScreen() {
                 ))}
               </View>
 
-              {/* Start CTA — only show for today or future */}
-              {!isPast(selectedDay) && (
+              {/* Completion badge or Start CTA */}
+              {isDayCompleted(selectedDay) ? (
+                <View style={styles.completedBadge}>
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                    <Path d="M20 6L9 17L4 12" stroke={colors.jewel.emerald} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+                  </Svg>
+                  <Text style={styles.completedText}>Completed</Text>
+                </View>
+              ) : !isPast(selectedDay) ? (
                 <View style={styles.detailCta}>
                   <Button
                     label={isToday(selectedDay) ? 'Start Ritual' : 'Preview Ritual'}
@@ -419,7 +454,7 @@ export default function RitualScreen() {
                     icon={<PlayIcon size={14} color={colors.ink} />}
                   />
                 </View>
-              )}
+              ) : null}
             </View>
           </Animated.View>
         )}
@@ -661,5 +696,21 @@ const styles = StyleSheet.create({
   },
   detailCta: {
     marginTop: spacing.xs,
+  },
+  completedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.jewel.emerald + '12',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
+  },
+  completedText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.jewel.emerald,
   },
 });

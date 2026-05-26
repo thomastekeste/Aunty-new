@@ -202,7 +202,14 @@ export default function SettingsScreen() {
           <View style={[styles.card, shadows.sm]}>
             <ListRow label="Name" value={name || 'Not set'} />
             <View style={styles.divider} />
-            <ListRow label="Hair Profile" value={profileSummary} />
+            <ListRow
+              label="Hair Profile"
+              value={profileSummary}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                (navigation as any).navigate('HairProfile');
+              }}
+            />
           </View>
         </Animated.View>
 

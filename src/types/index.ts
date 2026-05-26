@@ -184,4 +184,5 @@ export type AppStackParamList = {
   AuntyChat: { auntyId: AuntyId };
   HairProfile: undefined;
   Settings: undefined;
+  Journey: undefined;
 };
