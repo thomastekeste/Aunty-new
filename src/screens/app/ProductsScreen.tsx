@@ -29,7 +29,6 @@ import * as Haptics from 'expo-haptics';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { AUNTIES } from '../../constants/aunties';
 import { PRODUCTS, CATEGORY_LABELS, type Product, type ProductCategory } from '../../constants/products';
-import { getRecommendations } from '../../services/recommendations';
 import { useOnboarding } from '../../context/OnboardingContext';
 import {
   colors,
@@ -179,46 +178,23 @@ export default function ProductsScreen() {
   const { state } = useOnboarding();
   const profile = state.data.hairProfile;
 
-  // Use full recommendation engine — scored, sorted, personalized
-  const bundle = useMemo(() => getRecommendations(profile), [
-    profile.curlType,
-    profile.porosity,
-    profile.primaryGoal,
-    profile.secondaryGoals,
-    profile.scalpConcerns,
-    profile.heatUse,
-    profile.colorTreated,
-  ]);
+  const filtered = useMemo(() => {
+    return PRODUCTS.filter((p) => {
+      if (profile.curlType && p.curlTypes.length > 0 && !p.curlTypes.includes(profile.curlType)) return false;
+      if (profile.porosity && p.porosity.length > 0 && !p.porosity.includes(profile.porosity)) return false;
+      return true;
+    });
+  }, [profile.curlType, profile.porosity]);
 
-  // byCategory from recs; fall back to unscored products for completeness
-  const grouped = useMemo<Map<ProductCategory, Product[]>>(() => {
-    const map = new Map<ProductCategory, Product[]>();
-    // Start with recommendation engine results
-    for (const [cat, recs] of Object.entries(bundle.byCategory)) {
-      map.set(cat as ProductCategory, recs.map((r) => r.product));
-    }
-    // Fill any missing categories with unfiltered products
-    for (const p of PRODUCTS) {
-      if (!map.has(p.category)) {
-        const list = map.get(p.category) || [];
-        list.push(p);
-        map.set(p.category, list);
-      }
-    }
-    return map;
-  }, [bundle]);
+  const isMatchedForUser = useCallback((p: Product) => {
+    let score = 0;
+    if (profile.curlType && p.curlTypes.includes(profile.curlType)) score++;
+    if (profile.porosity && p.porosity.includes(profile.porosity)) score++;
+    if (profile.primaryGoal && p.goals.includes(profile.primaryGoal)) score++;
+    return score >= 2;
+  }, [profile.curlType, profile.porosity, profile.primaryGoal]);
 
-  // Build a quick reason lookup: productId → reason string
-  const reasonMap = useMemo<Record<string, string>>(() => {
-    const m: Record<string, string> = {};
-    for (const recs of Object.values(bundle.byCategory)) {
-      for (const r of recs) {
-        m[r.product.id] = r.reason;
-      }
-    }
-    return m;
-  }, [bundle]);
-
+  const grouped = useMemo(() => groupByCategory(filtered), [filtered]);
   const tabs = useMemo(() => Array.from(grouped.keys()), [grouped]);
   const [activeTab, setActiveTab] = useState<ProductCategory>(tabs[0] || 'cleanser');
   const activeProducts = grouped.get(activeTab) || [];
@@ -234,7 +210,7 @@ export default function ProductsScreen() {
         <Text style={styles.overline}>AUNTY'S PICKS</Text>
         <Text style={styles.title}>Your Products</Text>
         <Text style={styles.subtitle}>
-          Personalised{profile.curlType ? ` for ${profile.curlType} hair` : ' for your profile'}
+          Matched to {[profile.curlType, profile.porosity ? `${profile.porosity} porosity` : null].filter(Boolean).join(', ') || 'your'} hair
         </Text>
       </View>
 
@@ -287,7 +263,7 @@ export default function ProductsScreen() {
               <Text style={styles.sectionLabel}>Premium Picks</Text>
             </View>
             {premiumProducts.map((p, i) => (
-              <ProductCard key={p.id} product={p} index={i} isPremium reason={reasonMap[p.id]} />
+              <ProductCard key={p.id} product={p} index={i} isPremium isMatched={isMatchedForUser(p)} />
             ))}
           </View>
         )}
@@ -306,7 +282,7 @@ export default function ProductsScreen() {
                 key={p.id}
                 product={p}
                 index={premiumProducts.length + i}
-                reason={reasonMap[p.id]}
+                isMatched={isMatchedForUser(p)}
               />
             ))}
           </View>
@@ -335,12 +311,12 @@ function ProductCard({
   product: p,
   index,
   isPremium = false,
-  reason,
+  isMatched = false,
 }: {
   product: Product;
   index: number;
   isPremium?: boolean;
-  reason?: string;
+  isMatched?: boolean;
 }) {
   const ac = auntyColors[p.recommendedBy];
   const aunty = AUNTIES[p.recommendedBy];
@@ -374,8 +350,13 @@ function ProductCard({
           {/* Description + Tags inline */}
           <Text style={styles.cardDesc} numberOfLines={2}>{p.description}</Text>
 
-          {(p.isBudgetFriendly || isPremium) && (
+          {(p.isBudgetFriendly || isPremium || isMatched) && (
             <View style={styles.tagRow}>
+              {isMatched && (
+                <View style={styles.matchedPill}>
+                  <Text style={styles.matchedPillText}>Matched for You</Text>
+                </View>
+              )}
               {p.isBudgetFriendly && (
                 <View style={styles.budgetPill}>
                   <LeafIcon size={11} />
@@ -388,13 +369,6 @@ function ProductCard({
                   <Text style={styles.premiumPillText}>Premium Pick</Text>
                 </View>
               )}
-            </View>
-          )}
-
-          {/* Why recommended — from engine */}
-          {reason && (
-            <View style={styles.reasonPill}>
-              <Text style={styles.reasonText}>{reason}</Text>
             </View>
           )}
 
@@ -620,22 +594,21 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.primaryDeep,
   },
-
-  // Recommendation reason chip
-  reasonPill: {
+  matchedPill: {
     flexDirection: 'row',
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primary + '14',
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    marginBottom: spacing.xs,
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(212, 160, 74, 0.20)',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.primaryMuted,
   },
-  reasonText: {
-    fontFamily: fonts.bodyMedium,
+  matchedPillText: {
+    fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.xs,
-    color: colors.primary,
-    letterSpacing: 0.1,
+    color: colors.primaryDeep,
   },
 
   // Aunty recommendation

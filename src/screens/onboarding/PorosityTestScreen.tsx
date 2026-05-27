@@ -3,15 +3,16 @@
  *
  * "Time fi test di roots."
  * Interactive three-option test: float, sink slowly, sink fast.
+ * Quiz-based fallback for users who haven't done the water test.
  */
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { SalonFrame } from '../../components/SalonFrame';
-import { EditorialCard } from '../../components/EditorialCard';
+import { ConsultationShell } from '../../components/ConsultationShell';
+import { OptionCard } from '../../components/OptionCard';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
 import type { OnboardingStackParamList, Porosity } from '../../types';
@@ -32,6 +33,11 @@ interface PorosityOption {
   description: string;
   icon: string;
   detail: string;
+}
+
+interface QuizQuestion {
+  question: string;
+  answers: { label: string; value: Porosity }[];
 }
 
 const OPTIONS: PorosityOption[] = [
@@ -58,15 +64,70 @@ const OPTIONS: PorosityOption[] = [
   },
 ];
 
+const QUIZ_QUESTIONS: QuizQuestion[] = [
+  {
+    question: 'How long does your hair take to fully air dry?',
+    answers: [
+      { label: 'Takes forever (4+ hours)', value: 'low' },
+      { label: 'A couple hours', value: 'normal' },
+      { label: 'Dries really fast', value: 'high' },
+    ],
+  },
+  {
+    question: 'When you apply leave-in conditioner, what happens?',
+    answers: [
+      { label: 'It sits on top, feels greasy', value: 'low' },
+      { label: 'Absorbs nicely over a few minutes', value: 'normal' },
+      { label: 'Disappears instantly, hair still feels dry', value: 'high' },
+    ],
+  },
+  {
+    question: 'Does your hair get weighed down easily?',
+    answers: [
+      { label: 'Yes, everything feels heavy', value: 'low' },
+      { label: 'Only heavy products bother it', value: 'normal' },
+      { label: 'Never — it always wants more', value: 'high' },
+    ],
+  },
+  {
+    question: 'How does your hair react to humidity?',
+    answers: [
+      { label: 'Barely changes', value: 'low' },
+      { label: 'Some frizz, manageable', value: 'normal' },
+      { label: 'Frizzes up immediately', value: 'high' },
+    ],
+  },
+  {
+    question: 'Have you ever bleached or color-treated?',
+    answers: [
+      { label: 'Never', value: 'low' },
+      { label: 'A little (semi-permanent, highlights)', value: 'normal' },
+      { label: 'Yes, heavily (full bleach, multiple times)', value: 'high' },
+    ],
+  },
+];
+
+function calculatePorosity(answers: Porosity[]): Porosity {
+  const counts = { low: 0, normal: 0, high: 0 };
+  answers.forEach((a) => counts[a]++);
+  if (counts.low >= 3) return 'low';
+  if (counts.high >= 3) return 'high';
+  return 'normal';
+}
+
 export default function PorosityTestScreen() {
   const navigation = useNavigation<Nav>();
   const { state, updateHairProfile } = useOnboarding();
   const auntyId = state.data.chosenAuntyId || 'denise';
   const aunty = AUNTIES[auntyId];
   const ac = auntyColors[auntyId];
+
   const [selected, setSelected] = useState<Porosity | undefined>(
     state.data.hairProfile.porosity
   );
+  const [mode, setMode] = useState<'water' | 'quiz'>('water');
+  const [quizIndex, setQuizIndex] = useState<number>(0);
+  const [quizAnswers, setQuizAnswers] = useState<Porosity[]>([]);
 
   const handleContinue = () => {
     if (!selected) return;
@@ -74,52 +135,160 @@ export default function PorosityTestScreen() {
     navigation.navigate('PrimaryGoal');
   };
 
+  const handleSwitchToQuiz = () => {
+    setMode('quiz');
+    setQuizIndex(0);
+    setQuizAnswers([]);
+  };
+
+  const handleSwitchToWater = () => {
+    setMode('water');
+    setQuizIndex(0);
+    setQuizAnswers([]);
+  };
+
+  const handleQuizAnswer = useCallback(
+    (answer: Porosity) => {
+      const newAnswers = [...quizAnswers, answer];
+      setQuizAnswers(newAnswers);
+
+      setTimeout(() => {
+        if (quizIndex < 4) {
+          setQuizIndex(quizIndex + 1);
+        } else {
+          // All 5 questions answered
+          const result = calculatePorosity(newAnswers);
+          setSelected(result);
+        }
+      }, 400);
+    },
+    [quizIndex, quizAnswers]
+  );
+
   const selectedOption = OPTIONS.find((o) => o.value === selected);
+  const quizComplete = quizAnswers.length === 5;
 
   return (
-    <SalonFrame
+    <ConsultationShell
       auntyId={auntyId}
-      question="Let's test your porosity — does your hair float, hover, or sink?"
-      speakerVerb="wants to test"
+      question="Time to test your hair. Drop a strand in a glass of water. What happened?"
       step={3}
       totalSteps={7}
-      ctaLabel="Continue"
+      ctaLabel="Next"
       ctaDisabled={!selected}
       onCtaPress={handleContinue}
     >
-      {/* Test instruction */}
-      <Animated.View
-        entering={FadeInDown.delay(200).duration(400)}
-        style={styles.instruction}
-        accessibilityRole="text"
-        accessibilityLabel="If you do not know your porosity, try the water glass test. Drop a clean strand of hair into a glass of room-temperature water. Wait 2 to 4 minutes, then see whether it floats at the top, hovers in the middle, or sinks to the bottom."
-      >
-        <Text style={styles.instructionIcon}>{'\uD83E\uDDEA'}</Text>
-        <View style={styles.instructionTextWrap}>
-          <Text style={styles.instructionTitle}>{"Don't know yours? Try the water test"}</Text>
-          <Text style={styles.instructionBody}>
-            Drop a clean strand (a piece from your brush works) into a glass of
-            room-temperature water. Wait 2-4 minutes — does it float at the top,
-            hover in the middle, or sink to the bottom?
-          </Text>
-        </View>
-      </Animated.View>
+      {mode === 'water' && (
+        <>
+          {/* Test instruction */}
+          <Animated.View
+            entering={FadeInDown.delay(200).duration(400)}
+            style={styles.instruction}
+            accessibilityRole="text"
+            accessibilityLabel="The Water Glass Test: Take a clean strand of hair. Drop it in a glass of room-temperature water. Wait 2 to 4 minutes and observe."
+          >
+            <Text style={styles.instructionIcon}>{'🧪'}</Text>
+            <View style={styles.instructionTextWrap}>
+              <Text style={styles.instructionTitle}>The Water Glass Test</Text>
+              <Text style={styles.instructionBody}>
+                Take a clean strand of hair (shed from your brush is fine). Drop it in a glass
+                of room-temperature water. Wait 2-4 minutes and observe.
+              </Text>
+            </View>
+          </Animated.View>
 
-      <View style={styles.options}>
-        {OPTIONS.map((option, index) => (
-          <EditorialCard
-            key={option.value}
-            label={option.label}
-            description={option.description}
-            icon={option.icon}
-            selected={selected === option.value}
-            onPress={() => setSelected(option.value)}
-            auntyId={auntyId}
-            index={index}
-          />
-        ))}
-      </View>
+          {/* Options */}
+          <View style={styles.options}>
+            {OPTIONS.map((option, index) => (
+              <OptionCard
+                key={option.value}
+                label={option.label}
+                description={option.description}
+                icon={option.icon}
+                selected={selected === option.value}
+                onPress={() => setSelected(option.value)}
+                auntyId={auntyId}
+                index={index}
+              />
+            ))}
+          </View>
 
+          {/* Not sure? link */}
+          <Pressable onPress={handleSwitchToQuiz} style={styles.switchLink}>
+            <Text style={styles.switchLinkText}>
+              Haven't done the test? Let me figure it out.
+            </Text>
+          </Pressable>
+        </>
+      )}
+
+      {mode === 'quiz' && !quizComplete && (
+        <>
+          {/* Quiz progress */}
+          <View style={styles.quizProgress}>
+            <Text style={styles.progressText}>
+              Question {quizIndex + 1} of 5
+            </Text>
+            <View style={styles.quizDots}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.quizDot,
+                    i <= quizIndex && styles.quizDotActive,
+                    i <= quizIndex && { backgroundColor: ac.accent },
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
+
+          {/* Quiz question */}
+          <Animated.View
+            key={quizIndex}
+            entering={FadeInDown.duration(300)}
+          >
+            <Text style={styles.quizQuestionText}>
+              {QUIZ_QUESTIONS[quizIndex].question}
+            </Text>
+
+            <View style={styles.options}>
+              {QUIZ_QUESTIONS[quizIndex].answers.map((answer, index) => (
+                <OptionCard
+                  key={answer.label}
+                  label={answer.label}
+                  description=""
+                  icon=""
+                  selected={false}
+                  onPress={() => handleQuizAnswer(answer.value)}
+                  auntyId={auntyId}
+                  index={index}
+                />
+              ))}
+            </View>
+          </Animated.View>
+
+          {/* Back to water test link */}
+          <Pressable onPress={handleSwitchToWater} style={styles.switchLink}>
+            <Text style={styles.switchLinkText}>
+              {'←'} Try the water test instead
+            </Text>
+          </Pressable>
+        </>
+      )}
+
+      {mode === 'quiz' && quizComplete && (
+        <>
+          {/* Back to water test link */}
+          <Pressable onPress={handleSwitchToWater} style={styles.switchLink}>
+            <Text style={styles.switchLinkText}>
+              {'←'} Try the water test instead
+            </Text>
+          </Pressable>
+        </>
+      )}
+
+      {/* Detail card on selection */}
       {selectedOption && (
         <Animated.View
           entering={FadeInDown.duration(400)}
@@ -127,11 +296,11 @@ export default function PorosityTestScreen() {
         >
           <Text style={styles.detailText}>{selectedOption.detail}</Text>
           <Text style={[styles.marciaNote, { color: ac.accent }]}>
-            {'\u2014 '} Aunty {aunty.name} says so.
+            {'— '} Aunty {aunty.name} say so.
           </Text>
         </Animated.View>
       )}
-    </SalonFrame>
+    </ConsultationShell>
   );
 }
 
@@ -141,29 +310,28 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     backgroundColor: colors.dark.surfaceLight,
     borderRadius: radius.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm + 2,
-    marginBottom: spacing.sm,
-    gap: spacing.sm,
+    padding: spacing.md,
+    marginBottom: spacing.xl,
+    gap: spacing.md,
   },
   instructionIcon: {
-    fontSize: 18,
-    marginTop: 1,
+    fontSize: 28,
+    marginTop: 2,
   },
   instructionTextWrap: {
     flex: 1,
   },
   instructionTitle: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.base,
     color: colors.dark.text,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   instructionBody: {
     fontFamily: fonts.body,
-    fontSize: fontSize.xs,
+    fontSize: fontSize.sm,
     color: colors.dark.textMuted,
-    lineHeight: fontSize.xs * 1.5,
+    lineHeight: fontSize.sm * 1.6,
   },
   options: {
     gap: spacing.xs,
@@ -172,21 +340,62 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dark.surfaceLight,
     borderRadius: radius.md,
     borderLeftWidth: 3,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm + 2,
-    marginTop: spacing.sm,
+    padding: spacing.md,
+    marginTop: spacing.lg,
   },
   detailText: {
-    fontFamily: fonts.serifMedium,
-    fontSize: fontSize.sm,
+    fontFamily: fonts.body,
+    fontSize: fontSize.base,
     color: colors.dark.text,
-    lineHeight: fontSize.sm * 1.4,
-    letterSpacing: -0.1,
+    lineHeight: fontSize.base * 1.5,
   },
   marciaNote: {
-    fontFamily: fonts.serifItalic,
+    fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.xs,
     color: auntyColors.marcia?.accent,
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  switchLink: {
+    alignItems: 'center',
+    marginTop: spacing.lg,
+  },
+  switchLinkText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.dark.textMuted,
+    textDecorationLine: 'underline',
+  },
+  quizProgress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  quizDots: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  quizDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.dark.surfaceLight,
+  },
+  quizDotActive: {
+    backgroundColor: colors.dark.text,
+  },
+  quizQuestionText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.base,
+    color: colors.dark.text,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+    lineHeight: fontSize.base * 1.5,
+  },
+  progressText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.dark.textMuted,
   },
 });

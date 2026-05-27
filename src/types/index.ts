@@ -187,4 +187,5 @@ export type AppStackParamList = {
   Settings: undefined;
   EditProfile: undefined;
   ChangeAunty: undefined;
+  Journey: undefined;
 };

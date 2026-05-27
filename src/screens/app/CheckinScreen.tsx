@@ -1,8 +1,8 @@
 /**
- * CheckInScreen -- Weekly hair check-in modal.
+ * CheckInScreen — Weekly hair check-in modal.
  *
- * Dark background, aunty avatar, mood selection, optional notes.
- * Saves to AsyncStorage and shows aunty response on success.
+ * Dark background, aunty avatar, mood selection, optional photo + notes.
+ * Saves to AsyncStorage with full history tracking.
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -12,14 +12,16 @@ import {
   StyleSheet,
   Pressable,
   TextInput,
+  Image,
+  ScrollView,
+  Alert,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
-import type { AppStackParamList, CheckInMood } from '../../types';
+import { useNavigation } from '@react-navigation/native';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { Button } from '../../components/Button';
@@ -35,34 +37,29 @@ import {
 import { AUNTIES, type AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
 
-type Mood = CheckInMood;
-
-function CloseIcon({ size = 18, color = colors.dark.text }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M6 6L18 18M18 6L6 18"
-        stroke={color}
-        strokeWidth={2.2}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
-}
+type Mood = 'great' | 'good' | 'okay' | 'struggling';
 
 interface MoodOption {
   key: Mood;
+  emoji: string;
   label: string;
   description: string;
   color: string;
 }
 
 const MOOD_OPTIONS: MoodOption[] = [
-  { key: 'great', label: 'Great', description: 'Hair is thriving!', color: colors.jewel.emerald },
-  { key: 'good', label: 'Good', description: 'Feeling positive', color: colors.jewel.amber },
-  { key: 'okay', label: 'Okay', description: 'Doing alright', color: colors.jewel.indigo },
-  { key: 'struggling', label: 'Struggling', description: 'Need some help', color: colors.jewel.rose },
+  { key: 'great', emoji: '✨', label: 'Great', description: 'Hair is thriving!', color: colors.jewel.emerald },
+  { key: 'good', emoji: '🌱', label: 'Good', description: 'Feeling positive', color: colors.jewel.amber },
+  { key: 'okay', emoji: '🌤', label: 'Okay', description: 'Doing alright', color: colors.jewel.indigo },
+  { key: 'struggling', emoji: '🌧', label: 'Struggling', description: 'Need some help', color: colors.jewel.rose },
 ];
+
+const FOLLOW_UP_PROMPTS: Record<Mood, string> = {
+  great: 'What worked well this week?',
+  good: 'Any wins worth noting?',
+  okay: 'What would make next week better?',
+  struggling: 'What are you dealing with?',
+};
 
 function getAuntyResponse(aunty: typeof AUNTIES[AuntyId], mood: Mood): string {
   switch (mood) {
@@ -84,33 +81,121 @@ function getWeekNumber(onboardingDate?: string): number {
   return Math.max(1, Math.ceil(diff / (7 * 24 * 60 * 60 * 1000)));
 }
 
+async function getCheckinStreak(): Promise<number> {
+  try {
+    const raw = await AsyncStorage.getItem('checkin_history');
+    if (!raw) return 0;
+    const history: { timestamp: string }[] = JSON.parse(raw);
+    if (history.length === 0) return 0;
+
+    let streak = 1;
+    const sorted = history
+      .map((c) => new Date(c.timestamp))
+      .sort((a, b) => b.getTime() - a.getTime());
+
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1];
+      const curr = sorted[i];
+      const daysDiff = (prev.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysDiff <= 8) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
+  } catch {
+    return 0;
+  }
+}
+
+// ─── Camera Icon SVG ────────────────────────────────────────────
+
+function CameraIcon({ color }: { color: string }) {
+  return (
+    <Text style={{ fontSize: 24, color }}>📷</Text>
+  );
+}
+
+// ─── Main Screen ────────────────────────────────────────────────
+
 export default function CheckInScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
-  const route = useRoute<RouteProp<AppStackParamList, 'CheckIn'>>();
-  const initialMood = route.params?.mood ?? null;
   const { state } = useOnboarding();
   const auntyId: AuntyId = state.data.chosenAuntyId || 'denise';
   const aunty = AUNTIES[auntyId];
   const ac = auntyColors[auntyId];
 
-  const [selectedMood, setSelectedMood] = useState<Mood | null>(initialMood);
+  const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
   const [notes, setNotes] = useState('');
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [auntyResponse, setAuntyResponse] = useState('');
   const [onboardingDate, setOnboardingDate] = useState<string | undefined>();
+  const [streak, setStreak] = useState(0);
+  const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem('onboarding_completed_at').then((d) => {
-      if (d) setOnboardingDate(d);
-    }).catch(() => {});
+    AsyncStorage.getItem('onboarding_completed_at')
+      .then((d) => { if (d) setOnboardingDate(d); })
+      .catch(() => {});
+
+    getCheckinStreak().then(setStreak);
   }, []);
 
   const weekNumber = getWeekNumber(onboardingDate);
 
+  useEffect(() => {
+    AsyncStorage.getItem(`checkin_week_${weekNumber}`)
+      .then((val) => { if (val) setAlreadyCheckedIn(true); })
+      .catch(() => {});
+  }, [weekNumber]);
+
   const handleSelectMood = useCallback((mood: Mood) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedMood(mood);
+  }, []);
+
+  const handlePickPhoto = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'We need access to your photos to add a hair photo.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setPhotoUri(result.assets[0].uri);
+    }
+  }, []);
+
+  const handleTakePhoto = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'We need camera access to take a hair photo.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setPhotoUri(result.assets[0].uri);
+    }
   }, []);
 
   const handleSubmit = useCallback(async () => {
@@ -120,29 +205,39 @@ export default function CheckInScreen() {
     const checkin = {
       mood: selectedMood,
       notes: notes.trim(),
+      photoUri,
       timestamp: new Date().toISOString(),
       auntyId,
+      weekNumber,
     };
 
     try {
       await AsyncStorage.setItem(`checkin_week_${weekNumber}`, JSON.stringify(checkin));
+
+      const raw = await AsyncStorage.getItem('checkin_history');
+      const history = raw ? JSON.parse(raw) : [];
+      history.push(checkin);
+      await AsyncStorage.setItem('checkin_history', JSON.stringify(history));
     } catch {
-      // Best effort save
+      // Best effort
     }
 
     setAuntyResponse(getAuntyResponse(aunty, selectedMood));
+    setStreak((s) => s + 1);
     setSubmitted(true);
-  }, [selectedMood, notes, weekNumber, auntyId, aunty]);
+  }, [selectedMood, notes, photoUri, weekNumber, auntyId, aunty]);
 
   const handleDone = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     navigation.goBack();
   }, [navigation]);
 
+  // ─── Success State ──────────────────────────────────
+
   if (submitted) {
     return (
       <View style={[styles.container, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg }]}>
-        <View style={styles.successContent}>
+        <ScrollView contentContainerStyle={styles.successContent} showsVerticalScrollIndicator={false}>
           <Animated.View entering={FadeIn.duration(400)} style={styles.successAvatar}>
             <AuntyAvatar auntyId={auntyId} size={72} showRing glowing />
           </Animated.View>
@@ -152,82 +247,135 @@ export default function CheckInScreen() {
           <Animated.Text entering={FadeInDown.delay(150).duration(400)} style={styles.successWeek}>
             Week {weekNumber}
           </Animated.Text>
+
+          {streak > 1 && (
+            <Animated.View entering={FadeInDown.delay(170).duration(400)} style={styles.streakBadge}>
+              <Text style={styles.streakText}>🔥 {streak}-week streak</Text>
+            </Animated.View>
+          )}
+
+          {photoUri && (
+            <Animated.View entering={FadeInDown.delay(180).duration(400)} style={styles.successPhotoWrap}>
+              <Image source={{ uri: photoUri }} style={styles.successPhoto} />
+            </Animated.View>
+          )}
+
           <Animated.View entering={FadeInDown.delay(200).duration(400)} style={[styles.responseBubble, { borderLeftColor: ac.accent, backgroundColor: ac.bgDark }]}>
             <Text style={[styles.responseAuntyName, { color: ac.accent }]}>{aunty.name}</Text>
             <Text style={styles.aiDisclosure}>AI-powered response</Text>
             <Text style={styles.responseText}>{auntyResponse}</Text>
           </Animated.View>
+
           <Animated.View entering={FadeInDown.delay(300).duration(400)} style={styles.doneWrap}>
             <Button label="Done" onPress={handleDone} variant="primary" size="lg" />
           </Animated.View>
-        </View>
+        </ScrollView>
       </View>
     );
   }
 
+  // ─── Input State ────────────────────────────────────
+
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + spacing.lg }]}>
-      {/* Top bar */}
-      <View style={styles.topBar}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="Close">
-          <CloseIcon />
-        </Pressable>
-        <View style={styles.topTitleCol}>
-          <Text style={styles.topOverline}>{`WEEK ${weekNumber}`}</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+        {/* Top bar */}
+        <View style={styles.topBar}>
+          <Pressable onPress={() => navigation.goBack()} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="Close">
+            <Text style={styles.closeText}>✕</Text>
+          </Pressable>
           <Text style={styles.topTitle}>Weekly Check-in</Text>
+          <View style={{ width: 44 }} />
         </View>
-        <View style={{ width: 44 }} />
-      </View>
-      <View style={styles.topRule} />
 
-      {/* Aunty avatar + question */}
-      <Animated.View entering={FadeInDown.duration(300)} style={styles.questionSection}>
-        <AuntyAvatar auntyId={auntyId} size={56} showRing glowing />
-        <Text style={styles.questionText}>How's your hair this week?</Text>
-        <Text style={styles.questionSub}>{aunty.name} wants to know</Text>
-      </Animated.View>
+        {/* Already checked in notice */}
+        {alreadyCheckedIn && (
+          <Animated.View entering={FadeIn.duration(300)} style={styles.alreadyNotice}>
+            <Text style={styles.alreadyText}>You already checked in this week — updating will replace it</Text>
+          </Animated.View>
+        )}
 
-      {/* Mood options as tappable cards */}
-      <Animated.View entering={FadeInDown.delay(100).duration(300)} style={styles.moodGrid}>
-        {MOOD_OPTIONS.map((opt) => {
-          const isSelected = selectedMood === opt.key;
-          return (
-            <Pressable
-              key={opt.key}
-              onPress={() => handleSelectMood(opt.key)}
-              style={[
-                styles.moodCard,
-                isSelected && { borderColor: opt.color, backgroundColor: opt.color + '20' },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`${opt.label} - ${opt.description}`}
-              accessibilityState={{ selected: isSelected }}
-            >
-              <Text style={[styles.moodLabel, isSelected && { color: opt.color }]}>{opt.label}</Text>
-              <Text style={[styles.moodDesc, isSelected && { color: colors.dark.text }]}>{opt.description}</Text>
-            </Pressable>
-          );
-        })}
-      </Animated.View>
+        {/* Aunty avatar + question */}
+        <Animated.View entering={FadeInDown.duration(300)} style={styles.questionSection}>
+          <AuntyAvatar auntyId={auntyId} size={56} showRing glowing />
+          <Text style={styles.questionText}>How's your hair this week?</Text>
+          <Text style={styles.questionSub}>Week {weekNumber} · {aunty.name} wants to know</Text>
+        </Animated.View>
 
-      {/* Optional notes */}
-      <Animated.View entering={FadeInDown.delay(200).duration(300)} style={styles.notesSection}>
-        <TextInput
-          style={styles.notesInput}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Anything else to share? (optional)"
-          placeholderTextColor={colors.dark.textMuted}
-          multiline
-          maxLength={300}
-          accessibilityLabel="Additional notes about your hair this week"
-        />
-      </Animated.View>
+        {/* Mood options */}
+        <Animated.View entering={FadeInDown.delay(100).duration(300)} style={styles.moodGrid}>
+          {MOOD_OPTIONS.map((opt) => {
+            const isSelected = selectedMood === opt.key;
+            return (
+              <Pressable
+                key={opt.key}
+                onPress={() => handleSelectMood(opt.key)}
+                style={[
+                  styles.moodCard,
+                  isSelected && { borderColor: opt.color, backgroundColor: opt.color + '20' },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`${opt.label} - ${opt.description}`}
+                accessibilityState={{ selected: isSelected }}
+              >
+                <Text style={styles.moodEmoji}>{opt.emoji}</Text>
+                <Text style={[styles.moodLabel, isSelected && { color: opt.color }]}>{opt.label}</Text>
+                <Text style={[styles.moodDesc, isSelected && { color: colors.dark.text }]}>{opt.description}</Text>
+              </Pressable>
+            );
+          })}
+        </Animated.View>
 
-      {/* Submit */}
+        {/* Photo section */}
+        <Animated.View entering={FadeInDown.delay(200).duration(300)} style={styles.photoSection}>
+          <Text style={styles.photoLabel}>Add a hair photo</Text>
+          <Text style={styles.photoSub}>Track your progress week to week</Text>
+          {photoUri ? (
+            <View style={styles.photoPreviewWrap}>
+              <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+              <Pressable
+                onPress={() => setPhotoUri(null)}
+                style={styles.photoRemove}
+                accessibilityRole="button"
+                accessibilityLabel="Remove photo"
+              >
+                <Text style={styles.photoRemoveText}>✕</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.photoButtons}>
+              <Pressable onPress={handleTakePhoto} style={styles.photoBtn}>
+                <Text style={styles.photoBtnIcon}>📷</Text>
+                <Text style={styles.photoBtnText}>Camera</Text>
+              </Pressable>
+              <Pressable onPress={handlePickPhoto} style={styles.photoBtn}>
+                <Text style={styles.photoBtnIcon}>🖼</Text>
+                <Text style={styles.photoBtnText}>Gallery</Text>
+              </Pressable>
+            </View>
+          )}
+        </Animated.View>
+
+        {/* Notes with dynamic prompt */}
+        <Animated.View entering={FadeInDown.delay(250).duration(300)} style={styles.notesSection}>
+          <TextInput
+            style={styles.notesInput}
+            value={notes}
+            onChangeText={setNotes}
+            placeholder={selectedMood ? FOLLOW_UP_PROMPTS[selectedMood] : 'Anything to share? (optional)'}
+            placeholderTextColor={colors.dark.textMuted}
+            multiline
+            maxLength={300}
+            accessibilityLabel="Additional notes about your hair this week"
+          />
+          <Text style={styles.charCount}>{notes.length}/300</Text>
+        </Animated.View>
+      </ScrollView>
+
+      {/* Submit pinned to bottom */}
       <View style={styles.submitWrap}>
         <Button
-          label="Submit Check-in"
+          label={alreadyCheckedIn ? 'Update Check-in' : 'Submit Check-in'}
           onPress={handleSubmit}
           variant="primary"
           size="lg"
@@ -248,7 +396,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   closeBtn: {
     width: 44,
@@ -257,38 +405,38 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dark.surfaceLight,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.dark.border,
   },
-  topTitleCol: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 2,
-  },
-  topOverline: {
+  closeText: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: 10,
-    color: colors.primary,
-    letterSpacing: 2.4,
+    fontSize: fontSize.md,
+    color: colors.dark.text,
   },
   topTitle: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.lg,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.md,
     color: colors.dark.text,
-    letterSpacing: -0.2,
+    letterSpacing: letterSpacing.wide,
   },
-  topRule: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.primary,
-    opacity: 0.35,
+
+  alreadyNotice: {
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-    marginTop: -spacing.sm,
+    backgroundColor: colors.jewel.amber + '20',
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
   },
+  alreadyText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.jewel.amber,
+    textAlign: 'center',
+  },
+
   questionSection: {
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   questionText: {
     fontFamily: fonts.display,
@@ -304,6 +452,7 @@ const styles = StyleSheet.create({
     color: colors.dark.textMuted,
     marginTop: spacing.xs,
   },
+
   moodGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -323,17 +472,92 @@ const styles = StyleSheet.create({
     minHeight: 80,
     justifyContent: 'center',
   },
+  moodEmoji: {
+    fontSize: 20,
+    marginBottom: spacing.xs,
+  },
   moodLabel: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.lg,
+    fontSize: fontSize.md,
     color: colors.dark.textMuted,
-    marginBottom: spacing.xs,
+    marginBottom: 2,
   },
   moodDesc: {
     fontFamily: fonts.body,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.dark.textMuted,
   },
+
+  // Photo
+  photoSection: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  photoLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.dark.text,
+    marginBottom: 2,
+  },
+  photoSub: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.dark.textMuted,
+    marginBottom: spacing.sm,
+  },
+  photoButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  photoBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.dark.surfaceLight,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+    paddingVertical: spacing.md,
+  },
+  photoBtnIcon: {
+    fontSize: 18,
+  },
+  photoBtnText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.dark.text,
+  },
+  photoPreviewWrap: {
+    width: 120,
+    height: 120,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  photoPreview: {
+    width: '100%',
+    height: '100%',
+  },
+  photoRemove: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xs,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoRemoveText: {
+    color: '#fff',
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+  },
+
+  // Notes
   notesSection: {
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
@@ -351,17 +575,26 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
   },
+  charCount: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.dark.textMuted,
+    textAlign: 'right',
+    marginTop: spacing.xs,
+  },
+
   submitWrap: {
     paddingHorizontal: spacing.lg,
-    marginTop: 'auto',
+    paddingTop: spacing.sm,
   },
 
   // Success state
   successContent: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+    flexGrow: 1,
   },
   successAvatar: {
     marginBottom: spacing.lg,
@@ -378,7 +611,32 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.dark.textMuted,
     letterSpacing: letterSpacing.wide,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
+  },
+  streakBadge: {
+    backgroundColor: colors.jewel.amber + '25',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  streakText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.jewel.amber,
+  },
+  successPhotoWrap: {
+    width: 100,
+    height: 100,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    marginBottom: spacing.lg,
+    borderWidth: 2,
+    borderColor: colors.dark.border,
+  },
+  successPhoto: {
+    width: '100%',
+    height: '100%',
   },
   responseBubble: {
     borderRadius: radius.md,

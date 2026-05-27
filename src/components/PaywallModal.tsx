@@ -1,9 +1,9 @@
 /**
- * PaywallModal — RevenueCat-powered paywall.
+ * PaywallModal — RevenueCat-powered subscription screen.
  *
- * Shows real pricing from RevenueCat offerings.
- * Falls back to display prices if offerings aren't loaded.
- * Handles purchase, restore, and close actions.
+ * Gold/creme editorial design. Feature carousel showing every tab.
+ * Real pricing from RevenueCat offerings.
+ * Monthly and yearly options. Handles purchase, restore, and close.
  */
 
 import React, { useCallback, useState } from 'react';
@@ -17,6 +17,7 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useSubscription } from '../context/SubscriptionContext';
 import {
@@ -26,6 +27,7 @@ import {
   spacing,
   radius,
   shadows,
+  gradients,
   letterSpacing,
 } from '../constants/theme';
 import { PaywallFeatureCarousel } from './PaywallFeatureCarousel';
@@ -58,26 +60,23 @@ const VALUE_SECTIONS = [
   },
 ];
 
-const COMPARISON_ROWS = [
-  { feature: 'Chat with your aunty', free: '5 messages/day', premium: 'Unlimited' },
-  { feature: 'Product picks', free: 'Top 3 only', premium: 'Full personalised list' },
-  { feature: 'Weekly ritual', free: 'View only', premium: 'Tracked + editable' },
-  { feature: 'Articles & guides', free: 'Foundations only', premium: 'Full library' },
-] as const;
-
-export function PaywallModal({ visible, onClose, onSubscribe, onRestore }: Props) {
-  const { currentOffering, purchasePackage, restorePurchases, yearlyHasIntroOffer, trialDays } = useSubscription();
+export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore }: Props) {
+  const { currentOffering, purchasePackage, restorePurchases } = useSubscription();
   const [showMoreOptions, setShowMoreOptions] = useState(false);
 
   // Get packages from RevenueCat offering
   const yearlyPkg = currentOffering?.annual;
   const monthlyPkg = currentOffering?.monthly;
-  const lifetimePkg = currentOffering?.lifetime;
+
+  // Check for intro offer / trial on yearly
+  const yearlyProduct = yearlyPkg?.product as any;
+  const yearlyIntro = yearlyProduct?.introPrice;
+  const yearlyHasIntroOffer = !!yearlyIntro && yearlyIntro.price === 0;
+  const trialDays = yearlyIntro?.periodNumberOfUnits ?? 7;
 
   // Display prices (real from RC or fallback)
   const yearlyPrice = yearlyPkg?.product?.priceString || '$59.99/year';
   const monthlyPrice = monthlyPkg?.product?.priceString || '$9.99/month';
-  const lifetimePrice = lifetimePkg?.product?.priceString || '$149.99';
 
   const trialLabel = yearlyHasIntroOffer
     ? `Start ${trialDays}-Day Free Trial`
@@ -128,19 +127,18 @@ export function PaywallModal({ visible, onClose, onSubscribe, onRestore }: Props
       <View style={styles.overlay}>
         <View style={styles.card}>
           <Pressable onPress={onClose} style={styles.close} hitSlop={12}>
-            <Text style={styles.closeText}>{'\u2715'}</Text>
+            <Text style={styles.closeText}>{'✕'}</Text>
           </Pressable>
 
           <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-            {/* Hook */}
-            <View style={styles.hook}>
+            {/* Gold gradient hook */}
+            <LinearGradient colors={[...gradients.gold]} style={styles.hook}>
               <Text style={styles.hookOverline}>MADE FOR TEXTURED HAIR</Text>
               <Text style={styles.hookTitle}>Stop guessing.{'\n'}Start knowing.</Text>
               <Text style={styles.hookSub}>
                 Generic advice wastes your time and money. This app was built specifically for coily, curly, and textured hair.
               </Text>
-              <Text style={styles.hookUrgency}>Introductory pricing — won't last forever.</Text>
-            </View>
+            </LinearGradient>
 
             {/* Feature carousel — sweep through every tab of the app */}
             <PaywallFeatureCarousel cardWidth={SCREEN_W} />
@@ -167,27 +165,11 @@ export function PaywallModal({ visible, onClose, onSubscribe, onRestore }: Props
               </Text>
             </View>
 
-            {/* Free vs Premium comparison table */}
-            <View style={styles.compTable}>
-              <View style={styles.compHeader}>
-                <Text style={[styles.compCell, styles.compFeatureCell]} />
-                <Text style={[styles.compCell, styles.compHeaderText]}>Free</Text>
-                <Text style={[styles.compCell, styles.compHeaderText, { color: colors.primary }]}>Pro</Text>
-              </View>
-              {COMPARISON_ROWS.map((row, i) => (
-                <View key={i} style={[styles.compRow, i % 2 === 0 && styles.compRowTinted]}>
-                  <Text style={[styles.compCell, styles.compFeatureText]}>{row.feature}</Text>
-                  <Text style={[styles.compCell, styles.compValueText]}>{row.free}</Text>
-                  <Text style={[styles.compCell, styles.compValueText, { color: colors.primary, fontFamily: fonts.bodySemiBold }]}>{row.premium}</Text>
-                </View>
-              ))}
-            </View>
-
             {/* Pricing */}
             <View style={styles.pricing}>
               {/* Primary CTA — yearly with trial */}
               <Pressable onPress={handleYearly} style={styles.yearlyBtn}>
-                <View style={styles.yearlyGradient}>
+                <LinearGradient colors={[...gradients.gold]} style={styles.yearlyGradient}>
                   <View style={styles.bestValue}>
                     <Text style={styles.bestValueText}>
                       {yearlyHasIntroOffer ? `${trialDays} DAYS FREE` : 'BEST VALUE'}
@@ -197,14 +179,17 @@ export function PaywallModal({ visible, onClose, onSubscribe, onRestore }: Props
                   <Text style={styles.yearlyPrice}>
                     {yearlyHasIntroOffer ? `Then ${yearlyPrice}` : yearlyPrice}
                   </Text>
-                  <Text style={styles.yearlySub}>Cancel anytime in Settings</Text>
-                </View>
+                  <Text style={styles.yearlySub}>Less than one bad product purchase</Text>
+                </LinearGradient>
               </Pressable>
 
               {/* More options toggle */}
               <Pressable
                 style={styles.moreOptionsBtn}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowMoreOptions((v) => !v); }}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowMoreOptions((v) => !v);
+                }}
               >
                 <Text style={styles.moreOptionsText}>
                   {showMoreOptions ? 'Hide options ↑' : 'More options ↓'}
@@ -212,44 +197,19 @@ export function PaywallModal({ visible, onClose, onSubscribe, onRestore }: Props
               </Pressable>
 
               {showMoreOptions && (
-                <>
-                  {/* Monthly */}
-                  <Pressable onPress={handleMonthly} style={styles.monthlyBtn}>
-                    <Text style={styles.monthlyPrice}>{monthlyPrice}</Text>
-                    <Text style={styles.monthlySub}>Month-to-month · Cancel anytime</Text>
-                  </Pressable>
-
-                  {/* Lifetime (if available) */}
-                  {lifetimePkg && (
-                    <Pressable
-                      onPress={async () => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        const success = await purchasePackage(lifetimePkg);
-                        if (success) { onSubscribe?.('yearly'); onClose(); }
-                      }}
-                      style={styles.lifetimeBtn}
-                    >
-                      <Text style={styles.lifetimePrice}>{lifetimePrice} — Lifetime</Text>
-                      <Text style={styles.lifetimeSub}>Pay once, yours forever</Text>
-                    </Pressable>
-                  )}
-                </>
+                <Pressable onPress={handleMonthly} style={styles.monthlyBtn}>
+                  <Text style={styles.monthlyPrice}>{monthlyPrice}</Text>
+                  <Text style={styles.monthlySub}>Month-to-month · Cancel anytime</Text>
+                </Pressable>
               )}
             </View>
 
-            {/* Restore — prominent */}
+            {/* Guarantee */}
+            <Text style={styles.guarantee}>7-day free trial. Cancel before it ends and pay nothing.</Text>
+
+            {/* Restore */}
             <Pressable onPress={handleRestore} style={styles.restore}>
               <Text style={styles.restoreText}>Restore Purchases</Text>
-            </Pressable>
-
-            {/* Maybe later */}
-            <Pressable
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onClose(); }}
-              style={styles.maybeLaterBtn}
-              accessibilityRole="button"
-              accessibilityLabel="Maybe later"
-            >
-              <Text style={styles.maybeLaterText}>Maybe later</Text>
             </Pressable>
 
             {yearlyHasIntroOffer && (
@@ -264,6 +224,9 @@ export function PaywallModal({ visible, onClose, onSubscribe, onRestore }: Props
   );
 }
 
+// Backward-compatible alias
+export const PaywallModal = SubscriptionModal;
+
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
   card: { maxHeight: SCREEN_H * 0.92, backgroundColor: colors.dark.bg, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, overflow: 'hidden' },
@@ -272,10 +235,9 @@ const styles = StyleSheet.create({
   scroll: { paddingBottom: spacing.xxl },
 
   hook: { paddingHorizontal: spacing.lg, paddingTop: spacing.xxl + spacing.md, paddingBottom: spacing.xl, alignItems: 'center' },
-  hookOverline: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.primary, letterSpacing: letterSpacing.widest, marginBottom: spacing.sm },
-  hookTitle: { fontFamily: fonts.display, fontSize: fontSize.xxxl, color: colors.dark.text, textAlign: 'center', letterSpacing: letterSpacing.tight, lineHeight: fontSize.xxxl * 1.1 },
-  hookSub: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.dark.textMuted, textAlign: 'center', marginTop: spacing.md, lineHeight: fontSize.md * 1.5, paddingHorizontal: spacing.md },
-  hookUrgency: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.sm, color: colors.primary, marginTop: spacing.md, opacity: 0.85 },
+  hookOverline: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.ink, letterSpacing: letterSpacing.widest, marginBottom: spacing.sm },
+  hookTitle: { fontFamily: fonts.display, fontSize: fontSize.xxxl, color: colors.ink, textAlign: 'center', letterSpacing: letterSpacing.tight, lineHeight: fontSize.xxxl * 1.1 },
+  hookSub: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.inkLight, textAlign: 'center', marginTop: spacing.md, lineHeight: fontSize.md * 1.5, paddingHorizontal: spacing.md },
 
   values: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xl, gap: spacing.lg },
   valueRow: { flexDirection: 'row', gap: spacing.md },
@@ -289,12 +251,13 @@ const styles = StyleSheet.create({
 
   pricing: { paddingHorizontal: spacing.lg, gap: spacing.md },
   yearlyBtn: { borderRadius: radius.lg, overflow: 'hidden', ...shadows.gold },
-  yearlyGradient: { paddingVertical: spacing.lg, alignItems: 'center', borderRadius: radius.lg, backgroundColor: colors.primary },
+  yearlyGradient: { paddingVertical: spacing.lg, alignItems: 'center', borderRadius: radius.lg },
   bestValue: { backgroundColor: 'rgba(45,27,14,0.2)', paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, marginBottom: spacing.sm },
   bestValueText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.ink, letterSpacing: letterSpacing.wider },
   yearlyCtaLabel: { fontFamily: fonts.display, fontSize: fontSize.xl, color: colors.ink, marginBottom: 2 },
   yearlyPrice: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkLight, marginTop: 2 },
-  yearlySub: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.inkLight, marginTop: spacing.xs, textAlign: 'center' },
+  yearlySub: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkLight, marginTop: spacing.xs, textAlign: 'center' },
+
   moreOptionsBtn: { alignItems: 'center', paddingVertical: spacing.sm },
   moreOptionsText: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.dark.textMuted },
 
@@ -302,26 +265,10 @@ const styles = StyleSheet.create({
   monthlyPrice: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.lg, color: colors.dark.text },
   monthlySub: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.dark.textMuted, marginTop: 2 },
 
-  lifetimeBtn: { borderWidth: 1.5, borderColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.md, alignItems: 'center', backgroundColor: colors.primaryMuted },
-  lifetimePrice: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.lg, color: colors.primary },
-  lifetimeSub: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.dark.textMuted, marginTop: 2 },
+  guarantee: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.primary, textAlign: 'center', paddingVertical: spacing.lg, paddingHorizontal: spacing.xl },
 
-  // Comparison table
-  compTable: { marginHorizontal: spacing.lg, marginBottom: spacing.xl, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  compHeader: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.06)', paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
-  compRow: { flexDirection: 'row', paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
-  compRowTinted: { backgroundColor: 'rgba(255,255,255,0.03)' },
-  compCell: { flex: 1, textAlign: 'center' },
-  compFeatureCell: { flex: 2, textAlign: 'left' },
-  compHeaderText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.dark.textMuted, letterSpacing: letterSpacing.wide },
-  compFeatureText: { flex: 2, textAlign: 'left', fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.dark.text },
-  compValueText: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.dark.textMuted },
-
-  // Legal + restore
-  legalText: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.dark.textMuted, textAlign: 'center', paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, lineHeight: fontSize.xs + 4, opacity: 0.6 },
+  legalText: { fontFamily: fonts.body, fontSize: 10, color: colors.dark.textMuted, textAlign: 'center', paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, lineHeight: 14, opacity: 0.6 },
 
   restore: { alignItems: 'center', paddingVertical: spacing.sm },
   restoreText: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.dark.textMuted, textDecorationLine: 'underline' },
-  maybeLaterBtn: { alignItems: 'center', paddingVertical: spacing.md, paddingBottom: spacing.lg },
-  maybeLaterText: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.dark.textMuted, opacity: 0.6 },
 });

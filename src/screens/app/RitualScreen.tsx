@@ -13,13 +13,21 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
+  Dimensions,
 } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { Button } from '../../components/Button';
@@ -31,32 +39,65 @@ import {
   spacing,
   radius,
   shadows,
+  gradients,
   letterSpacing,
 } from '../../constants/theme';
 import { AUNTIES, RITUAL_HOSTS, type AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
-import {
-  getRitualLog,
-  markRitualComplete,
-  markRitualSkipped,
-  computeStreak,
-  computeWeekStats,
-  toDateKey,
-  type RitualLogEntry,
-} from '../../services/ritualLog';
-import { RitualActionSheetModal } from './ritual/RitualActionSheetModal';
-import {
-  RITUAL_CELL_SIZE as CELL_SIZE,
-  RITUAL_GAP as GAP,
-  RITUAL_GRID_PAD as GRID_PAD,
-  DAY_LETTERS,
-  MONTH_NAMES,
-  WEEKLY_PATTERN,
-  TYPE_COLORS,
-  TYPE_GRADIENTS,
-  TYPE_DETAILS,
-  getMonthDays,
-} from './ritual/ritualConstants';
+import type { RitualDayType } from '../../types';
+
+const { width: SCREEN_W } = Dimensions.get('window');
+const GRID_PAD = spacing.lg;
+const GAP = 6;
+const CELL_SIZE = Math.floor((SCREEN_W - GRID_PAD * 2 - GAP * 6) / 7);
+
+const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+// ─── Ritual data ────────────────────────────────────────────────
+
+const WEEKLY_PATTERN: Record<number, { type: RitualDayType; label: string }> = {
+  0: { type: 'rest', label: 'Rest' },
+  1: { type: 'wash', label: 'Wash' },
+  2: { type: 'scalp', label: 'Scalp' },
+  3: { type: 'protect', label: 'Protect' },
+  4: { type: 'refresh', label: 'Refresh' },
+  5: { type: 'style', label: 'Style' },
+  6: { type: 'protein', label: 'Strength' },
+};
+
+const TYPE_COLORS: Record<RitualDayType, string> = {
+  wash: colors.jewel.amber,
+  style: colors.jewel.rose,
+  refresh: colors.jewel.plum,
+  rest: colors.jewel.teal,
+  scalp: colors.jewel.emerald,
+  protein: colors.jewel.sienna,
+  protect: colors.jewel.indigo,
+};
+
+const TYPE_GRADIENTS: Record<RitualDayType, readonly [string, string]> = {
+  wash: ['#D4A04A', '#B8862E'],
+  style: ['#C2456E', '#9E3058'],
+  refresh: ['#7B3F6B', '#5C2A4E'],
+  rest: ['#2A7B7B', '#1A5C5C'],
+  scalp: ['#1A7A4A', '#0A5C30'],
+  protein: ['#B85C2A', '#8A3A10'],
+  protect: ['#3D5A99', '#2A4070'],
+};
+
+const TYPE_DETAILS: Record<RitualDayType, { purpose: string; time: string; steps: string[] }> = {
+  wash: { purpose: 'Deep cleanse & moisture reset', time: '45 min', steps: ['Pre-poo with oil', 'Sulfate-free shampoo', 'Deep condition under cap', 'Rinse, detangle, seal'] },
+  style: { purpose: 'Define & celebrate your curls', time: '25 min', steps: ['Take down style', 'Fluff & shape', 'Define with gel', 'Diffuse or air dry'] },
+  refresh: { purpose: 'Mid-week touch-up', time: '10 min', steps: ['Light mist', 'Re-twist edges', 'Seal ends with oil'] },
+  rest: { purpose: 'Let your hair breathe', time: '5 min', steps: ['Gentle scalp massage', 'Refresh edges if needed'] },
+  scalp: { purpose: 'Nourish the roots', time: '15 min', steps: ['Apply scalp oil blend', 'Firm circular massage'] },
+  protein: { purpose: 'Rebuild & strengthen', time: '20 min', steps: ['Protein treatment on lengths', 'Rinse & light condition'] },
+  protect: { purpose: 'Low-manipulation styling', time: '30 min', steps: ['Moisturize sections', 'Twist or braid', 'Edge care & silk wrap'] },
+};
 
 // ─── SVG Icons ──────────────────────────────────────────────────
 
@@ -93,6 +134,14 @@ function PlayIcon({ color = '#FFFFFF', size = 16 }: { color?: string; size?: num
   );
 }
 
+// ─── Helpers ────────────────────────────────────────────────────
+
+function getMonthDays(year: number, month: number) {
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  return { firstDay, daysInMonth };
+}
+
 // ─── Component ──────────────────────────────────────────────────
 
 export default function RitualScreen() {
@@ -106,27 +155,22 @@ export default function RitualScreen() {
   const [viewMonth, setViewMonth] = useState(now.getMonth());
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [selectedDay, setSelectedDay] = useState<number | null>(now.getDate());
-
-  // Ritual log state
-  const [ritualLog, setRitualLog] = useState<Record<string, RitualLogEntry>>({});
-  const [actionSheetDay, setActionSheetDay] = useState<number | null>(null);
+  const [completedDates, setCompletedDates] = useState<Set<string>>(new Set());
 
   const scrollRef = useRef<ScrollView>(null);
 
-  // Load log on mount + whenever the screen gains focus (e.g. after completing a ritual)
-  const loadLog = useCallback(async () => {
-    const log = await getRitualLog();
-    setRitualLog(log);
-  }, []);
-
-  useEffect(() => { loadLog(); }, [loadLog]);
-  useFocusEffect(useCallback(() => { loadLog(); }, [loadLog]));
-
-  const streak = useMemo(() => computeStreak(ritualLog), [ritualLog]);
-  const weekStats = useMemo(() => computeWeekStats(ritualLog), [ritualLog]);
-
-  // True if today is Sunday and user has done >= 4 days this week
-  const showEndOfWeekCard = now.getDay() === 0 && weekStats.done >= 4;
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        try {
+          const keys = await AsyncStorage.getAllKeys();
+          const ritualKeys = keys.filter((k) => k.startsWith('ritual_completed_'));
+          const dates = ritualKeys.map((k) => k.replace('ritual_completed_', ''));
+          setCompletedDates(new Set(dates));
+        } catch {}
+      })();
+    }, []),
+  );
 
   const { firstDay, daysInMonth } = useMemo(
     () => getMonthDays(viewYear, viewMonth),
@@ -144,6 +188,12 @@ export default function RitualScreen() {
   const getRitualForDay = (day: number) => {
     const date = new Date(viewYear, viewMonth, day);
     return WEEKLY_PATTERN[date.getDay()];
+  };
+
+  const isDayCompleted = (day: number) => {
+    const d = new Date(viewYear, viewMonth, day);
+    const key = d.toISOString().split('T')[0];
+    return completedDates.has(key);
   };
 
   const selectedRitual = selectedDay ? getRitualForDay(selectedDay) : null;
@@ -172,42 +222,6 @@ export default function RitualScreen() {
     setSelectedDay(null);
   };
 
-  // Action sheet handlers
-  const openActionSheet = useCallback((day: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedDay(day);
-    setActionSheetDay(day);
-  }, []);
-
-  const closeActionSheet = useCallback(() => setActionSheetDay(null), []);
-
-  const handleMarkComplete = useCallback(async (day: number) => {
-    const d = new Date(viewYear, viewMonth, day);
-    await markRitualComplete(toDateKey(d));
-    await loadLog();
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    closeActionSheet();
-  }, [viewYear, viewMonth, loadLog, closeActionSheet]);
-
-  const handleSkip = useCallback(async (day: number, reason: string) => {
-    const d = new Date(viewYear, viewMonth, day);
-    await markRitualSkipped(toDateKey(d), reason);
-    await loadLog();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    closeActionSheet();
-  }, [viewYear, viewMonth, loadLog, closeActionSheet]);
-
-  const getDayStatus = useCallback((day: number): 'completed' | 'skipped' | 'none' => {
-    const key = toDateKey(new Date(viewYear, viewMonth, day));
-    const entry = ritualLog[key];
-    if (!entry) return 'none';
-    if (entry.completed) return 'completed';
-    if (entry.skipped) return 'skipped';
-    return 'none';
-  }, [ritualLog, viewYear, viewMonth]);
-
-  const actionSheetRitual = actionSheetDay ? getRitualForDay(actionSheetDay) : null;
-
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.sm }]}>
       <ScrollView
@@ -217,37 +231,9 @@ export default function RitualScreen() {
       >
         {/* ─── Header ──────────────────────────────────────── */}
         <Animated.View entering={FadeIn.duration(400)} style={styles.header}>
-          <Text style={styles.overline}>CHECK-IN</Text>
+          <Text style={styles.overline}>YOUR RITUAL</Text>
           <Text style={styles.title}>Hair Calendar</Text>
         </Animated.View>
-
-        {/* ─── Streak Banner ───────────────────────────────── */}
-        <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.streakBanner}>
-          <View style={styles.streakLeft}>
-            <View>
-              <Text style={styles.streakCount}>{streak.current} day{streak.current !== 1 ? 's' : ''}</Text>
-              <Text style={styles.streakLabel}>current streak</Text>
-            </View>
-          </View>
-          <View style={styles.streakRight}>
-            <Text style={styles.weekStatText}>
-              {weekStats.done}/{weekStats.total} this week
-            </Text>
-            {streak.longest > 1 && (
-              <Text style={styles.longestText}>Best: {streak.longest}</Text>
-            )}
-          </View>
-        </Animated.View>
-
-        {/* ─── End-of-week celebration ─────────────────────── */}
-        {showEndOfWeekCard && (
-          <Animated.View entering={FadeInDown.delay(150).duration(400)} style={[styles.eowCard, { borderLeftColor: ac.accent }]}>
-            <AuntyAvatar auntyId={auntyId} size={36} showRing />
-            <Text style={styles.eowText}>
-              You showed up {weekStats.done} of 7 days this week. That{"\u2019"}s how hair changes.
-            </Text>
-          </Animated.View>
-        )}
 
         {/* ─── Month Navigator ─────────────────────────────── */}
         <Animated.View entering={FadeIn.duration(400)} style={styles.monthNav}>
@@ -296,25 +282,16 @@ export default function RitualScreen() {
             const selected = selectedDay === day;
             const todayMark = isToday(day);
             const pastMark = isPast(day);
-            const status = getDayStatus(day);
-
-            const statusBadge = status === 'completed' ? (
-              <View style={[styles.completedBadge, { backgroundColor: color }]}>
-                <Text style={styles.completedBadgeGlyph}>✓</Text>
-              </View>
-            ) : status === 'skipped' ? (
-              <View style={[styles.skippedBadge]}>
-                <Text style={styles.skippedBadgeGlyph}>–</Text>
-              </View>
-            ) : null;
 
             // Today: gradient cell
             if (todayMark && !selected) {
               return (
                 <Pressable
                   key={i}
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSelectedDay(day); }}
-                  onLongPress={() => openActionSheet(day)}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSelectedDay(day);
+                  }}
                   accessibilityLabel={`Today, ${day}, ${ritual.label} day`}
                 >
                   <LinearGradient
@@ -324,7 +301,7 @@ export default function RitualScreen() {
                     style={[styles.cell, styles.cellTodayGrad]}
                   >
                     <Text style={styles.cellDayToday}>{day}</Text>
-                    {statusBadge ?? <View style={styles.cellDotToday} />}
+                    <View style={styles.cellDotToday} />
                   </LinearGradient>
                 </Pressable>
               );
@@ -335,32 +312,46 @@ export default function RitualScreen() {
               return (
                 <Pressable
                   key={i}
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSelectedDay(day); }}
-                  onLongPress={() => openActionSheet(day)}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSelectedDay(day);
+                  }}
                   accessibilityLabel={`Selected, ${day}, ${ritual.label} day`}
                 >
                   <View style={[styles.cell, styles.cellSelected, { borderColor: color }]}>
                     <Text style={[styles.cellDaySelected, { color }]}>{day}</Text>
-                    {statusBadge ?? <View style={[styles.cellDot, { backgroundColor: color }]} />}
+                    <View style={[styles.cellDot, { backgroundColor: color }]} />
                   </View>
                 </Pressable>
               );
             }
 
             // Normal or past cell
+            const completed = isDayCompleted(day);
             return (
               <Pressable
                 key={i}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSelectedDay(day); }}
-                onLongPress={() => (todayMark || pastMark) ? openActionSheet(day) : null}
-                accessibilityLabel={`${day}, ${ritual.label} day`}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setSelectedDay(day);
+                }}
+                accessibilityLabel={`${day}, ${ritual.label} day${completed ? ', completed' : ''}`}
               >
-                <View style={styles.cell}>
+                <View style={[styles.cell, completed && { backgroundColor: color + '12' }]}>
                   <Text style={[styles.cellDay, pastMark && { color: colors.ink }]}>
                     {day}
                   </Text>
-                  {statusBadge ?? (
-                    <View style={[styles.cellDot, { backgroundColor: pastMark ? color : color + '40' }]} />
+                  {completed ? (
+                    <Svg width={10} height={10} viewBox="0 0 24 24" fill="none">
+                      <Path d="M20 6L9 17L4 12" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+                    </Svg>
+                  ) : (
+                    <View
+                      style={[
+                        styles.cellDot,
+                        { backgroundColor: pastMark ? color : color + '40' },
+                      ]}
+                    />
                   )}
                 </View>
               </Pressable>
@@ -442,11 +433,18 @@ export default function RitualScreen() {
                 ))}
               </View>
 
-              {/* Action CTAs */}
-              <View style={styles.detailCta}>
-                {!isPast(selectedDay) && (
+              {/* Completion badge or Start CTA */}
+              {isDayCompleted(selectedDay) ? (
+                <View style={styles.completedBadge}>
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                    <Path d="M20 6L9 17L4 12" stroke={colors.jewel.emerald} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+                  </Svg>
+                  <Text style={styles.completedText}>Completed</Text>
+                </View>
+              ) : !isPast(selectedDay) ? (
+                <View style={styles.detailCta}>
                   <Button
-                    label={isToday(selectedDay) ? 'Start Check-In' : 'Preview Check-In'}
+                    label={isToday(selectedDay) ? 'Start Ritual' : 'Preview Ritual'}
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                       navigation.navigate('RitualSteps');
@@ -455,43 +453,12 @@ export default function RitualScreen() {
                     size="md"
                     icon={<PlayIcon size={14} color={colors.ink} />}
                   />
-                )}
-                {/* Quick mark for past/today */}
-                {(isPast(selectedDay) || isToday(selectedDay)) && getDayStatus(selectedDay) === 'none' && (
-                  <Pressable
-                    style={styles.markCompleteBtn}
-                    onPress={() => handleMarkComplete(selectedDay)}
-                    accessibilityRole="button"
-                    accessibilityLabel="Mark check-in as complete"
-                  >
-                    <Text style={styles.markCompleteBtnText}>✓ Mark Complete</Text>
-                  </Pressable>
-                )}
-                {(isPast(selectedDay) || isToday(selectedDay)) && getDayStatus(selectedDay) !== 'none' && (
-                  <View style={styles.statusChip}>
-                    <Text style={styles.statusChipText}>
-                      {getDayStatus(selectedDay) === 'completed' ? '✓ Completed' : '– Skipped'}
-                    </Text>
-                  </View>
-                )}
-              </View>
+                </View>
+              ) : null}
             </View>
           </Animated.View>
         )}
       </ScrollView>
-
-      <RitualActionSheetModal
-        visible={actionSheetDay !== null}
-        actionSheetDay={actionSheetDay}
-        viewYear={viewYear}
-        viewMonth={viewMonth}
-        actionSheetRitual={actionSheetRitual}
-        onClose={closeActionSheet}
-        onMarkComplete={handleMarkComplete}
-        onViewSteps={() => navigation.navigate('RitualSteps')}
-        onSkip={handleSkip}
-        getDayStatus={getDayStatus}
-      />
     </View>
   );
 }
@@ -729,133 +696,21 @@ const styles = StyleSheet.create({
   },
   detailCta: {
     marginTop: spacing.xs,
-    gap: spacing.sm,
   },
-
-  // Mark complete / status chip in detail card
-  markCompleteBtn: {
-    marginTop: spacing.sm,
-    backgroundColor: colors.primary + '18',
-    borderWidth: 1,
-    borderColor: colors.primary + '40',
-    borderRadius: radius.md,
-    paddingVertical: spacing.sm + 2,
-    alignItems: 'center',
-  },
-  markCompleteBtnText: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.sm,
-    color: colors.primary,
-  },
-  statusChip: {
-    marginTop: spacing.sm,
-    borderRadius: radius.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.canvasDeep,
-    alignItems: 'center',
-  },
-  statusChipText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: fontSize.sm,
-    color: colors.muted,
-  },
-
-  // Streak banner
-  streakBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginHorizontal: GRID_PAD,
-    marginBottom: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  streakLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  streakFlame: {
-    fontSize: 28,
-  },
-  streakCount: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.xl,
-    color: colors.ink,
-    letterSpacing: letterSpacing.tight,
-  },
-  streakLabel: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.muted,
-  },
-  streakRight: {
-    alignItems: 'flex-end',
-  },
-  weekStatText: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.sm,
-    color: colors.primary,
-  },
-  longestText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.muted,
-    marginTop: 2,
-  },
-
-  // End-of-week card
-  eowCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginHorizontal: GRID_PAD,
-    marginBottom: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderLeftWidth: 3,
-    padding: spacing.md,
-  },
-  eowText: {
-    flex: 1,
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.inkLight,
-    lineHeight: fontSize.sm * 1.5,
-    fontStyle: 'italic',
-  },
-
-  // Calendar completion badges
   completedBadge: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.jewel.emerald + '12',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
   },
-  completedBadgeGlyph: {
-    fontSize: 8,
-    color: '#FFFFFF',
-    fontFamily: fonts.bodyBold,
-    lineHeight: 10,
+  completedText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.jewel.emerald,
   },
-  skippedBadge: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.muted + '40',
-  },
-  skippedBadgeGlyph: {
-    fontSize: 10,
-    color: colors.muted,
-    fontFamily: fonts.bodyBold,
-    lineHeight: 12,
-  },
-
 });

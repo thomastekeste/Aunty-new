@@ -1,11 +1,11 @@
 /**
- * HairProfileScreen — View your complete hair profile.
+ * HairProfileScreen — View & edit your complete hair profile.
  *
- * Modal screen showing all hair attributes collected during onboarding.
- * Matches the warm editorial aesthetic of SettingsScreen.
+ * Tap any row to edit it via an inline picker. Changes save instantly
+ * through OnboardingContext (auto-persisted to AsyncStorage).
  */
 
-import React, { useCallback } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,16 +13,20 @@ import {
   StyleSheet,
   Pressable,
   Alert,
+  Modal,
+  FlatList,
+  Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { Button } from '../../components/Button';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES, type AuntyId } from '../../constants/aunties';
+import type { HairProfile } from '../../types';
 import {
   colors,
   auntyColors,
@@ -108,18 +112,55 @@ const BUDGET_LABELS: Record<string, string> = {
   '100-plus': '$100+',
 };
 
-// ─── Section Components ─────────────────────────────────────────
+const BOOLEAN_LABELS: Record<string, string> = {
+  true: 'Yes',
+  false: 'No',
+};
+
+// ─── Picker field config ────────────────────────────────────────
+
+interface FieldConfig {
+  key: keyof HairProfile;
+  label: string;
+  labels: Record<string, string>;
+  isBoolean?: boolean;
+}
+
+// ─── Section / Row Components ───────────────────────────────────
 
 function SectionHeader({ title }: { title: string }) {
   return <Text style={styles.sectionHeader}>{title.toUpperCase()}</Text>;
 }
 
-function ProfileRow({ label, value, rawValue }: { label: string; value?: string; rawValue?: string }) {
+function PencilIcon() {
   return (
-    <View style={styles.profileRow}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value || rawValue || 'Not set'}</Text>
-    </View>
+    <Text style={styles.editIcon}>{'✎'}</Text>
+  );
+}
+
+function EditableRow({
+  label,
+  value,
+  onPress,
+}: {
+  label: string;
+  value?: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={styles.profileRow}
+      accessibilityRole="button"
+      accessibilityLabel={`Edit ${label}`}
+      accessibilityHint="Tap to change"
+    >
+      <View style={styles.rowLeft}>
+        <Text style={styles.rowLabel}>{label}</Text>
+        <Text style={styles.rowValue}>{value || 'Not set'}</Text>
+      </View>
+      <PencilIcon />
+    </Pressable>
   );
 }
 
@@ -127,16 +168,113 @@ function Divider() {
   return <View style={styles.divider} />;
 }
 
+// ─── Picker Modal ───────────────────────────────────────────────
+
+function PickerModal({
+  visible,
+  title,
+  options,
+  currentValue,
+  onSelect,
+  onClose,
+  accentColor,
+}: {
+  visible: boolean;
+  title: string;
+  options: { key: string; label: string }[];
+  currentValue?: string;
+  onSelect: (key: string) => void;
+  onClose: () => void;
+  accentColor: string;
+}) {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable
+          style={[styles.modalSheet, { paddingBottom: insets.bottom + spacing.lg }]}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <View style={styles.modalHandle} />
+          <Text style={styles.modalTitle}>{title}</Text>
+          <FlatList
+            data={options}
+            keyExtractor={(item) => item.key}
+            style={styles.modalList}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => {
+              const isSelected = item.key === currentValue;
+              return (
+                <Pressable
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    onSelect(item.key);
+                  }}
+                  style={[
+                    styles.optionRow,
+                    isSelected && { backgroundColor: accentColor + '15', borderColor: accentColor },
+                  ]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isSelected }}
+                >
+                  <Text
+                    style={[
+                      styles.optionLabel,
+                      isSelected && { color: accentColor, fontFamily: fonts.bodySemiBold },
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                  {isSelected && (
+                    <Text style={[styles.checkmark, { color: accentColor }]}>{'✓'}</Text>
+                  )}
+                </Pressable>
+              );
+            }}
+          />
+          <Pressable onPress={onClose} style={styles.modalCancel}>
+            <Text style={styles.modalCancelText}>Cancel</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
 // ─── Main Screen ────────────────────────────────────────────────
 
 export default function HairProfileScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { state, reset } = useOnboarding();
+  const { state, updateHairProfile, reset } = useOnboarding();
   const { hairProfile: hp, name, chosenAuntyId } = state.data;
   const auntyId: AuntyId = chosenAuntyId || 'denise';
   const aunty = AUNTIES[auntyId];
   const ac = auntyColors[auntyId];
+
+  const [pickerField, setPickerField] = useState<FieldConfig | null>(null);
+
+  const openPicker = useCallback((field: FieldConfig) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setPickerField(field);
+  }, []);
+
+  const handleSelect = useCallback(
+    (key: string) => {
+      if (!pickerField) return;
+      const val = pickerField.isBoolean ? key === 'true' : key;
+      updateHairProfile({ [pickerField.key]: val } as Partial<HairProfile>);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setPickerField(null);
+    },
+    [pickerField, updateHairProfile],
+  );
 
   const handleRetakeQuiz = useCallback(() => {
     Alert.alert(
@@ -155,6 +293,18 @@ export default function HairProfileScreen() {
       ],
     );
   }, [reset]);
+
+  const pickerOptions = useMemo(() => {
+    if (!pickerField) return [];
+    return Object.entries(pickerField.labels).map(([key, label]) => ({ key, label }));
+  }, [pickerField]);
+
+  const pickerCurrentValue = useMemo(() => {
+    if (!pickerField) return undefined;
+    const raw = hp[pickerField.key];
+    if (pickerField.isBoolean) return raw == null ? undefined : String(raw);
+    return raw as string | undefined;
+  }, [pickerField, hp]);
 
   const goalsDisplay = [
     hp.primaryGoal ? GOAL_LABELS[hp.primaryGoal] : null,
@@ -177,7 +327,7 @@ export default function HairProfileScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Text style={styles.backArrow}>{'\u2039'}</Text>
+            <Text style={styles.backArrow}>{'‹'}</Text>
           </Pressable>
           <Text style={[typography.h2]}>Hair Profile</Text>
           <View style={{ width: 44 }} />
@@ -190,7 +340,7 @@ export default function HairProfileScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.auntyName}>{aunty.name}</Text>
               <Text style={styles.auntyNote}>
-                {name ? `${name}'s hair profile` : 'Your hair profile'} — curated by {aunty.name}
+                Tap any row to update your profile
               </Text>
             </View>
           </View>
@@ -200,13 +350,29 @@ export default function HairProfileScreen() {
         <Animated.View entering={FadeInDown.delay(200).duration(400)}>
           <SectionHeader title="Hair Type" />
           <View style={[styles.card, shadows.sm]}>
-            <ProfileRow label="Curl Type" value={hp.curlType ? CURL_TYPE_LABELS[hp.curlType] : undefined} rawValue={hp.curlType} />
+            <EditableRow
+              label="Curl Type"
+              value={hp.curlType ? CURL_TYPE_LABELS[hp.curlType] : undefined}
+              onPress={() => openPicker({ key: 'curlType', label: 'Curl Type', labels: CURL_TYPE_LABELS })}
+            />
             <Divider />
-            <ProfileRow label="Porosity" value={hp.porosity ? POROSITY_LABELS[hp.porosity] : undefined} rawValue={hp.porosity} />
+            <EditableRow
+              label="Porosity"
+              value={hp.porosity ? POROSITY_LABELS[hp.porosity] : undefined}
+              onPress={() => openPicker({ key: 'porosity', label: 'Porosity', labels: POROSITY_LABELS })}
+            />
             <Divider />
-            <ProfileRow label="Density" value={hp.density ? DENSITY_LABELS[hp.density] : undefined} rawValue={hp.density} />
+            <EditableRow
+              label="Density"
+              value={hp.density ? DENSITY_LABELS[hp.density] : undefined}
+              onPress={() => openPicker({ key: 'density', label: 'Density', labels: DENSITY_LABELS })}
+            />
             <Divider />
-            <ProfileRow label="Elasticity" value={hp.elasticity ? ELASTICITY_LABELS[hp.elasticity] : undefined} rawValue={hp.elasticity} />
+            <EditableRow
+              label="Elasticity"
+              value={hp.elasticity ? ELASTICITY_LABELS[hp.elasticity] : undefined}
+              onPress={() => openPicker({ key: 'elasticity', label: 'Elasticity', labels: ELASTICITY_LABELS })}
+            />
           </View>
         </Animated.View>
 
@@ -214,11 +380,23 @@ export default function HairProfileScreen() {
         <Animated.View entering={FadeInDown.delay(300).duration(400)}>
           <SectionHeader title="Hair History" />
           <View style={[styles.card, shadows.sm]}>
-            <ProfileRow label="Relaxer History" value={hp.relaxerHistory == null ? undefined : hp.relaxerHistory ? 'Yes' : 'No'} />
+            <EditableRow
+              label="Relaxer History"
+              value={hp.relaxerHistory == null ? undefined : hp.relaxerHistory ? 'Yes' : 'No'}
+              onPress={() => openPicker({ key: 'relaxerHistory', label: 'Relaxer History', labels: BOOLEAN_LABELS, isBoolean: true })}
+            />
             <Divider />
-            <ProfileRow label="Color Treated" value={hp.colorTreated == null ? undefined : hp.colorTreated ? 'Yes' : 'No'} />
+            <EditableRow
+              label="Color Treated"
+              value={hp.colorTreated == null ? undefined : hp.colorTreated ? 'Yes' : 'No'}
+              onPress={() => openPicker({ key: 'colorTreated', label: 'Color Treated', labels: BOOLEAN_LABELS, isBoolean: true })}
+            />
             <Divider />
-            <ProfileRow label="Protective Styling" value={hp.protectiveStyling == null ? undefined : hp.protectiveStyling ? 'Yes' : 'No'} />
+            <EditableRow
+              label="Protective Styling"
+              value={hp.protectiveStyling == null ? undefined : hp.protectiveStyling ? 'Yes' : 'No'}
+              onPress={() => openPicker({ key: 'protectiveStyling', label: 'Protective Styling', labels: BOOLEAN_LABELS, isBoolean: true })}
+            />
           </View>
         </Animated.View>
 
@@ -226,11 +404,22 @@ export default function HairProfileScreen() {
         <Animated.View entering={FadeInDown.delay(400).duration(400)}>
           <SectionHeader title="Goals" />
           <View style={[styles.card, shadows.sm]}>
-            <ProfileRow label="Primary Goal" value={hp.primaryGoal ? GOAL_LABELS[hp.primaryGoal] : undefined} rawValue={hp.primaryGoal} />
+            <EditableRow
+              label="Primary Goal"
+              value={hp.primaryGoal ? GOAL_LABELS[hp.primaryGoal] : undefined}
+              onPress={() => openPicker({ key: 'primaryGoal', label: 'Primary Goal', labels: GOAL_LABELS })}
+            />
             {hp.secondaryGoals && hp.secondaryGoals.length > 0 && (
               <>
                 <Divider />
-                <ProfileRow label="Other Goals" value={hp.secondaryGoals.map((g) => GOAL_LABELS[g] || g).join(', ')} />
+                <View style={styles.profileRow}>
+                  <View style={styles.rowLeft}>
+                    <Text style={styles.rowLabel}>Other Goals</Text>
+                    <Text style={styles.rowValue}>
+                      {hp.secondaryGoals.map((g) => GOAL_LABELS[g] || g).join(', ')}
+                    </Text>
+                  </View>
+                </View>
               </>
             )}
           </View>
@@ -240,15 +429,17 @@ export default function HairProfileScreen() {
         <Animated.View entering={FadeInDown.delay(500).duration(400)}>
           <SectionHeader title="Routine" />
           <View style={[styles.card, shadows.sm]}>
-            <ProfileRow label="Wash Frequency" value={hp.washFrequency ? WASH_LABELS[hp.washFrequency] : undefined} rawValue={hp.washFrequency} />
+            <EditableRow
+              label="Wash Frequency"
+              value={hp.washFrequency ? WASH_LABELS[hp.washFrequency] : undefined}
+              onPress={() => openPicker({ key: 'washFrequency', label: 'Wash Frequency', labels: WASH_LABELS })}
+            />
             <Divider />
-            <ProfileRow label="Heat Use" value={hp.heatUse ? HEAT_LABELS[hp.heatUse] : undefined} rawValue={hp.heatUse} />
-            {hp.timeAvailable && (
-              <>
-                <Divider />
-                <ProfileRow label="Time Available" value={hp.timeAvailable.replace('-', ' ').replace('plus', '+')} />
-              </>
-            )}
+            <EditableRow
+              label="Heat Use"
+              value={hp.heatUse ? HEAT_LABELS[hp.heatUse] : undefined}
+              onPress={() => openPicker({ key: 'heatUse', label: 'Heat Use', labels: HEAT_LABELS })}
+            />
           </View>
         </Animated.View>
 
@@ -256,9 +447,17 @@ export default function HairProfileScreen() {
         <Animated.View entering={FadeInDown.delay(600).duration(400)}>
           <SectionHeader title="Budget" />
           <View style={[styles.card, shadows.sm]}>
-            <ProfileRow label="Product Scope" value={hp.productScope ? SCOPE_LABELS[hp.productScope] : undefined} rawValue={hp.productScope} />
+            <EditableRow
+              label="Product Scope"
+              value={hp.productScope ? SCOPE_LABELS[hp.productScope] : undefined}
+              onPress={() => openPicker({ key: 'productScope', label: 'Product Scope', labels: SCOPE_LABELS })}
+            />
             <Divider />
-            <ProfileRow label="Budget Range" value={hp.productBudget ? BUDGET_LABELS[hp.productBudget] : undefined} rawValue={hp.productBudget} />
+            <EditableRow
+              label="Budget Range"
+              value={hp.productBudget ? BUDGET_LABELS[hp.productBudget] : undefined}
+              onPress={() => openPicker({ key: 'productBudget', label: 'Budget Range', labels: BUDGET_LABELS })}
+            />
           </View>
         </Animated.View>
 
@@ -270,13 +469,29 @@ export default function HairProfileScreen() {
             variant="secondary"
             size="lg"
           />
+          <Text style={styles.retakeHint}>
+            Start from scratch with a full new consultation
+          </Text>
         </Animated.View>
       </ScrollView>
+
+      {/* ─── Picker Modal ──────────────────────────────── */}
+      <PickerModal
+        visible={!!pickerField}
+        title={pickerField?.label || ''}
+        options={pickerOptions}
+        currentValue={pickerCurrentValue}
+        onSelect={handleSelect}
+        onClose={() => setPickerField(null)}
+        accentColor={ac.accent}
+      />
     </View>
   );
 }
 
 // ─── Styles ─────────────────────────────────────────────────────
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
@@ -352,6 +567,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     minHeight: 52,
   },
+  rowLeft: {
+    flex: 1,
+    gap: 2,
+  },
   rowLabel: {
     fontFamily: fonts.bodyMedium,
     fontSize: fontSize.base,
@@ -361,8 +580,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
     color: colors.muted,
-    textAlign: 'right',
-    maxWidth: '55%',
+  },
+  editIcon: {
+    fontSize: fontSize.md,
+    color: colors.primary,
+    marginLeft: spacing.sm,
   },
   divider: {
     height: 1,
@@ -373,5 +595,81 @@ const styles = StyleSheet.create({
   retakeWrap: {
     paddingHorizontal: spacing.lg,
     marginTop: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  retakeHint: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    textAlign: 'center',
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingTop: spacing.md,
+    maxHeight: SCREEN_HEIGHT * 0.6,
+  },
+  modalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    fontFamily: fonts.display,
+    fontSize: fontSize.lg,
+    color: colors.ink,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+    letterSpacing: letterSpacing.tight,
+  },
+  modalList: {
+    paddingHorizontal: spacing.lg,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    marginBottom: spacing.xs,
+  },
+  optionLabel: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.base,
+    color: colors.ink,
+    flex: 1,
+  },
+  checkmark: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.lg,
+    marginLeft: spacing.sm,
+  },
+  modalCancel: {
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  modalCancelText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.base,
+    color: colors.muted,
   },
 });

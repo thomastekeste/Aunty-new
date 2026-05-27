@@ -1,9 +1,16 @@
 import { useCallback, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { Alert, InteractionManager, Platform, View } from 'react-native';
-import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import * as Haptics from 'expo-haptics';
+
+// Lazy-load react-native-view-shot to avoid TurboModule crash if native module missing
+let captureRef: typeof import('react-native-view-shot').captureRef | null = null;
+try {
+  captureRef = require('react-native-view-shot').captureRef;
+} catch {
+  // Native module not available in this build
+}
 
 /**
  * Captures a 9:16 view ref and opens the system share sheet (image).
@@ -29,6 +36,10 @@ export function useShareVerdictImage() {
       await new Promise<void>((resolve) => {
         InteractionManager.runAfterInteractions(() => resolve());
       });
+      if (!captureRef) {
+        Alert.alert('Share unavailable', 'Image capture is not available in this build. Please rebuild the app.');
+        return;
+      }
       const uri = await captureRef(node, {
         format: 'png',
         quality: 0.92,

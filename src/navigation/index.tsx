@@ -13,6 +13,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { TabBar } from '../components/TabBar';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../constants/theme';
@@ -42,6 +43,7 @@ import ValidationThreeScreen from '../screens/onboarding/ValidationThreeScreen';
 import HomeDashboardScreen from '../screens/app/HomeDashboardScreen';
 import RitualScreen from '../screens/app/RitualScreen';
 import CouncilScreen from '../screens/app/CouncilScreen';
+import JourneyScreen from '../screens/app/JourneyScreen';
 import LearnScreen from '../screens/app/LearnScreen';
 import ProductsScreen from '../screens/app/ProductsScreen';
 import SettingsScreen from '../screens/app/SettingsScreen';
@@ -140,6 +142,17 @@ function OnboardingNavigator() {
   );
 }
 
+// ─── Error-wrapped screens ─────────────────────────────────────
+
+function WrappedHome() { return <ErrorBoundary fallbackTitle="Home couldn't load"><HomeDashboardScreen /></ErrorBoundary>; }
+function WrappedRitual() { return <ErrorBoundary fallbackTitle="Ritual couldn't load"><RitualScreen /></ErrorBoundary>; }
+function WrappedProducts() { return <ErrorBoundary fallbackTitle="Products couldn't load"><ProductsScreen /></ErrorBoundary>; }
+function WrappedChat() { return <ErrorBoundary fallbackTitle="Chat couldn't load"><CouncilScreen /></ErrorBoundary>; }
+function WrappedLearn() { return <ErrorBoundary fallbackTitle="Learn couldn't load"><LearnScreen /></ErrorBoundary>; }
+function WrappedCheckIn() { return <ErrorBoundary fallbackTitle="Check-in couldn't load"><CheckInScreen /></ErrorBoundary>; }
+function WrappedHairProfile() { return <ErrorBoundary fallbackTitle="Profile couldn't load"><HairProfileScreen /></ErrorBoundary>; }
+function WrappedJourney() { return <ErrorBoundary fallbackTitle="Journey couldn't load"><JourneyScreen /></ErrorBoundary>; }
+
 // ─── App Tab Navigator ──────────────────────────────────────────
 
 const AppTab = createBottomTabNavigator<AppTabParamList>();
@@ -150,11 +163,11 @@ function TabNavigator() {
       tabBar={(props) => <TabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
-      <AppTab.Screen name="Home" component={HomeDashboardScreen} />
-      <AppTab.Screen name="Ritual" component={RitualScreen} />
-      <AppTab.Screen name="Products" component={ProductsScreen} />
-      <AppTab.Screen name="Chat" component={CouncilScreen} />
-      <AppTab.Screen name="Learn" component={LearnScreen} />
+      <AppTab.Screen name="Home" component={WrappedHome} />
+      <AppTab.Screen name="Ritual" component={WrappedRitual} />
+      <AppTab.Screen name="Products" component={WrappedProducts} />
+      <AppTab.Screen name="Chat" component={WrappedChat} />
+      <AppTab.Screen name="Learn" component={WrappedLearn} />
     </AppTab.Navigator>
   );
 }
@@ -168,12 +181,13 @@ function AppNavigator() {
     <AppStack.Navigator screenOptions={{ headerShown: false }}>
       <AppStack.Screen name="Tabs" component={TabNavigator} />
       <AppStack.Group screenOptions={{ presentation: 'modal', animation: 'slide_from_bottom' }}>
-        <AppStack.Screen name="HairProfile" component={HairProfileScreen} />
+        <AppStack.Screen name="HairProfile" component={WrappedHairProfile} />
         <AppStack.Screen name="Settings" component={SettingsScreen} />
         <AppStack.Screen name="RitualSteps" component={RitualStepScreen} />
-        <AppStack.Screen name="CheckIn" component={CheckInScreen} />
+        <AppStack.Screen name="CheckIn" component={WrappedCheckIn} />
         <AppStack.Screen name="EditProfile" component={EditProfileScreen} />
         <AppStack.Screen name="ChangeAunty" component={ChangeAuntyScreen} />
+        <AppStack.Screen name="Journey" component={WrappedJourney} />
       </AppStack.Group>
     </AppStack.Navigator>
   );

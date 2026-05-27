@@ -1,8 +1,8 @@
 /**
  * SubscriptionContext — RevenueCat-powered subscription management.
  *
- * Initializes RevenueCat SDK, checks entitlements, provides
- * purchase functions, and gates features based on "Aunty Pro" entitlement.
+ * Subscription-only model: everyone pays, everyone gets everything.
+ * No free tier, no feature gating.
  */
 
 import React, {
@@ -12,7 +12,6 @@ import React, {
   useEffect,
   useCallback,
 } from 'react';
-import { Platform } from 'react-native';
 import Purchases, {
   PurchasesOffering,
   PurchasesPackage,
@@ -27,35 +26,11 @@ const ENTITLEMENT_ID = 'Aunty Pro';
 
 // ─── Types ─────────────────────────────────────────────────────
 
-type Tier = 'free' | 'premium';
-
-type Feature =
-  | 'unlimited_routines'
-  | 'unlimited_checkins'
-  | 'unlimited_photos'
-  | 'full_chat'
-  | 'product_recommendations'
-  | 'progress_comparison'
-  | 'seasonal_updates';
-
-// Features available on the free tier
-const FREE_FEATURES: Set<Feature> = new Set([
-  'full_chat',
-  'product_recommendations',
-  'unlimited_checkins',
-]);
-
 interface SubscriptionContextValue {
-  tier: Tier;
-  isActive: boolean;
+  isSubscribed: boolean;
   isLoading: boolean;
   error: string | null;
-  customerInfo: CustomerInfo | null;
   currentOffering: PurchasesOffering | null;
-  // Trial offer info derived from RevenueCat product metadata
-  yearlyHasIntroOffer: boolean;
-  trialDays: number;
-  canAccess: (feature: Feature) => boolean;
   purchasePackage: (pkg: PurchasesPackage) => Promise<boolean>;
   restorePurchases: () => Promise<boolean>;
 }
@@ -72,16 +47,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Derive tier from entitlements
-  const isActive = customerInfo?.entitlements?.active?.[ENTITLEMENT_ID]?.isActive ?? false;
-  const tier: Tier = isActive ? 'premium' : 'free';
-
-  // Trial offer detection — requires App Store Connect introductory offer to be configured
-  // Set `Introductory Offer: 7 days free` on the yearly SKU in App Store Connect before TestFlight.
-  const yearlyHasIntroOffer =
-    (currentOffering?.annual?.product as any)?.introPrice != null;
-  const trialDays: number =
-    (currentOffering?.annual?.product as any)?.introPrice?.periodNumberOfUnits ?? 7;
+  const isSubscribed = customerInfo?.entitlements?.active?.[ENTITLEMENT_ID]?.isActive ?? false;
 
   // Initialize RevenueCat (skip in Expo Go — native module not available)
   useEffect(() => {
@@ -107,7 +73,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           setCurrentOffering(offerings.current);
         }
       } catch (e: any) {
-        // Gracefully handle Expo Go (no native store available)
         const msg = e.message || String(e);
         console.warn('[RevenueCat] Skipping — likely running in Expo Go:', msg);
         setError(msg);
@@ -127,7 +92,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  // Purchase a package
   const purchasePackage = useCallback(async (pkg: PurchasesPackage): Promise<boolean> => {
     try {
       const { customerInfo: info } = await Purchases.purchasePackage(pkg);
@@ -141,7 +105,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  // Restore purchases
   const restorePurchases = useCallback(async (): Promise<boolean> => {
     try {
       const info = await Purchases.restorePurchases();
@@ -153,22 +116,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  // Feature gating — free tier gets chat, product recs, and check-ins
-  const canAccess = useCallback((feature: Feature): boolean => {
-    if (tier === 'premium') return true;
-    return FREE_FEATURES.has(feature);
-  }, [tier]);
-
   const value: SubscriptionContextValue = {
-    tier,
-    isActive,
+    isSubscribed,
     isLoading,
     error,
-    customerInfo,
     currentOffering,
-    yearlyHasIntroOffer,
-    trialDays,
-    canAccess,
     purchasePackage,
     restorePurchases,
   };
