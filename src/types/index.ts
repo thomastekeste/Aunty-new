@@ -83,6 +83,17 @@ export interface OnboardingData {
   routine?: WeeklyRitual;
 }
 
+export interface PhotoAnalysis {
+  observedCurlPattern: string;
+  observedPorosity: string;
+  observedDensity: string;
+  moistureLevel: 'low' | 'adequate' | 'good';
+  damageIndicators: string[];
+  strengths: string[];
+  recommendations: string[];
+  overallAssessment: string;
+}
+
 export interface CouncilResponse {
   auntyMessages: Record<AuntyId, string>;
   consensus: string;
@@ -162,6 +173,7 @@ export type OnboardingStackParamList = {
   Struggles: undefined;
   Validation3: undefined;
   BudgetQuestion: undefined;
+  PhotoCapture: undefined;
   CouncilConvening: undefined;
   CouncilVerdict: undefined;
   ProductReveal: undefined;

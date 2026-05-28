@@ -1,7 +1,13 @@
 import { supabase } from './supabase';
-import type { HairProfile, CouncilResponse, WeeklyRitual } from '../types';
+import type { HairProfile, CouncilResponse, WeeklyRitual, PhotoAnalysis } from '../types';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? 'http://localhost:3001' : '');
+
+if (!API_URL) {
+  console.error('[api] EXPO_PUBLIC_API_URL is not set — API calls will fail in production.');
+}
+
+export { API_URL };
 
 // ─── Helpers ────────────────────────────────────────────────────
 
@@ -51,7 +57,7 @@ export async function submitIntake(data: {
 // ─── Photos ─────────────────────────────────────────────────────
 
 export async function analyzePhoto(imageUri: string): Promise<{
-  analysis: Record<string, unknown>;
+  analysis: PhotoAnalysis;
   photoId: string;
   storagePath: string;
 }> {
@@ -134,4 +140,10 @@ export async function getUserProfile(): Promise<{
   checkins: Record<string, unknown>[];
 }> {
   return apiCall('/api/user/profile');
+}
+
+// ─── Account Deletion ──────────────────────────────────────────
+
+export async function deleteAccount(): Promise<{ success: boolean }> {
+  return apiCall('/api/user/delete', { method: 'POST' });
 }

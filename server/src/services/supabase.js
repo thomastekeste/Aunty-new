@@ -4,16 +4,31 @@ import config from '../config.js';
 /**
  * Supabase admin client — uses the service role key
  * for server-side operations that bypass RLS.
+ *
+ * Gracefully handles missing service key (dev mode) — all DB functions
+ * return null/empty so endpoints can fall back to request body data.
  */
-const supabase = createClient(config.supabaseUrl, config.supabaseServiceKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+let supabase = null;
+
+if (config.supabaseUrl && config.supabaseServiceKey) {
+  supabase = createClient(config.supabaseUrl, config.supabaseServiceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+} else {
+  console.warn('[supabase] Service key not set — DB operations will return empty data. Chat will use client-sent profile data.');
+}
 
 export { supabase };
+
+// Helper — throws a clear error if DB isn't available
+function requireDb() {
+  if (!supabase) throw new Error('Supabase not configured (missing service key)');
+}
 
 // ─── Users ──────────────────────────────────────────────────────
 
 export async function createUser(email, name) {
+  requireDb();
   const { data, error } = await supabase
     .from('users')
     .insert({ email, name })
@@ -24,16 +39,18 @@ export async function createUser(email, name) {
 }
 
 export async function getUser(userId) {
+  if (!supabase) return null;
   const { data, error } = await supabase
     .from('users')
     .select('*')
     .eq('id', userId)
     .single();
-  if (error) throw error;
+  if (error) return null;
   return data;
 }
 
 export async function updateUser(userId, updates) {
+  requireDb();
   const { data, error } = await supabase
     .from('users')
     .update({ ...updates, updated_at: new Date().toISOString() })
@@ -47,6 +64,7 @@ export async function updateUser(userId, updates) {
 // ─── Hair Profiles ──────────────────────────────────────────────
 
 export async function saveHairProfile(userId, profile) {
+  requireDb();
   const { data, error } = await supabase
     .from('hair_profiles')
     .upsert(
@@ -77,18 +95,20 @@ export async function saveHairProfile(userId, profile) {
 }
 
 export async function getHairProfile(userId) {
+  if (!supabase) return null;
   const { data, error } = await supabase
     .from('hair_profiles')
     .select('*')
     .eq('user_id', userId)
     .single();
-  if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
+  if (error) return null;
   return data;
 }
 
 // ─── Routines ───────────────────────────────────────────────────
 
 export async function saveRoutine(userId, routineJson, councilResponseJson) {
+  requireDb();
   const { data, error } = await supabase
     .from('routines')
     .insert({
@@ -113,6 +133,7 @@ export async function saveRoutine(userId, routineJson, councilResponseJson) {
 }
 
 export async function getRoutine(userId) {
+  if (!supabase) return null;
   const { data, error } = await supabase
     .from('routines')
     .select('*')
@@ -121,13 +142,14 @@ export async function getRoutine(userId) {
     .order('created_at', { ascending: false })
     .limit(1)
     .single();
-  if (error && error.code !== 'PGRST116') throw error;
+  if (error) return null;
   return data;
 }
 
 // ─── Check-ins ──────────────────────────────────────────────────
 
 export async function saveCheckin(userId, checkinData) {
+  requireDb();
   const { data, error } = await supabase
     .from('checkins')
     .insert({
@@ -146,18 +168,20 @@ export async function saveCheckin(userId, checkinData) {
 }
 
 export async function getCheckins(userId) {
+  if (!supabase) return [];
   const { data, error } = await supabase
     .from('checkins')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) return [];
   return data;
 }
 
 // ─── Photos ─────────────────────────────────────────────────────
 
 export async function savePhoto(userId, type, storagePath, analysisJson) {
+  requireDb();
   const { data, error } = await supabase
     .from('photos')
     .insert({

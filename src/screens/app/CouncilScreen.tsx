@@ -1,47 +1,39 @@
 /**
- * CouncilScreen (now Chat) -- 1-on-1 chat with your chosen aunty.
+ * CouncilScreen (Chat) — 1-on-1 chat with your chosen aunty.
  *
- * Header shows chosen aunty's avatar + name.
- * Messages from aunty (left, colored) and user (right, dark).
- * Calls Gemini API or falls back to local personality-based responses.
+ * Orchestrates chat components: ChatHeader, WelcomeCard, MessageBubble,
+ * TypingIndicator, QuickSuggestions, ChatInput.
+ * Handles state, API calls, and AsyncStorage persistence.
  */
 
-import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
-  Text,
   FlatList,
-  TextInput,
-  StyleSheet,
-  Pressable,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import Animated, {
-  FadeInDown,
-} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { AuntyAvatar } from '../../components/AuntyAvatar';
-import {
-  colors,
-  auntyColors,
-  fonts,
-  fontSize,
-  spacing,
-  radius,
-  shadows,
-  gradients,
-  typography,
-  letterSpacing,
-} from '../../constants/theme';
+import { colors, auntyColors, spacing } from '../../constants/theme';
 import { AUNTIES, type AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { useAuth } from '../../context/AuthContext';
+import type { AppStackParamList } from '../../types';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+import { ChatHeader } from '../../components/chat/ChatHeader';
+import { WelcomeCard } from '../../components/chat/WelcomeCard';
+import { MessageBubble } from '../../components/chat/MessageBubble';
+import { TypingIndicator } from '../../components/chat/TypingIndicator';
+import { QuickSuggestions } from '../../components/chat/QuickSuggestions';
+import { ChatInput } from '../../components/chat/ChatInput';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? 'http://localhost:3001' : '');
 
 interface Message {
   id: string;
@@ -54,26 +46,68 @@ function getTimestamp(): string {
   return new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
+// ─── Fallback when both AIs are completely down ────────────────────
 function generateFallbackResponse(aunty: typeof AUNTIES[AuntyId], userText: string): string {
   const lower = userText.toLowerCase();
+  const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
 
   if (lower.includes('dry') || lower.includes('moisture')) {
-    return `${aunty.greeting} When it comes to moisture, ${aunty.ingredient.toLowerCase()} is your best friend. Make sure you're sealing in that hydration. Your hair is thirsty and we are going to quench it.`;
-  }
-  if (lower.includes('product') || lower.includes('recommend')) {
-    return `Check the Products tab -- I've already lined up some essentials for you. My go-to is always ${aunty.ingredient.toLowerCase()}. Start there and see how your hair responds.`;
+    return pick([
+      `Your hair is THIRSTY. ${aunty.ingredient.split(',')[0]} on damp hair, seal it in, and stop skipping deep condition day.`,
+      `How often are you deep conditioning? Be honest with me.`,
+    ]);
   }
   if (lower.includes('wash') || lower.includes('routine')) {
-    return `On wash day, I like to start with a pre-poo treatment, then cleanse gently. ${aunty.ingredient} is key for me. Take your time -- rushing wash day is how breakage happens.`;
+    return pick([
+      `Pre-poo before you wash. Always. Oil on dry hair, 20 minutes, then wash.`,
+      `How often you washing? Because if you're washing every day we need to talk.`,
+    ]);
   }
+  if (lower.includes('break') || lower.includes('damage') || lower.includes('thin')) {
+    return pick([
+      `Breathe. Does your hair feel mushy or does it snap? That tells me everything.`,
+      `When did this start? Something changed — new product, stress, heat?`,
+    ]);
+  }
+  if (lower.includes('scalp') || lower.includes('itch')) {
+    return pick([
+      `Your scalp is the soil. Warm oil massage before wash day, every time.`,
+      `If it's been going on for weeks please see a dermatologist.`,
+    ]);
+  }
+  if (lower.includes('grow') || lower.includes('length')) {
+    return pick([
+      `Your hair IS growing. The issue is retention. Protect those ends. Satin pillowcase.`,
+      `Patience. Protect your ends, stop checking every week, and in 6 months you'll see it.`,
+    ]);
+  }
+  if (lower.includes('hello') || lower.includes('hi') || lower.includes('hey') || lower.length < 15) {
+    return `${aunty.greeting} What's going on with your hair today?`;
+  }
+  return pick([
+    `Mmm okay. Tell me more — what's your hair been doing lately?`,
+    `What's your current routine looking like? Walk me through a wash day.`,
+    `How long have you been natural? That changes my answer completely.`,
+  ]);
+}
 
-  // Default warm response using personality
-  return `${aunty.quote} Remember, this journey is yours and I'm here every step of the way. What else is on your mind?`;
+// ─── Message grouping helper ──────────────────────────────────────
+function getGroupInfo(messages: Message[], index: number) {
+  const current = messages[index];
+  const prev = index > 0 ? messages[index - 1] : null;
+  const next = index < messages.length - 1 ? messages[index + 1] : null;
+  return {
+    isFirstInGroup: !prev || prev.sender !== current.sender,
+    isLastInGroup: !next || next.sender !== current.sender,
+  };
 }
 
 export default function CouncilScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { state } = useOnboarding();
+  const { session } = useAuth();
+
   const auntyId: AuntyId = state.data.chosenAuntyId || 'denise';
   const aunty = AUNTIES[auntyId];
   const ac = auntyColors[auntyId];
@@ -90,6 +124,7 @@ export default function CouncilScreen() {
   const flatListRef = useRef<FlatList>(null);
   const isSendingRef = useRef(false);
 
+  // ─── Load persisted messages ────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
@@ -103,23 +138,21 @@ export default function CouncilScreen() {
           }
         }
       } catch {}
-      setMessages([{
-        id: '1',
-        text: `${aunty.greeting} Ask me anything about your hair journey.`,
-        sender: 'aunty',
-        timestamp: getTimestamp(),
-      }]);
+      // Empty state — WelcomeCard handles the greeting
+      setMessages([]);
       setIsLoaded(true);
     })();
   }, [auntyId]);
 
+  // ─── Persist messages ───────────────────────────────────────────
   useEffect(() => {
     if (!isLoaded || messages.length === 0) return;
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-MAX_MESSAGES))).catch(() => {});
   }, [messages, isLoaded]);
 
-  const handleSend = useCallback(async () => {
-    const trimmed = inputText.trim();
+  // ─── Send message (accepts override text for quick suggestions) ─
+  const handleSend = useCallback(async (overrideText?: string) => {
+    const trimmed = (overrideText || inputText).trim();
     if (!trimmed || isSendingRef.current) return;
     isSendingRef.current = true;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -131,7 +164,7 @@ export default function CouncilScreen() {
       timestamp: getTimestamp(),
     };
     setMessages((prev) => [...prev, userMsg].slice(-MAX_MESSAGES));
-    setInputText('');
+    if (!overrideText) setInputText('');
     setIsTyping(true);
 
     let responseText: string;
@@ -139,27 +172,37 @@ export default function CouncilScreen() {
     const timeout = setTimeout(() => controller.abort(), 30_000);
 
     try {
-      // Send last 20 messages for AI context (keeps payload small)
       const history = [...messages, userMsg].slice(-20).map((m) => ({
         sender: m.sender,
         text: m.text,
       }));
 
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
       const res = await fetch(`${API_URL}/api/chat/message`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           message: trimmed,
           auntyId,
           conversationHistory: history,
+          hairProfile,
+          userName: name,
         }),
         signal: controller.signal,
       });
 
-      if (!res.ok) throw new Error(`API ${res.status}`);
-
-      const data = await res.json();
-      responseText = data.response || generateFallbackResponse(aunty, trimmed);
+      if (res.status === 503) {
+        responseText = `Sorry love, my brain is being slow right now. Try again in a minute? I promise I'll be back.`;
+      } else if (!res.ok) {
+        throw new Error(`API ${res.status}`);
+      } else {
+        const data = await res.json();
+        responseText = data.response || generateFallbackResponse(aunty, trimmed);
+      }
     } catch {
       responseText = generateFallbackResponse(aunty, trimmed);
     } finally {
@@ -175,73 +218,57 @@ export default function CouncilScreen() {
       timestamp: getTimestamp(),
     };
     setMessages((prev) => [...prev, auntyMsg].slice(-MAX_MESSAGES));
-  }, [inputText, auntyId, aunty, name, hairProfile, messages]);
+  }, [inputText, auntyId, aunty, name, hairProfile, messages, session]);
 
-  const renderMessage = ({ item }: { item: Message }) => {
-    if (item.sender === 'user') {
-      return (
-        <Animated.View entering={FadeInDown.duration(200)} style={styles.userMessageRow}>
-          <View style={styles.userBubble}>
-            <Text style={styles.userMessageText}>{item.text}</Text>
-            <Text style={styles.userTimestamp}>{item.timestamp}</Text>
-          </View>
-        </Animated.View>
-      );
-    }
+  // ─── New chat ───────────────────────────────────────────────────
+  const handleNewChat = useCallback(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    setMessages([]);
+    AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
+  }, [STORAGE_KEY]);
 
+  // ─── Navigation ─────────────────────────────────────────────────
+  const handleChangeAunty = useCallback(() => {
+    navigation.navigate('ChangeAunty');
+  }, [navigation]);
+
+  // ─── Derived state ──────────────────────────────────────────────
+  const lastMessage = messages[messages.length - 1];
+  const lastSenderIsAunty = !lastMessage || lastMessage.sender === 'aunty';
+  const showWelcome = messages.length === 0;
+
+  // ─── Render message ─────────────────────────────────────────────
+  const renderMessage = useCallback(({ item, index }: { item: Message; index: number }) => {
+    const { isFirstInGroup, isLastInGroup } = getGroupInfo(messages, index);
     return (
-      <Animated.View entering={FadeInDown.duration(200)} style={styles.auntyMessageRow}>
-        <AuntyAvatar auntyId={auntyId} size={36} showRing={false} />
-        <View style={styles.auntyMessageContent}>
-          <View style={styles.auntyNameRow}>
-            <Text style={[styles.auntyName, { color: ac.accent }]}>{aunty.name}</Text>
-            <Text style={styles.auntyTimestamp}>{item.timestamp}</Text>
-          </View>
-          <View style={[styles.auntyBubble, { backgroundColor: ac.bg, borderLeftColor: ac.accent }]}>
-            <Text style={[styles.auntyMessageText, { color: colors.ink }]}>{item.text}</Text>
-          </View>
-        </View>
-      </Animated.View>
+      <MessageBubble
+        item={item}
+        auntyId={auntyId}
+        auntyName={aunty.name}
+        accentColor={ac.accent}
+        bgColor={ac.bg}
+        isFirstInGroup={isFirstInGroup}
+        isLastInGroup={isLastInGroup}
+      />
     );
-  };
+  }, [messages, auntyId, aunty.name, ac.accent, ac.bg]);
 
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.canvas }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <View style={styles.headerContent}>
-          <AuntyAvatar auntyId={auntyId} size={40} showRing glowing />
-          <View style={styles.headerText}>
-            <Text style={[typography.h3]}>{aunty.name}</Text>
-            <Text style={[typography.caption, { color: ac.accent }]}>{aunty.title}</Text>
-            <Text style={styles.aiDisclosure}>AI-powered character</Text>
-          </View>
-          {messages.length > 1 && (
-            <Pressable
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setMessages([{
-                  id: Date.now().toString(),
-                  text: `${aunty.greeting} Ask me anything about your hair journey.`,
-                  sender: 'aunty',
-                  timestamp: getTimestamp(),
-                }]);
-              }}
-              style={styles.newChatBtn}
-              accessibilityRole="button"
-              accessibilityLabel="New conversation"
-            >
-              <Text style={styles.newChatText}>New</Text>
-            </Pressable>
-          )}
-        </View>
-      </View>
+      <ChatHeader
+        auntyId={auntyId}
+        aunty={aunty}
+        accentColor={ac.accent}
+        gradient={ac.gradient}
+        messageCount={messages.length}
+        onNewChat={handleNewChat}
+        onChangeAunty={handleChangeAunty}
+        topInset={insets.top}
+      />
 
-      {/* Messages */}
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -249,56 +276,49 @@ export default function CouncilScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.messageList}
         showsVerticalScrollIndicator={false}
+        keyboardDismissMode="interactive"
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        ListHeaderComponent={
+          showWelcome ? (
+            <WelcomeCard
+              auntyId={auntyId}
+              aunty={aunty}
+              accentColor={ac.accent}
+              gradient={ac.gradient}
+            />
+          ) : null
+        }
         ListFooterComponent={
           isTyping ? (
-            <Animated.View entering={FadeInDown.duration(200)} style={styles.auntyMessageRow}>
-              <AuntyAvatar auntyId={auntyId} size={36} showRing={false} />
-              <View style={styles.auntyMessageContent}>
-                <View style={[styles.auntyBubble, { backgroundColor: ac.bg, borderLeftColor: ac.accent }]}>
-                  <Text style={[styles.typingText, { color: ac.accent }]}>typing...</Text>
-                </View>
-              </View>
-            </Animated.View>
+            <TypingIndicator
+              auntyId={auntyId}
+              accentColor={ac.accent}
+              bgColor={ac.bg}
+            />
           ) : null
         }
       />
 
-      {/* Input */}
-      <View style={[styles.inputContainer, { paddingBottom: insets.bottom + spacing.sm }]}>
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.textInput}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder={`Ask ${aunty.name}...`}
-            placeholderTextColor={colors.muted}
-            multiline
-            maxLength={500}
-            accessibilityLabel={`Type your message to ${aunty.name}`}
-            accessibilityHint={`Ask Aunty ${aunty.name} a question about your hair`}
-          />
-          <Pressable
-            onPress={handleSend}
-            disabled={!inputText.trim() || isTyping}
-            style={[
-              styles.sendButton,
-              (!inputText.trim() || isTyping) && styles.sendButtonDisabled,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Send message"
-            accessibilityHint={`Send your question to ${aunty.name}`}
-          >
-            <LinearGradient
-              colors={inputText.trim() && !isTyping ? [...gradients.gold] : [colors.border, colors.border]}
-              style={styles.sendButtonGradient}
-            >
-              <Text style={[styles.sendIcon, { color: inputText.trim() && !isTyping ? colors.ink : colors.muted }]}>
-                {'\u2191'}
-              </Text>
-            </LinearGradient>
-          </Pressable>
-        </View>
+      <View style={{ paddingBottom: insets.bottom + spacing.sm }}>
+        <QuickSuggestions
+          auntyId={auntyId}
+          messageCount={messages.length}
+          isTyping={isTyping}
+          lastSenderIsAunty={lastSenderIsAunty}
+          onSend={handleSend}
+          accentColor={ac.accent}
+          bgColor={ac.bg}
+          textColor={ac.text}
+        />
+        <ChatInput
+          value={inputText}
+          onChangeText={setInputText}
+          onSend={() => handleSend()}
+          auntyName={aunty.name}
+          accentColor={ac.accent}
+          gradient={ac.gradient}
+          isTyping={isTyping}
+        />
       </View>
     </KeyboardAvoidingView>
   );
@@ -308,153 +328,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  headerText: {
-    flex: 1,
-  },
-  aiDisclosure: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.muted,
-    marginTop: 2,
-  },
-  newChatBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: colors.primary + '30',
-  },
-  newChatText: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.xs,
-    color: colors.primary,
-  },
   messageList: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    gap: spacing.md,
-  },
-  auntyMessageRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    maxWidth: '88%',
-  },
-  auntyMessageContent: {
-    flex: 1,
-  },
-  auntyNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  auntyName: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.xs,
-    letterSpacing: letterSpacing.wide,
-  },
-  auntyTimestamp: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.muted,
-  },
-  auntyBubble: {
-    borderRadius: radius.md,
-    borderTopLeftRadius: radius.xs,
-    padding: spacing.md,
-    borderLeftWidth: 3,
-  },
-  auntyMessageText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
-    lineHeight: fontSize.md * 1.5,
-  },
-  typingText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: fontSize.sm,
-    fontStyle: 'italic',
-  },
-  userMessageRow: {
-    alignItems: 'flex-end',
-  },
-  userBubble: {
-    backgroundColor: colors.ink,
-    borderRadius: radius.md,
-    borderTopRightRadius: radius.xs,
-    padding: spacing.md,
-    maxWidth: '82%',
-  },
-  userMessageText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
-    lineHeight: fontSize.md * 1.5,
-    color: colors.canvas,
-  },
-  userTimestamp: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.dark.textMuted,
-    marginTop: spacing.xs,
-    textAlign: 'right',
-  },
-  inputContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-    ...shadows.sm,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: spacing.sm,
-  },
-  textInput: {
-    flex: 1,
-    fontFamily: fonts.body,
-    fontSize: fontSize.base,
-    color: colors.ink,
-    backgroundColor: colors.canvasDeep,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    paddingTop: spacing.md,
-    maxHeight: 120,
-    minHeight: 44,
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
-  },
-  sendButtonDisabled: {
-    opacity: 0.5,
-  },
-  sendButtonGradient: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendIcon: {
-    fontFamily: fonts.bodyBold,
-    fontSize: fontSize.xl,
-    marginTop: -2,
   },
 });

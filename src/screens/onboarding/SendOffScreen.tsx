@@ -17,6 +17,8 @@ import { CeremonialButton } from '../../components/CeremonialButton';
 import { AUNTIES } from '../../constants/aunties';
 import type { AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { API_URL } from '../../services/api';
+import { supabase } from '../../services/supabase';
 import {
   colors,
   auntyColors,
@@ -47,20 +49,22 @@ export default function SendOffScreen() {
     setShowButton(true);
   }, []);
 
-  const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
-
   const handleBegin = useCallback(async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     try { await AsyncStorage.setItem('onboarding_completed_at', new Date().toISOString()); } catch {}
     try {
+      const { data: { session } } = await supabase!.auth.getSession();
       fetch(`${API_URL}/api/onboarding/intake`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify(state.data),
       }).catch(() => {});
     } catch {}
     complete();
-  }, [API_URL, complete, state.data]);
+  }, [complete, state.data]);
 
   return (
     <LinearGradient colors={[...gradients.ceremony]} style={[styles.container, { paddingTop: insets.top }]}>

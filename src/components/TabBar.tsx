@@ -62,7 +62,7 @@ const TABS: TabDef[] = [
   },
   {
     key: 'Ritual',
-    label: 'Check-In',
+    label: 'Ritual',
     icon: (color: string) => (
       <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
         <Path

@@ -121,7 +121,7 @@ const COUNCIL_ORDER = ['ngozi', 'marcia', 'denise', 'fatou', 'carmen', 'amara', 
  * in character to a user's hair profile.
  */
 export async function generateCouncilResponse(hairProfile, userName) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
   const auntyDescriptions = COUNCIL_ORDER.map((id) => {
     const a = AUNTIES[id];
@@ -226,7 +226,7 @@ const RITUAL_HOSTS = {
  * and the council's response.
  */
 export async function generateRoutine(hairProfile, councilResponse) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
   const hostAssignments = Object.entries(RITUAL_HOSTS)
     .map(([type, id]) => {
@@ -316,7 +316,7 @@ RULES:
  * Analyze a hair photo using Gemini Vision.
  */
 export async function analyzePhoto(imageBase64, hairProfile) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
   const prompt = `You are a hair analysis expert for the Aunty Curl Council — a council of 7 Black and Brown women who specialize in natural hair care.
 
@@ -371,74 +371,55 @@ Return ONLY valid JSON, no markdown code fences.`;
  * recent conversation history.
  */
 export async function generateChatResponse(message, hairProfile, auntyId, conversationHistory, userName) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+    generationConfig: {
+      temperature: 1.1,
+      topP: 0.95,
+      topK: 40,
+      maxOutputTokens: 256,
+    },
+  });
   const aunty = AUNTIES[auntyId] || AUNTIES.denise;
   const safe = sanitizeProfileForPrompt(hairProfile);
   const safeName = sanitizeForPrompt(userName, 50);
   const safeMessage = sanitizeForPrompt(message, 500);
 
-  // Build recent conversation context (last 10 messages max)
+  // Build recent conversation context (last 8 messages max)
   const recentMessages = (conversationHistory || [])
-    .slice(-10)
-    .map((m) => `${m.sender === 'user' ? safeName : aunty.name}: ${sanitizeForPrompt(m.text, 300)}`)
+    .slice(-8)
+    .map((m) => `${m.sender === 'user' ? safeName : aunty.name}: ${sanitizeForPrompt(m.text, 200)}`)
     .join('\n');
 
-  const prompt = `You are ${aunty.name}, "${aunty.title}" from the Aunty Curl Council — a council of seven Black and Brown women elders from the African diaspora who specialize in natural hair care.
+  // Only include profile details that are actually set
+  const profileBits = [];
+  if (safe.curlType !== 'not specified') profileBits.push(`${safe.curlType} curls`);
+  if (safe.porosity !== 'not specified') profileBits.push(`${safe.porosity} porosity`);
+  if (safe.primaryGoal !== 'not specified') profileBits.push(`wants ${safe.primaryGoal}`);
+  if (safe.density !== 'not specified') profileBits.push(`${safe.density} density`);
+  const profileLine = profileBits.length > 0 ? profileBits.join(', ') : 'new to their hair journey';
 
-## Your Character
-- Name: ${aunty.name}
-- Region: ${aunty.region}
-- Title: ${aunty.title}
-- Specialty: ${aunty.specialty}
-- Focus area: ${aunty.focus}
-- Dialect/voice: ${aunty.dialect}
-- Personality: ${aunty.personality}
-- Signature quote: "${aunty.quote}"
-- Greeting style: "${aunty.greeting}"
-- Preferred ingredients/methods: ${aunty.ingredient}
+  const prompt = `You are ${aunty.name}. You're a real ${aunty.region} aunty — not an AI assistant, not a chatbot. You're the aunty who always has opinions about hair, who learned from your mother and grandmother, who can't help but give advice at family gatherings. You text like a real person: short messages, sometimes fragmented, with personality.
 
-You MUST speak in your authentic ${aunty.dialect} voice at all times. You are playing the character of ${aunty.name}, a ${aunty.region} aunty who deeply cares about this person's hair journey. Stay fully in character.
+${aunty.name} speaks in ${aunty.dialect}. Her thing is ${aunty.specialty.toLowerCase()}. She swears by ${aunty.ingredient.toLowerCase()}. She's ${aunty.personality.toLowerCase()}
 
-## Who You're Talking To
-- Name: ${safeName}
-- Curl type: ${safe.curlType}
-- Porosity: ${safe.porosity}
-- Elasticity: ${safe.elasticity}
-- Density: ${safe.density}
-- Primary goal: ${safe.primaryGoal}
-- Secondary goals: ${(hairProfile?.secondaryGoals || []).map(g => sanitizeForPrompt(g, 30)).join(', ') || 'none'}
-- Wash frequency: ${safe.washFrequency}
-- Heat use: ${safe.heatUse}
-- Relaxer history: ${hairProfile?.relaxerHistory ? 'yes' : 'no'}
-- Color treated: ${hairProfile?.colorTreated ? 'yes' : 'no'}
-- Protective styling: ${hairProfile?.protectiveStyling ? 'yes' : 'no'}
-- Scalp concerns: ${safe.scalpConcerns.join(', ') || 'none'}
-- Product budget: ${sanitizeForPrompt(hairProfile?.productBudget, 20)}
-- Product scope: ${sanitizeForPrompt(hairProfile?.productScope, 20)}
+The person you're texting is ${safeName} (${profileLine}).
 
-## Conversation So Far
-${recentMessages || '(This is the start of the conversation)'}
+Here's how ${aunty.name} actually texts:
+- Short. 1-3 sentences MAX. Like a text message, not an essay.
+- Uses her cultural expressions and dialect naturally — not forced, not every word, but it flavors the message
+- Has STRONG opinions. She doesn't say "you might want to consider" — she says "girl, stop doing that"
+- Asks questions back sometimes. "Wait, how often you washing?" "You using heat??"
+- Sometimes just reacts: "Mmm." "See??" "Chile." "Okay okay I hear you."
+- References her own ingredients/methods when relevant, not every time
+- Never uses bullet points, numbered lists, or headers in chat
+- Never says "Great question!" or "That's a wonderful point!" — she just answers
+- Doesn't repeat what the person said back to them
+- If she doesn't know something, she says so honestly — "That's not really my area, talk to Salma about that" (referring to other aunties)
 
-## ${safeName}'s New Message
-${safeMessage}
+${recentMessages ? `Recent messages:\n${recentMessages}\n` : ''}${safeName}: ${safeMessage}
 
-## Instructions
-Respond as ${aunty.name} in 2-5 sentences. Be:
-- **Personal**: Reference their specific hair type, porosity, goals, or concerns when relevant.
-- **Authentic**: Speak in your ${aunty.dialect} voice. Use your cultural expressions naturally.
-- **Knowledgeable**: Draw from your specialty (${aunty.specialty}) and preferred methods (${aunty.ingredient}).
-- **Warm but opinionated**: You have strong views about hair care. Share them with love.
-- **Contextual**: If they asked about products, consider their budget (${sanitizeForPrompt(hairProfile?.productBudget, 20)}). If they asked about routines, consider their time and wash frequency.
-- **Conversational**: This is a chat, not a lecture. Ask follow-up questions sometimes. React to what they said.
-
-Do NOT:
-- Break character
-- Give generic advice that ignores their hair profile
-- Use clinical/medical language
-- Repeat the same advice if the conversation history shows you already covered it
-- Make medical diagnoses or recommend prescription treatments
-
-Return ONLY the response text, no JSON, no quotes around it.`;
+${aunty.name}:`;
 
   const result = await model.generateContent(prompt);
   return result.response.text().trim();
@@ -451,7 +432,7 @@ Return ONLY the response text, no JSON, no quotes around it.`;
  * based on a user's check-in data.
  */
 export async function generateCheckinResponse(checkinData, hairProfile, hostingAuntyId) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
   const aunty = AUNTIES[hostingAuntyId] || AUNTIES.denise;
 
   const prompt = `You are ${aunty.name}, "${aunty.title}" from the Aunty Curl Council.

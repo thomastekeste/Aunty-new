@@ -15,6 +15,7 @@ import {
   Image,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
@@ -24,6 +25,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
+import { PhotoAnalysisCard } from '../../components/PhotoAnalysisCard';
+import { analyzePhoto } from '../../services/api';
+import type { PhotoAnalysis } from '../../types';
 import { Button } from '../../components/Button';
 import {
   colors,
@@ -130,6 +134,9 @@ export default function CheckInScreen() {
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
   const [notes, setNotes] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoAnalysis, setPhotoAnalysis] = useState<PhotoAnalysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [auntyResponse, setAuntyResponse] = useState('');
   const [onboardingDate, setOnboardingDate] = useState<string | undefined>();
@@ -151,6 +158,33 @@ export default function CheckInScreen() {
       .then((val) => { if (val) setAlreadyCheckedIn(true); })
       .catch(() => {});
   }, [weekNumber]);
+
+  // Auto-analyze photo when one is picked
+  useEffect(() => {
+    if (!photoUri) {
+      setPhotoAnalysis(null);
+      setAnalysisError(null);
+      return;
+    }
+    let cancelled = false;
+    const analyze = async () => {
+      setIsAnalyzing(true);
+      setAnalysisError(null);
+      try {
+        const result = await analyzePhoto(photoUri);
+        if (!cancelled) setPhotoAnalysis(result.analysis);
+      } catch (err) {
+        if (!cancelled) {
+          setAnalysisError('Could not analyze photo. You can still submit your check-in.');
+          console.warn('[CheckIn] Photo analysis failed:', err);
+        }
+      } finally {
+        if (!cancelled) setIsAnalyzing(false);
+      }
+    };
+    analyze();
+    return () => { cancelled = true; };
+  }, [photoUri]);
 
   const handleSelectMood = useCallback((mood: Mood) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -356,6 +390,24 @@ export default function CheckInScreen() {
           )}
         </Animated.View>
 
+        {/* Photo analysis results */}
+        {isAnalyzing && (
+          <Animated.View entering={FadeInDown.duration(300)} style={styles.analyzingWrap}>
+            <ActivityIndicator color={ac.accent} size="small" />
+            <Text style={styles.analyzingText}>Aunty is examining your hair...</Text>
+          </Animated.View>
+        )}
+        {analysisError && !isAnalyzing && (
+          <Animated.View entering={FadeInDown.duration(300)} style={styles.analysisErrorWrap}>
+            <Text style={styles.analysisErrorText}>{analysisError}</Text>
+          </Animated.View>
+        )}
+        {photoAnalysis && !isAnalyzing && (
+          <Animated.View entering={FadeInDown.duration(400)}>
+            <PhotoAnalysisCard analysis={photoAnalysis} auntyId={auntyId} compact />
+          </Animated.View>
+        )}
+
         {/* Notes with dynamic prompt */}
         <Animated.View entering={FadeInDown.delay(250).duration(300)} style={styles.notesSection}>
           <TextInput
@@ -555,6 +607,32 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.xs,
+  },
+
+  // Analysis states
+  analyzingWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  analyzingText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.dark.textMuted,
+  },
+  analysisErrorWrap: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    padding: spacing.sm,
+    backgroundColor: colors.jewel.rose + '15',
+    borderRadius: radius.md,
+  },
+  analysisErrorText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.jewel.rose,
   },
 
   // Notes

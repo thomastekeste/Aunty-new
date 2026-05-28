@@ -25,7 +25,9 @@ import * as Haptics from 'expo-haptics';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { deleteAccount } from '../../services/api';
 import {
   colors,
   fonts,
@@ -118,6 +120,7 @@ export default function SettingsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { state: onboardingState, reset: resetOnboarding } = useOnboarding();
+  const { signOut } = useAuth();
   const { mode: themeMode, isDark, setMode: setThemeMode } = useTheme();
 
   const { name, hairProfile, chosenAuntyId } = onboardingState.data;
@@ -168,6 +171,43 @@ export default function SettingsScreen() {
           onPress: async () => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             resetOnboarding();
+          },
+        },
+      ]
+    );
+  }, [resetOnboarding]);
+
+  const handleDeleteAccount = useCallback(() => {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and all your data (hair profile, routines, check-ins, photos). This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Everything',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Are you absolutely sure?',
+              'All your progress will be lost forever.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Yes, Delete My Account',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                      await deleteAccount();
+                      await AsyncStorage.clear();
+                      resetOnboarding();
+                    } catch (err) {
+                      Alert.alert('Error', 'Failed to delete account. Please try again or contact support@auntycurl.com.');
+                    }
+                  },
+                },
+              ]
+            );
           },
         },
       ]
@@ -280,6 +320,11 @@ export default function SettingsScreen() {
               label="Privacy Policy"
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); Linking.openURL('https://auntycurl.com/privacy'); }}
             />
+            <View style={styles.divider} />
+            <ListRow
+              label="Terms of Service"
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); Linking.openURL('https://auntycurl.com/terms'); }}
+            />
           </View>
         </Animated.View>
 
@@ -291,6 +336,13 @@ export default function SettingsScreen() {
               label="Sign Out"
               isDestructive
               onPress={handleSignOut}
+              showChevron={false}
+            />
+            <View style={styles.divider} />
+            <ListRow
+              label="Delete Account"
+              isDestructive
+              onPress={handleDeleteAccount}
               showChevron={false}
             />
           </View>

@@ -8,10 +8,11 @@ import config from './src/config.js';
 import authMiddleware from './src/middleware/auth.js';
 import { sanitizeBody } from './src/middleware/sanitize.js';
 import * as db from './src/services/supabase.js';
-import * as gemini from './src/services/gemini.js';
+import * as ai from './src/services/anthropic.js';
 import { sendPushNotification } from './src/services/notifications.js';
 
 const app = express();
+app.set('trust proxy', 1); // Railway runs behind a reverse proxy
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
@@ -41,7 +42,7 @@ const authLimiter = rateLimit({
   message: { error: 'Too many login attempts. Try again in 15 minutes.' },
 });
 
-// AI generation: 10 requests per 15 minutes per IP (Gemini is expensive)
+// AI generation: 10 requests per 15 minutes per IP
 const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -50,11 +51,31 @@ const aiLimiter = rateLimit({
   message: { error: 'Too many AI requests. Try again later.' },
 });
 
+// ─── Daily Spending Cap ────────────────────────────────────────
+// Hard cap: max 200 AI calls per day across ALL users.
+// At ~1K tokens/call × $0.10/M tokens → max ~$0.02/day.
+let dailyAiCalls = 0;
+let dailyResetDate = new Date().toDateString();
+
+function dailyCap(_req, res, next) {
+  const today = new Date().toDateString();
+  if (today !== dailyResetDate) { dailyAiCalls = 0; dailyResetDate = today; }
+  if (dailyAiCalls >= 200) {
+    return res.status(429).json({ error: 'Daily AI limit reached. Try again tomorrow.' });
+  }
+  dailyAiCalls++;
+  next();
+}
+
 // ─── Middleware ──────────────────────────────────────────────────
 
+// CORS — mobile apps don't send Origin headers, so allow all in production.
+// In dev, restrict to the Expo dev client origins.
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:8081'],
-  methods: ['GET', 'POST'],
+  origin: process.env.NODE_ENV === 'production'
+    ? true // allow all origins (mobile app doesn't use browsers)
+    : (process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:8081']),
+  methods: ['GET', 'POST', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
@@ -73,12 +94,18 @@ app.use(generalLimiter);
 // ─── Health Check ───────────────────────────────────────────────
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    aiCallsToday: dailyAiCalls,
+    aiDailyLimit: 200,
+    dbAvailable: !!db.supabase,
+  });
 });
 
 // ─── Onboarding Intake ──────────────────────────────────────────
 
-app.post('/api/onboarding/intake', aiLimiter, authMiddleware, async (req, res) => {
+app.post('/api/onboarding/intake', aiLimiter, dailyCap, authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const { name, hairProfile } = req.body;
@@ -94,10 +121,10 @@ app.post('/api/onboarding/intake', aiLimiter, authMiddleware, async (req, res) =
     await db.saveHairProfile(userId, hairProfile);
 
     // Generate council response
-    const councilResponse = await gemini.generateCouncilResponse(hairProfile, name);
+    const councilResponse = await ai.generateCouncilResponse(hairProfile, name);
 
     // Generate personalized routine
-    const routine = await gemini.generateRoutine(hairProfile, councilResponse);
+    const routine = await ai.generateRoutine(hairProfile, councilResponse);
 
     // Save routine + council response
     await db.saveRoutine(userId, routine, councilResponse);
@@ -117,7 +144,7 @@ app.post('/api/onboarding/intake', aiLimiter, authMiddleware, async (req, res) =
 
 // ─── Photo Analysis ─────────────────────────────────────────────
 
-app.post('/api/photos/analyze', aiLimiter, authMiddleware, upload.single('photo'), async (req, res) => {
+app.post('/api/photos/analyze', aiLimiter, dailyCap, authMiddleware, upload.single('photo'), async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -150,7 +177,7 @@ app.post('/api/photos/analyze', aiLimiter, authMiddleware, upload.single('photo'
     }
 
     const hairProfile = await db.getHairProfile(userId);
-    const analysis = await gemini.analyzePhoto(imageBase64, hairProfile);
+    const analysis = await ai.analyzePhoto(imageBase64, hairProfile);
 
     // Store in Supabase storage
     const photoId = uuidv4();
@@ -173,7 +200,7 @@ app.post('/api/photos/analyze', aiLimiter, authMiddleware, upload.single('photo'
 
 // ─── Council Generation ─────────────────────────────────────────
 
-app.post('/api/council/generate', aiLimiter, authMiddleware, async (req, res) => {
+app.post('/api/council/generate', aiLimiter, dailyCap, authMiddleware, async (req, res) => {
   try {
     const { hairProfile } = req.body;
 
@@ -182,7 +209,7 @@ app.post('/api/council/generate', aiLimiter, authMiddleware, async (req, res) =>
     }
 
     const user = await db.getUser(req.user.id);
-    const councilResponse = await gemini.generateCouncilResponse(hairProfile, user?.name);
+    const councilResponse = await ai.generateCouncilResponse(hairProfile, user?.name);
 
     res.json(councilResponse);
   } catch (err) {
@@ -193,30 +220,59 @@ app.post('/api/council/generate', aiLimiter, authMiddleware, async (req, res) =>
 
 // ─── 1-on-1 Chat ───────────────────────────────────────────────
 
-app.post('/api/chat/message', aiLimiter, authMiddleware, async (req, res) => {
+// Optional auth — tries to validate token but proceeds without it (for dev)
+async function optionalAuth(req, res, next) {
   try {
-    const userId = req.user.id;
-    const { message, auntyId, conversationHistory } = req.body;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const { createClient } = await import('@supabase/supabase-js');
+      const client = createClient(config.supabaseUrl, config.supabaseAnonKey);
+      const { data: { user } } = await client.auth.getUser(authHeader.replace('Bearer ', ''));
+      if (user) { req.user = user; req.token = authHeader.replace('Bearer ', ''); }
+    }
+  } catch { /* proceed without auth */ }
+  next();
+}
+
+app.post('/api/chat/message', aiLimiter, dailyCap, optionalAuth, async (req, res) => {
+  try {
+    const { message, auntyId, conversationHistory, hairProfile: bodyProfile, userName: bodyName } = req.body;
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return res.status(400).json({ error: 'message is required' });
     }
 
-    // Fetch user + hair profile from DB
-    const [user, hairProfile] = await Promise.all([
-      db.getUser(userId),
-      db.getHairProfile(userId),
-    ]);
+    if (!ai.isAvailable()) {
+      return res.status(503).json({ error: 'AI not configured', code: 'AI_UNAVAILABLE' });
+    }
 
-    const response = await gemini.generateChatResponse(
+    // Try DB lookup if authenticated, fall back to body data
+    let userName = bodyName || 'Queen';
+    let hairProfile = bodyProfile || {};
+
+    if (req.user) {
+      try {
+        const [user, dbProfile] = await Promise.all([
+          db.getUser(req.user.id),
+          db.getHairProfile(req.user.id),
+        ]);
+        if (user?.name) userName = user.name;
+        if (dbProfile) hairProfile = dbProfile;
+      } catch (dbErr) {
+        console.warn('DB lookup failed, using body data:', dbErr.message);
+      }
+    }
+
+    const response = await ai.generateChatResponse(
       message.trim(),
-      hairProfile || {},
+      hairProfile,
       auntyId || 'denise',
       conversationHistory || [],
-      user?.name || 'Queen',
+      userName,
     );
 
-    res.json({ response });
+    console.log(`Chat response (${auntyId || 'denise'})`);
+    res.json({ response, provider: 'anthropic' });
   } catch (err) {
     console.error('Chat message error:', err.message || err);
     res.status(500).json({ error: 'Failed to generate response' });
@@ -225,7 +281,7 @@ app.post('/api/chat/message', aiLimiter, authMiddleware, async (req, res) => {
 
 // ─── Routine Generation ─────────────────────────────────────────
 
-app.post('/api/routine/generate', aiLimiter, authMiddleware, async (req, res) => {
+app.post('/api/routine/generate', aiLimiter, dailyCap, authMiddleware, async (req, res) => {
   try {
     const { hairProfile, councilResponse } = req.body;
 
@@ -233,10 +289,12 @@ app.post('/api/routine/generate', aiLimiter, authMiddleware, async (req, res) =>
       return res.status(400).json({ error: 'hairProfile and councilResponse are required' });
     }
 
-    const routine = await gemini.generateRoutine(hairProfile, councilResponse);
+    const routine = await ai.generateRoutine(hairProfile, councilResponse);
 
-    // Save routine
-    await db.saveRoutine(req.user.id, routine, councilResponse);
+    // Save routine (non-blocking — don't fail if DB is unavailable)
+    try { await db.saveRoutine(req.user.id, routine, councilResponse); } catch (dbErr) {
+      console.warn('Routine DB save skipped:', dbErr.message);
+    }
 
     res.json(routine);
   } catch (err) {
@@ -247,7 +305,7 @@ app.post('/api/routine/generate', aiLimiter, authMiddleware, async (req, res) =>
 
 // ─── Check-in Submission ────────────────────────────────────────
 
-app.post('/api/checkin/submit', aiLimiter, authMiddleware, async (req, res) => {
+app.post('/api/checkin/submit', aiLimiter, dailyCap, authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const { weekNumber, hostingAuntyId, mood, notes, photoUri } = req.body;
@@ -255,20 +313,25 @@ app.post('/api/checkin/submit', aiLimiter, authMiddleware, async (req, res) => {
     const hairProfile = await db.getHairProfile(userId);
 
     // Generate aunty response
-    const auntyResponse = await gemini.generateCheckinResponse(
+    const auntyResponse = await ai.generateCheckinResponse(
       { weekNumber, mood, notes },
       hairProfile,
       hostingAuntyId || 'denise'
     );
 
-    const checkin = await db.saveCheckin(userId, {
-      weekNumber,
-      hostingAuntyId: hostingAuntyId || 'denise',
-      mood,
-      notes,
-      photoUri,
-      auntyResponse,
-    });
+    let checkin = null;
+    try {
+      checkin = await db.saveCheckin(userId, {
+        weekNumber,
+        hostingAuntyId: hostingAuntyId || 'denise',
+        mood,
+        notes,
+        photoUri,
+        auntyResponse,
+      });
+    } catch (dbErr) {
+      console.warn('Check-in DB save skipped:', dbErr.message);
+    }
 
     res.json({ checkin, auntyResponse });
   } catch (err) {
@@ -312,6 +375,50 @@ app.get('/api/user/profile', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('Get profile error:', err.message || err);
     res.status(500).json({ error: 'Failed to get profile' });
+  }
+});
+
+// ─── Account Deletion (Apple requirement) ──────────────────────
+
+app.post('/api/user/delete', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Delete all user data from each table
+    const tables = ['checkins', 'photos', 'routines', 'hair_profiles', 'users'];
+    for (const table of tables) {
+      const col = table === 'users' ? 'id' : 'user_id';
+      const { error } = await db.supabase
+        .from(table)
+        .delete()
+        .eq(col, userId);
+      if (error) console.warn(`Failed to delete from ${table}:`, error.message);
+    }
+
+    // Delete storage files
+    try {
+      const { data: files } = await db.supabase.storage
+        .from('hair-photos')
+        .list(userId);
+      if (files && files.length > 0) {
+        const paths = files.map((f) => `${userId}/${f.name}`);
+        await db.supabase.storage.from('hair-photos').remove(paths);
+      }
+    } catch (storageErr) {
+      console.warn('Storage cleanup failed:', storageErr.message);
+    }
+
+    // Delete auth user (requires service role key)
+    try {
+      await db.supabase.auth.admin.deleteUser(userId);
+    } catch (authErr) {
+      console.warn('Auth user deletion failed:', authErr.message);
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Account deletion error:', err.message || err);
+    res.status(500).json({ error: 'Failed to delete account' });
   }
 });
 

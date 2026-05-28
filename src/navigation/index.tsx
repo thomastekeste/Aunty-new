@@ -31,6 +31,7 @@ import PrimaryGoalScreen from '../screens/onboarding/PrimaryGoalScreen';
 import HairHabitsScreen from '../screens/onboarding/HairHabitsScreen';
 import StrugglesScreen from '../screens/onboarding/StrugglesScreen';
 import BudgetQuestionScreen from '../screens/onboarding/BudgetQuestionScreen';
+import PhotoCaptureScreen from '../screens/onboarding/PhotoCaptureScreen';
 import CouncilConveningScreen from '../screens/onboarding/CouncilConveningScreen';
 import CouncilVerdictScreen from '../screens/onboarding/CouncilVerdictScreen';
 import ProductRevealScreen from '../screens/onboarding/ProductRevealScreen';
@@ -122,6 +123,7 @@ function OnboardingNavigator() {
         options={{ animation: 'fade', animationDuration: 380 }}
       />
       <OnboardingStack.Screen name="BudgetQuestion" component={BudgetQuestionScreen} />
+      <OnboardingStack.Screen name="PhotoCapture" component={PhotoCaptureScreen} />
       <OnboardingStack.Screen
         name="CouncilConvening"
         component={CouncilConveningScreen}

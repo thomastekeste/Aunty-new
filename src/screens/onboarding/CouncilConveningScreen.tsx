@@ -35,6 +35,8 @@ import { CeremonialButton } from '../../components/CeremonialButton';
 import { AUNTIES, COUNCIL_ORDER } from '../../constants/aunties';
 import type { AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { analyzePhoto, API_URL } from '../../services/api';
+import { supabase } from '../../services/supabase';
 import type { OnboardingStackParamList, CouncilResponse, WeeklyRitual } from '../../types';
 import {
   colors,
@@ -47,7 +49,6 @@ import {
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'CouncilConvening'>;
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
 const { width: SCREEN_W } = Dimensions.get('window');
 const MIN_DISPLAY_TIME = 5400;
 
@@ -81,12 +82,13 @@ function getStatusForAunty(auntyId: AuntyId, name: string, profile: any): string
   }
 }
 
-const SCROLL_ITEMS = [
-  'Hair profile reviewed',
-  'Routine drafted',
-  'Products vetted',
-  'Plan signed by the council',
-];
+// Scroll items are built dynamically based on whether photos were captured
+function getScrollItems(hasPhotos: boolean): string[] {
+  const items = ['Hair profile reviewed'];
+  if (hasPhotos) items.push('Photo analyzed');
+  items.push('Routine drafted', 'Products vetted', 'Plan signed by the council');
+  return items;
+}
 
 // ─── Mock data ─────────────────────────────────────────────────
 function generateMockCouncilResponse(name: string, profile: Record<string, any>): CouncilResponse {
@@ -375,7 +377,9 @@ export default function CouncilConveningScreen() {
   const auntyId: AuntyId = state.data.chosenAuntyId || 'denise';
   const aunty = AUNTIES[auntyId];
   const ac = auntyColors[auntyId];
-  const { hairProfile, name } = state.data;
+  const { hairProfile, name, photos } = state.data;
+  const hasPhotos = !!(photos?.front || photos?.back || photos?.closeup);
+  const scrollItems = useMemo(() => getScrollItems(hasPhotos), [hasPhotos]);
 
   const [activeIdx, setActiveIdx] = useState(0);
   const [scrollDone, setScrollDone] = useState(0);
@@ -401,9 +405,24 @@ export default function CouncilConveningScreen() {
 
   const fetchCouncilData = async () => {
     try {
+      // Run photo analysis in parallel with council generation (non-blocking)
+      const photoUri = photos?.front || photos?.back || photos?.closeup;
+      if (photoUri) {
+        analyzePhoto(photoUri).catch((err) =>
+          console.warn('[CouncilConvening] Photo analysis failed (non-blocking):', err),
+        );
+      }
+
+      // Get auth token for API calls
+      const { data: { session } } = await supabase!.auth.getSession();
+      const authHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      };
+
       const councilRes = await fetch(`${API_URL}/api/council/generate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ name, hairProfile }),
       });
       if (!councilRes.ok) throw new Error(`Council API error: ${councilRes.status}`);
@@ -412,7 +431,7 @@ export default function CouncilConveningScreen() {
 
       const routineRes = await fetch(`${API_URL}/api/routine/generate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ name, hairProfile }),
       });
       if (!routineRes.ok) throw new Error(`Routine API error: ${routineRes.status}`);
@@ -450,7 +469,7 @@ export default function CouncilConveningScreen() {
       });
     }, 1100);
 
-    const scrollTimers = SCROLL_ITEMS.map((_, i) =>
+    const scrollTimers = scrollItems.map((_, i) =>
       setTimeout(() => setScrollDone(i + 1), 900 + i * 1200),
     );
 
@@ -511,7 +530,7 @@ export default function CouncilConveningScreen() {
 
       {/* Scroll */}
       <View style={[styles.scroll, { paddingBottom: insets.bottom + spacing.xl }]}>
-        {SCROLL_ITEMS.map((item, i) => (
+        {scrollItems.map((item, i) => (
           <ScrollItem key={item} label={item} done={i < scrollDone} index={i} />
         ))}
 

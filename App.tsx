@@ -10,6 +10,13 @@ import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN || '',
+  enabled: !__DEV__,
+  tracesSampleRate: 0.2,
+});
 import {
   PlusJakartaSans_400Regular,
   PlusJakartaSans_500Medium,
@@ -24,7 +31,7 @@ import { ThemeProvider } from './src/context/ThemeContext';
 import { RootNavigator } from './src/navigation';
 import { colors, fontSize } from './src/constants/theme';
 
-export default function App() {
+function App() {
   const [fontsLoaded] = useFonts({
     PlusJakartaSans_400Regular,
     PlusJakartaSans_500Medium,
@@ -76,3 +83,5 @@ const styles = StyleSheet.create({
     color: colors.dark.textMuted,
   },
 });
+
+export default Sentry.wrap(App);

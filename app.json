@@ -38,7 +38,8 @@
         {
           "locationWhenInUsePermission": "Aunty Curl uses your approximate location to show humidity-aware hair tips on your home screen."
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "extra": {
       "eas": {

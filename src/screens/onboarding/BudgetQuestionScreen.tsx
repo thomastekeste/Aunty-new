@@ -231,7 +231,7 @@ export default function BudgetQuestionScreen() {
               label={canContinue ? 'Find my products' : 'Select your budget'}
               onPress={() => {
                 updateHairProfile({ productScope: scope as any, productBudget: budget as any });
-                navigation.navigate('CouncilConvening');
+                navigation.navigate('PhotoCapture');
               }}
               size="lg"
               disabled={!canContinue}
