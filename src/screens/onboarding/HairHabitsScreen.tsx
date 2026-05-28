@@ -140,6 +140,7 @@ export default function HairHabitsScreen() {
               onPress={() => setWash(option.value)}
               auntyId={auntyId}
               index={index}
+              compact
             />
           ))}
         </Animated.View>
@@ -155,6 +156,7 @@ export default function HairHabitsScreen() {
               onPress={() => setHeat(option.value)}
               auntyId={auntyId}
               index={index}
+              compact
             />
           ))}
         </Animated.View>

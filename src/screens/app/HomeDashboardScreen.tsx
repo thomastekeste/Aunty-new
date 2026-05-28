@@ -455,7 +455,14 @@ export default function HomeDashboardScreen() {
       >
         {/* ─── 1. Compact Header ─────────────────────── */}
         <Animated.View entering={FadeIn.duration(380)} style={styles.header}>
-          <View style={styles.headerLeft}>
+          <PressableScale
+            onPress={() => navigation.navigate('ChangeAunty')}
+            scaleTo={0.97}
+            haptic="light"
+            style={styles.headerLeft}
+            accessibilityRole="button"
+            accessibilityLabel={`Change aunty, currently ${aunty.name}`}
+          >
             <AuntyAvatar auntyId={auntyId} size={40} showRing />
             <View style={styles.headerGreeting}>
               <Text style={styles.greetingText} numberOfLines={1}>
@@ -465,7 +472,7 @@ export default function HomeDashboardScreen() {
                 {aunty.signOff}
               </Text>
             </View>
-          </View>
+          </PressableScale>
           <View style={styles.headerRight}>
             {streak.current > 0 && (
               <View style={styles.streakBadge}>

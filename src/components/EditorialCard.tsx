@@ -65,6 +65,7 @@ export function EditorialCard({
   onPress,
   auntyId,
   index = 0,
+  compact = false,
   tag,
 }: Props) {
   const ac = auntyColors[auntyId];
@@ -131,7 +132,7 @@ export function EditorialCard({
   return (
     <Animated.View
       entering={FadeInDown.delay(50 * index).duration(340)}
-      style={styles.wrap}
+      style={compact ? styles.wrapCompact : styles.wrap}
     >
       <AnimatedPressable
         onPress={handlePress}
@@ -143,7 +144,7 @@ export function EditorialCard({
         accessibilityLabel={`${label}${selected ? ', selected' : ''}`}
         accessibilityHint={description}
       >
-        <Animated.View style={[styles.card, cardStyle]}>
+        <Animated.View style={[compact ? styles.cardCompact : styles.card, cardStyle]}>
           {/* Left accent bar — slides in on selection */}
           <Animated.View
             pointerEvents="none"
@@ -154,7 +155,7 @@ export function EditorialCard({
           <View style={styles.text}>
             <View style={styles.labelRow}>
               <Animated.Text
-                style={[styles.label, labelStyle]}
+                style={[compact ? styles.labelCompact : styles.label, labelStyle]}
                 numberOfLines={2}
               >
                 {label}
@@ -204,6 +205,9 @@ const styles = StyleSheet.create({
   wrap: {
     marginBottom: spacing.sm + 2,
   },
+  wrapCompact: {
+    marginBottom: spacing.xs,
+  },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -214,6 +218,18 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth * 2,
     gap: spacing.sm,
     minHeight: 64,
+    overflow: 'hidden',
+  },
+  cardCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm + 2,
+    paddingLeft: spacing.md + 4,
+    paddingRight: spacing.md,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    gap: spacing.sm,
+    minHeight: 48,
     overflow: 'hidden',
   },
   accentBar: {
@@ -240,6 +256,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     letterSpacing: -0.3,
     lineHeight: 24,
+    flexShrink: 1,
+  },
+  labelCompact: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: 16,
+    letterSpacing: -0.2,
+    lineHeight: 20,
     flexShrink: 1,
   },
   description: {

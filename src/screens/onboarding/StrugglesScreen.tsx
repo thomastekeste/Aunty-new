@@ -95,6 +95,7 @@ export default function StrugglesScreen() {
             onPress={() => toggleStruggle(struggle.id)}
             auntyId={auntyId}
             index={index}
+            compact
           />
         ))}
       </View>

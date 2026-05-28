@@ -232,6 +232,10 @@ export default function CouncilScreen() {
     navigation.navigate('ChangeAunty');
   }, [navigation]);
 
+  const handleGoHome = useCallback(() => {
+    (navigation as any).navigate('Tabs', { screen: 'Home' });
+  }, [navigation]);
+
   // ─── Derived state ──────────────────────────────────────────────
   const lastMessage = messages[messages.length - 1];
   const lastSenderIsAunty = !lastMessage || lastMessage.sender === 'aunty';
@@ -266,6 +270,7 @@ export default function CouncilScreen() {
         messageCount={messages.length}
         onNewChat={handleNewChat}
         onChangeAunty={handleChangeAunty}
+        onGoHome={handleGoHome}
         topInset={insets.top}
       />
 

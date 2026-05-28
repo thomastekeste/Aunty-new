@@ -257,13 +257,23 @@ export default function SettingsScreen() {
         <Animated.View entering={FadeInDown.delay(200).duration(400)}>
           <SectionHeader title="Preferences" />
           <View style={[styles.card, shadows.sm]}>
-            <View style={styles.auntyRow}>
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                (navigation as any).navigate('ChangeAunty');
+              }}
+              style={styles.auntyRow}
+              accessibilityRole="button"
+              accessibilityLabel={`Change aunty, currently ${aunty.name}`}
+            >
               <AuntyAvatar auntyId={auntyId} size={44} showRing />
               <View style={{ flex: 1 }}>
                 <Text style={styles.auntyRowName}>{aunty.name}</Text>
                 <Text style={styles.auntyRowTitle}>{aunty.title} — {aunty.region}</Text>
               </View>
-            </View>
+              <Text style={styles.changeLabel}>Change</Text>
+              <Text style={styles.chevron}>{'›'}</Text>
+            </Pressable>
             <View style={styles.divider} />
             <ListRow
               label="Notifications"
@@ -449,6 +459,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.muted,
     marginTop: 1,
+  },
+  changeLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    letterSpacing: 0.3,
   },
   version: {
     fontFamily: fonts.body,

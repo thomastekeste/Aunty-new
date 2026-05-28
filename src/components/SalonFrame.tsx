@@ -171,7 +171,7 @@ export function SalonFrame({
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 140 },
+          { paddingBottom: insets.bottom + 180 },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -346,10 +346,10 @@ const styles = StyleSheet.create({
   },
   footerFade: {
     position: 'absolute',
-    top: -56,
+    top: -80,
     left: 0,
     right: 0,
-    height: 56,
+    height: 80,
   },
   footerInner: {
     backgroundColor: colors.dark.bg,
