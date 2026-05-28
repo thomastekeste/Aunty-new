@@ -194,7 +194,6 @@ export type AppStackParamList = {
   Tabs: undefined;
   CheckIn: { mood?: CheckInMood } | undefined;
   RitualSteps: undefined;
-  AuntyChat: { auntyId: AuntyId };
   HairProfile: undefined;
   Settings: undefined;
   EditProfile: undefined;
