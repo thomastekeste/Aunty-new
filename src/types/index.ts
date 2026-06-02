@@ -47,6 +47,8 @@ export interface HairProfile {
   porosity?: Porosity;
   elasticity?: Elasticity;
   density?: Density;
+  waterHardness?: 'soft' | 'moderate' | 'hard';
+  currentProductCategories?: string[];
   primaryGoal?: PrimaryGoal;
   secondaryGoals?: PrimaryGoal[];
   washFrequency?: WashFrequency;
@@ -58,11 +60,14 @@ export interface HairProfile {
   timeAvailable?: TimeAvailable;
   failedAttempts?: string[];
   productScope?: ProductScope;
-  productBudget?: ProductBudget;
+  productBudget?: ProductBudget; // legacy — superseded by productBudgetTotal
+  brandTier?: BrandTier;
+  productBudgetTotal?: number; // chosen target $ for the whole routine
 }
 
 export type ProductScope = 'basics' | 'routine' | 'full' | 'everything';
 export type ProductBudget = 'under-30' | '30-60' | '60-100' | '100-plus';
+export type BrandTier = 'drugstore' | 'premium' | 'mix';
 
 // ─── Onboarding State ────────────────────────────────────────────
 
@@ -73,6 +78,7 @@ export interface OnboardingData {
   chosenAuntyId?: AuntyId;
   ageRange?: AgeRange;
   gender?: string;
+  city?: string;
   hairProfile: HairProfile;
   photos: {
     front?: string;
@@ -81,6 +87,7 @@ export interface OnboardingData {
   };
   councilResponse?: CouncilResponse;
   routine?: WeeklyRitual;
+  photoAnalysis?: PhotoAnalysis;
 }
 
 export interface PhotoAnalysis {
@@ -141,6 +148,8 @@ export interface CheckIn {
   notes?: string;
   photoUri?: string;
   auntyResponse?: string;
+  healthScore?: number;
+  productsUsed?: string[];
   createdAt: string;
 }
 
@@ -164,12 +173,14 @@ export type RootStackParamList = {
 export type OnboardingStackParamList = {
   Welcome: undefined;
   NameEntry: undefined;
+  Location: undefined;
   CurlType: undefined;
   Validation1: undefined;
   PorosityTest: undefined;
   PrimaryGoal: undefined;
   Validation2: undefined;
   HairHabits: undefined;
+  CurrentProducts: undefined;
   Struggles: undefined;
   Validation3: undefined;
   BudgetQuestion: undefined;
@@ -199,4 +210,5 @@ export type AppStackParamList = {
   EditProfile: undefined;
   ChangeAunty: undefined;
   Journey: undefined;
+  SendOffPreview: undefined;
 };

@@ -149,6 +149,14 @@ export const fonts = {
   heading: 'PlusJakartaSans_700Bold',
   headingMedium: 'PlusJakartaSans_600SemiBold',
   headingRegular: 'PlusJakartaSans_500Medium',
+
+  // Script — handwritten gold ink (the send-off "letter").
+  script: 'DancingScript_600SemiBold',
+  scriptBold: 'DancingScript_700Bold',
+
+  // Playfair — elegant high-contrast serif for refined accents.
+  playfair: 'PlayfairDisplay_500Medium',
+  playfairBold: 'PlayfairDisplay_600SemiBold',
 };
 
 export const fontSize = {

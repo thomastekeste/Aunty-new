@@ -1,16 +1,12 @@
 /**
- * EditorialCard — Framed answer bubble for consultation questions.
+ * EditorialCard — Selection card for consultation answers.
  *
- *   • Proper card body: hairline border all around, radius 10, real vertical
- *     presence so answers feel substantial, not like list rows.
- *   • Left: no index number — answers are unordered choices.
- *   • Middle: serif label (20pt) + italic muted description.
- *   • Right: hairline ring → filled aunty-accent bullet with cream tick.
- *   • Selected: accent-tinted fill + accent border + subtle elevation.
- *   • Press: 0.99 scale + 0.9 opacity (no layout shift).
- *   • Entrance: staggered fade-up.
- *
- * The `icon` prop is accepted for API compat but not rendered.
+ * Light canvas design: white card on cream background.
+ *   - Warm border (idle) -> accent border (selected)
+ *   - Clean white surface -> soft accent tint (selected)
+ *   - Radio/check circle with accent fill
+ *   - Press: 0.99 scale + 0.9 opacity (no layout shift)
+ *   - Entrance: staggered fade-up
  */
 
 import React, { useCallback, useEffect } from 'react';
@@ -21,7 +17,6 @@ import Animated, {
   withSpring,
   withTiming,
   FadeInDown,
-  interpolate,
   interpolateColor,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -37,26 +32,26 @@ import type { AuntyId } from '../constants/aunties';
 interface Props {
   label: string;
   description?: string;
-  /** Kept for API compat — not rendered in the editorial design. */
+  /** Kept for API compat -- not rendered. */
   icon?: string | React.ReactNode;
   selected: boolean;
   onPress: () => void;
   auntyId: AuntyId;
   index?: number;
-  /** Deprecated — retained for prop compatibility. */
+  /** Compact variant with smaller padding. */
   compact?: boolean;
-  /** Optional magazine-style tag (e.g. "MOST ASKED"). */
+  /** Optional tag (e.g. "MOST ASKED"). */
   tag?: string;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const PRESS_SPRING = { damping: 16, stiffness: 220, mass: 0.35 };
 
-const BORDER_IDLE = 'rgba(254, 248, 236, 0.14)';
-const FILL_IDLE = 'rgba(254, 248, 236, 0.025)';
-const LABEL_IDLE = 'rgba(254, 248, 236, 0.92)';
-const LABEL_ACTIVE = colors.dark.text;
-const DESC_IDLE = 'rgba(254, 248, 236, 0.48)';
+const BORDER_IDLE = colors.border;
+const FILL_IDLE = colors.surface;
+const LABEL_IDLE = colors.ink;
+const LABEL_ACTIVE = colors.ink;
+const DESC_IDLE = colors.muted;
 
 export function EditorialCard({
   label,
@@ -102,17 +97,13 @@ export function EditorialCard({
     backgroundColor: interpolateColor(
       sel.value,
       [0, 1],
-      [FILL_IDLE, `${ac.accent}14`], // ~8% accent tint when selected
+      [FILL_IDLE, `${ac.accent}0D`], // ~5% accent tint when selected
     ),
     borderColor: interpolateColor(
       sel.value,
       [0, 1],
       [BORDER_IDLE, ac.accent],
     ),
-  }));
-
-  const labelStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(sel.value, [0, 1], [LABEL_IDLE, LABEL_ACTIVE]),
   }));
 
   const bulletRingStyle = useAnimatedStyle(() => ({
@@ -122,11 +113,6 @@ export function EditorialCard({
   const bulletFillStyle = useAnimatedStyle(() => ({
     opacity: sel.value,
     transform: [{ scale: 0.6 + sel.value * 0.4 }],
-  }));
-
-  const accentBarStyle = useAnimatedStyle(() => ({
-    opacity: sel.value,
-    transform: [{ translateX: interpolate(sel.value, [0, 1], [-6, 0]) }],
   }));
 
   return (
@@ -145,21 +131,15 @@ export function EditorialCard({
         accessibilityHint={description}
       >
         <Animated.View style={[compact ? styles.cardCompact : styles.card, cardStyle]}>
-          {/* Left accent bar — slides in on selection */}
-          <Animated.View
-            pointerEvents="none"
-            style={[styles.accentBar, accentBarStyle, { backgroundColor: ac.accent }]}
-          />
-
           {/* Label + description */}
           <View style={styles.text}>
             <View style={styles.labelRow}>
-              <Animated.Text
-                style={[compact ? styles.labelCompact : styles.label, labelStyle]}
+              <Text
+                style={compact ? styles.labelCompact : styles.label}
                 numberOfLines={2}
               >
                 {label}
-              </Animated.Text>
+              </Text>
               {tag ? (
                 <View style={[styles.tag, { borderColor: ac.accent }]}>
                   <Text style={[styles.tagText, { color: ac.accent }]}>{tag}</Text>
@@ -173,14 +153,10 @@ export function EditorialCard({
             ) : null}
           </View>
 
-          {/* Selection bullet — hairline ring → filled accent */}
+          {/* Selection bullet */}
           <View style={styles.bulletCol}>
             <Animated.View
-              style={[
-                styles.bulletRing,
-                bulletRingStyle,
-                { borderColor: 'rgba(254, 248, 236, 0.32)' },
-              ]}
+              style={[styles.bulletRing, bulletRingStyle]}
             />
             <Animated.View
               style={[
@@ -189,7 +165,7 @@ export function EditorialCard({
                 { backgroundColor: ac.accent },
               ]}
             >
-              <Text style={styles.bulletTick}>{'\u2713'}</Text>
+              <Text style={styles.bulletTick}>{'✓'}</Text>
             </Animated.View>
           </View>
         </Animated.View>
@@ -203,7 +179,7 @@ const BULLET = 22;
 
 const styles = StyleSheet.create({
   wrap: {
-    marginBottom: spacing.sm + 2,
+    marginBottom: spacing.sm,
   },
   wrapCompact: {
     marginBottom: spacing.xs,
@@ -211,39 +187,28 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.md + 2,
-    paddingLeft: spacing.md + 4,
+    paddingVertical: spacing.md,
+    paddingLeft: spacing.md,
     paddingRight: spacing.md,
     borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderWidth: 1,
     gap: spacing.sm,
-    minHeight: 64,
-    overflow: 'hidden',
+    minHeight: 60,
   },
   cardCompact: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.sm + 2,
-    paddingLeft: spacing.md + 4,
+    paddingLeft: spacing.md,
     paddingRight: spacing.md,
     borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderWidth: 1,
     gap: spacing.sm,
     minHeight: 48,
-    overflow: 'hidden',
-  },
-  accentBar: {
-    position: 'absolute',
-    left: 0,
-    top: 10,
-    bottom: 10,
-    width: 3,
-    borderTopRightRadius: 2,
-    borderBottomRightRadius: 2,
   },
   text: {
     flex: 1,
-    gap: 4,
+    gap: 3,
   },
   labelRow: {
     flexDirection: 'row',
@@ -252,31 +217,32 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   label: {
-    fontFamily: fonts.serifSemiBold,
-    fontSize: 20,
-    letterSpacing: -0.3,
-    lineHeight: 24,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.base,
+    letterSpacing: -0.2,
+    lineHeight: fontSize.base * 1.3,
+    color: LABEL_IDLE,
     flexShrink: 1,
   },
   labelCompact: {
-    fontFamily: fonts.serifSemiBold,
-    fontSize: 16,
-    letterSpacing: -0.2,
-    lineHeight: 20,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.md,
+    letterSpacing: -0.15,
+    lineHeight: fontSize.md * 1.3,
+    color: LABEL_IDLE,
     flexShrink: 1,
   },
   description: {
-    fontFamily: fonts.serifItalic,
-    fontSize: fontSize.sm + 1,
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
     color: DESC_IDLE,
-    lineHeight: (fontSize.sm + 1) * 1.45,
-    letterSpacing: 0.08,
+    lineHeight: fontSize.sm * 1.45,
   },
   tag: {
     paddingHorizontal: 6,
     paddingVertical: 1.5,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 2,
+    borderWidth: 1,
+    borderRadius: 3,
   },
   tagText: {
     fontFamily: fonts.bodySemiBold,
@@ -294,7 +260,8 @@ const styles = StyleSheet.create({
     width: BULLET,
     height: BULLET,
     borderRadius: BULLET / 2,
-    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderWidth: 1.5,
+    borderColor: colors.border,
   },
   bulletFill: {
     position: 'absolute',

@@ -15,7 +15,6 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -46,7 +45,6 @@ import {
   fonts,
   fontSize,
   spacing,
-  gradients,
   salon,
 } from '../../constants/theme';
 
@@ -137,7 +135,7 @@ export default function CouncilVerdictScreen() {
   }));
 
   return (
-    <LinearGradient colors={[...gradients.ceremony]} style={styles.container}>
+    <View style={styles.container}>
       {/* Off-screen 9:16 asset for system share (view-shot). */}
       <View
         style={styles.shareOffscreen}
@@ -179,14 +177,14 @@ export default function CouncilVerdictScreen() {
                 : salon.bead.upcomingSize;
             const color =
               status === 'active'
-                ? salon.bead.active
+                ? ac.accent
                 : status === 'done'
-                ? salon.bead.completed
-                : salon.bead.upcoming;
+                ? colors.primary
+                : colors.border;
             return (
               <View key={i} style={styles.beadWrap}>
                 {status === 'active' ? (
-                  <View style={[styles.beadHalo, { backgroundColor: salon.bead.activeHalo }]} />
+                  <View style={[styles.beadHalo, { backgroundColor: ac.accent + '33' }]} />
                 ) : null}
                 <View
                   style={{
@@ -263,12 +261,12 @@ export default function CouncilVerdictScreen() {
           />
         </Animated.View>
       )}
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.canvas },
 
   shareOffscreen: {
     position: 'absolute',
@@ -326,7 +324,7 @@ const styles = StyleSheet.create({
   verb: {
     fontFamily: fonts.serifItalic,
     fontSize: fontSize.sm,
-    color: colors.dark.textMuted,
+    color: colors.muted,
     marginTop: 2,
     letterSpacing: 0.3,
   },
@@ -335,7 +333,7 @@ const styles = StyleSheet.create({
   line: {
     fontFamily: fonts.display,
     fontSize: fontSize.xxl,
-    color: colors.dark.text,
+    color: colors.ink,
     lineHeight: fontSize.xxl * 1.3,
     textAlign: 'center',
     letterSpacing: -0.4,

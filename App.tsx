@@ -23,6 +23,14 @@ import {
   PlusJakartaSans_600SemiBold,
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
+import {
+  DancingScript_600SemiBold,
+  DancingScript_700Bold,
+} from '@expo-google-fonts/dancing-script';
+import {
+  PlayfairDisplay_500Medium,
+  PlayfairDisplay_600SemiBold,
+} from '@expo-google-fonts/playfair-display';
 
 import { AuthProvider } from './src/context/AuthContext';
 import { OnboardingProvider } from './src/context/OnboardingContext';
@@ -37,6 +45,10 @@ function App() {
     PlusJakartaSans_500Medium,
     PlusJakartaSans_600SemiBold,
     PlusJakartaSans_700Bold,
+    DancingScript_600SemiBold,
+    DancingScript_700Bold,
+    PlayfairDisplay_500Medium,
+    PlayfairDisplay_600SemiBold,
   });
 
   if (!fontsLoaded) {

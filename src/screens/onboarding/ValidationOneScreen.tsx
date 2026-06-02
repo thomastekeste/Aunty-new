@@ -1,20 +1,33 @@
 /**
- * ValidationOneScreen — After curl type selection.
+ * ValidationOneScreen — "The Read"
  *
- * Single line that lands, lingers, and gives way.
+ * After curl type selection, before porosity test.
+ * A warm, quiet beat: the chosen aunty appears on the cream canvas
+ * and delivers her read on your curl type. No theatrics — just her,
+ * her words, and her accent color.
  */
 
-import React, { useCallback } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
+import { View, Pressable, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeInUp,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  Easing,
+} from 'react-native-reanimated';
+
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { SpeechBubble } from '../../components/SpeechBubble';
+import { TapToContinue } from '../../components/TapToContinue';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { AUNTY_CURL_READS } from '../../constants/validationCopy';
 import type { AuntyId } from '../../constants/aunties';
 import {
   colors,
@@ -22,25 +35,16 @@ import {
   fonts,
   fontSize,
   spacing,
-  gradients,
 } from '../../constants/theme';
 import type { OnboardingStackParamList } from '../../types';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'Validation1'>;
 
-function getTextureMessage(curlType?: string): string {
-  if (!curlType) return "Your hair. Let's figure out exactly what it needs.";
+function getCurlMessage(auntyId: AuntyId, curlType?: string): string {
+  const reads = AUNTY_CURL_READS[auntyId];
+  if (!curlType) return reads.default;
   const prefix = curlType.charAt(0);
-  switch (prefix) {
-    case '2':
-      return "Wavy hair. Most products aren't built for you. That changes.";
-    case '3':
-      return 'Curly hair. Beautiful and complex. I know what it needs.';
-    case '4':
-      return 'Coily hair. The most misunderstood texture. I got you.';
-    default:
-      return "Your hair. Let's figure out exactly what it needs.";
-  }
+  return reads[prefix] || reads.default;
 }
 
 export default function ValidationOneScreen() {
@@ -49,47 +53,144 @@ export default function ValidationOneScreen() {
   const { state } = useOnboarding();
   const auntyId: AuntyId = state.data.chosenAuntyId || 'denise';
   const ac = auntyColors[auntyId];
-  const message = getTextureMessage(state.data.hairProfile.curlType);
+  const curlType = state.data.hairProfile.curlType;
+  const message = getCurlMessage(auntyId, curlType);
 
-  const handleComplete = useCallback(() => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setTimeout(() => navigation.replace('PorosityTest'), 600);
+  const [showSpeech, setShowSpeech] = useState(false);
+  const [canTap, setCanTap] = useState(false);
+  const navigatingRef = useRef(false);
+  const autoAdvanceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // ── Soft accent halo behind the avatar ──
+  const haloOpacity = useSharedValue(0.1);
+
+  // ── Decorative accent line ──
+  const lineWidth = useSharedValue(0);
+
+  const haloStyle = useAnimatedStyle(() => ({ opacity: haloOpacity.value }));
+  const lineAnimStyle = useAnimatedStyle(() => ({ width: lineWidth.value }));
+
+  // ── Choreography ──
+  useEffect(() => {
+    // Decorative line extends
+    const t1 = setTimeout(() => {
+      lineWidth.value = withTiming(80, { duration: 600, easing: Easing.out(Easing.cubic) });
+    }, 500);
+
+    // She begins to speak
+    const t2 = setTimeout(() => setShowSpeech(true), 900);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, []);
+
+  const handleLineLanded = useCallback(() => {
+    // Halo warms gently on each line landing
+    haloOpacity.value = withSequence(
+      withTiming(0.18, { duration: 240 }),
+      withTiming(0.1, { duration: 480 }),
+    );
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
+  const handleSpeechComplete = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setTimeout(() => setCanTap(true), 500);
+
+    autoAdvanceRef.current = setTimeout(() => {
+      if (!navigatingRef.current) {
+        navigatingRef.current = true;
+        navigation.replace('PorosityTest');
+      }
+    }, 8000);
   }, [navigation]);
 
+  const handleTap = useCallback(() => {
+    if (!canTap || navigatingRef.current) return;
+    navigatingRef.current = true;
+    if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setTimeout(() => navigation.replace('PorosityTest'), 180);
+  }, [canTap, navigation]);
+
   return (
-    <LinearGradient colors={[...gradients.ceremony]} style={styles.container}>
-      <View style={[styles.content, { paddingTop: insets.top + spacing.xxl }]}>
-        <Animated.View entering={FadeInUp.delay(120).duration(700)} style={styles.avatarWrap}>
-          <View style={[styles.glow, { backgroundColor: ac.accent }]} />
-          <AuntyAvatar auntyId={auntyId} size={64} showRing glowing />
+    <View style={styles.container}>
+      <Pressable
+        style={[styles.pressable, { paddingTop: insets.top + spacing.xxl }]}
+        onPress={handleTap}
+        disabled={!canTap}
+      >
+        {/* Avatar with soft accent halo */}
+        <Animated.View entering={FadeInUp.delay(120).duration(600)} style={styles.avatarWrap}>
+          <Animated.View style={[styles.halo, { backgroundColor: ac.accent }, haloStyle]} />
+          <AuntyAvatar auntyId={auntyId} size={84} showRing glowing />
         </Animated.View>
 
-        <View style={styles.lines}>
-          <SpeechBubble
-            lines={[message]}
-            holdMs={2000}
-            fadeMs={420}
-            shimmer
-            textStyle={[styles.line, { color: colors.dark.text }]}
-            onComplete={handleComplete}
-          />
+        {/* Decorative accent line */}
+        <View style={styles.lineCenter}>
+          <Animated.View style={[styles.decorLine, { backgroundColor: ac.accent + '55' }, lineAnimStyle]} />
         </View>
-      </View>
-    </LinearGradient>
+
+        {/* Speech */}
+        <View style={styles.lines}>
+          {showSpeech && (
+            <SpeechBubble
+              lines={[message]}
+              holdMs={2400}
+              fadeMs={420}
+              shimmer
+              quoteMarkColor={ac.accent}
+              textStyle={[styles.line, { color: colors.ink }]}
+              onLineLanded={handleLineLanded}
+              onComplete={handleSpeechComplete}
+            />
+          )}
+        </View>
+
+        <TapToContinue visible={canTap} />
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { flex: 1, alignItems: 'center', paddingHorizontal: spacing.xl, justifyContent: 'center' },
-  avatarWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xxl },
-  glow: { position: 'absolute', width: 120, height: 120, borderRadius: 60, opacity: 0.18 },
-  lines: { width: '100%', minHeight: 160, justifyContent: 'center' },
+  container: { flex: 1, backgroundColor: colors.canvas },
+  pressable: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    justifyContent: 'center',
+  },
+  avatarWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xl,
+  },
+  halo: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+  },
+  lineCenter: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  decorLine: {
+    height: 1,
+  },
+  lines: {
+    width: '100%',
+    minHeight: 120,
+    justifyContent: 'center',
+  },
   line: {
     fontFamily: fonts.display,
     fontSize: fontSize.xxl,
-    color: colors.dark.text,
-    lineHeight: fontSize.xxl * 1.3,
+    color: colors.ink,
+    lineHeight: fontSize.xxl * 1.35,
     letterSpacing: -0.4,
     textAlign: 'center',
   },

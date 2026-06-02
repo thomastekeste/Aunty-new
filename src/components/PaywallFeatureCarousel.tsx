@@ -150,7 +150,7 @@ function HomeSlideMock() {
         end={{ x: 1, y: 1 }}
         style={mockStyles.heroMini}
       >
-        <Text style={mockStyles.heroMiniOverline}>TODAY'S RITUAL</Text>
+        <Text style={mockStyles.heroMiniOverline}>TODAY&apos;S RITUAL</Text>
         <Text style={mockStyles.heroMiniTitle}>Wash Day</Text>
         <Text style={mockStyles.heroMiniMeta}>45 min · Deep cleanse + reset</Text>
       </LinearGradient>
@@ -288,7 +288,7 @@ function ChatSlideMock() {
         </View>
         <View style={mockStyles.bubbleAunty}>
           <Text style={mockStyles.bubbleAuntyText}>
-            Skip the gel today, baby. Seal with shea butter on damp ends — that's your fix.
+            Skip the gel today, baby. Seal with shea butter on damp ends — that&apos;s your fix.
           </Text>
         </View>
       </View>
@@ -411,7 +411,7 @@ export function PaywallFeatureCarousel({ cardWidth }: Props) {
   return (
     <View style={styles.wrap}>
       <View style={styles.headerRow}>
-        <Text style={styles.eyebrow}>WHAT YOU'LL GET</Text>
+        <Text style={styles.eyebrow}>WHAT YOU&apos;LL GET</Text>
         <Text style={styles.pageOf}>
           {page + 1} of {SLIDES.length}
         </Text>

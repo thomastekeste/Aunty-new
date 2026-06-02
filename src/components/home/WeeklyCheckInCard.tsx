@@ -136,7 +136,7 @@ export function WeeklyCheckInCard({ auntyId, weekNumber, accentColor, accentBg, 
       <View style={styles.headerRow}>
         <View style={{ flexShrink: 1 }}>
           <Text style={[styles.overline, { color: accentColor }]}>WEEK {weekNumber} CHECK-IN</Text>
-          <Text style={styles.title}>How's your hair this week?</Text>
+          <Text style={styles.title}>How&apos;s your hair this week?</Text>
         </View>
         <Pressable
           onPress={handleOpen}

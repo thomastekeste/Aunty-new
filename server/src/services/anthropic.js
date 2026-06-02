@@ -203,7 +203,25 @@ Here's how ${aunty.name} actually texts:
 
 // ─── Council Response Generation ────────────────────────────────
 
-export async function generateCouncilResponse(hairProfile, userName) {
+// Format the AI photo analysis into a prompt block the council/routine can use.
+function photoAnalysisBlock(photoAnalysis) {
+  if (!photoAnalysis || typeof photoAnalysis !== 'object') return '';
+  const a = photoAnalysis;
+  const lines = [];
+  if (a.observedCurlPattern) lines.push(`- Observed curl pattern: ${sanitizeForPrompt(a.observedCurlPattern, 80)}`);
+  if (a.observedPorosity) lines.push(`- Observed porosity: ${sanitizeForPrompt(a.observedPorosity, 80)}`);
+  if (a.observedDensity) lines.push(`- Observed density: ${sanitizeForPrompt(a.observedDensity, 80)}`);
+  if (a.moistureLevel) lines.push(`- Moisture level: ${sanitizeForPrompt(a.moistureLevel, 20)}`);
+  if (Array.isArray(a.damageIndicators) && a.damageIndicators.length)
+    lines.push(`- Damage indicators: ${a.damageIndicators.map((d) => sanitizeForPrompt(d, 60)).join(', ')}`);
+  if (Array.isArray(a.strengths) && a.strengths.length)
+    lines.push(`- Strengths: ${a.strengths.map((s) => sanitizeForPrompt(s, 60)).join(', ')}`);
+  if (a.overallAssessment) lines.push(`- Overall: ${sanitizeForPrompt(a.overallAssessment, 240)}`);
+  if (!lines.length) return '';
+  return `\n\n## What the council SAW in the member's photo (AI vision analysis)\nThese observations come from looking at an actual photo of the member's hair. Treat them as first-hand sight. Where they differ from the self-reported answers, gently trust your eyes and note what you see.\n${lines.join('\n')}`;
+}
+
+export async function generateCouncilResponse(hairProfile, userName, photoAnalysis = null) {
   const auntyDescriptions = COUNCIL_ORDER.map((id) => {
     const a = AUNTIES[id];
     return `
@@ -255,7 +273,7 @@ RULES:
 - Return ONLY valid JSON, no markdown code fences.`;
 
   const userPrompt = `## The New Member's Hair Profile
-${profileSummary}
+${profileSummary}${photoAnalysisBlock(photoAnalysis)}
 
 Generate a JSON response with this exact structure:
 {
@@ -278,7 +296,7 @@ Generate a JSON response with this exact structure:
 
 // ─── Routine Generation ─────────────────────────────────────────
 
-export async function generateRoutine(hairProfile, councilResponse) {
+export async function generateRoutine(hairProfile, councilResponse, photoAnalysis = null) {
   const hostAssignments = Object.entries(RITUAL_HOSTS)
     .map(([type, id]) => {
       const a = AUNTIES[id];
@@ -306,7 +324,7 @@ export async function generateRoutine(hairProfile, councilResponse) {
 ${(councilResponse.keyFindings || []).map((f) => `- ${f}`).join('\n')}
 
 ## Council Consensus
-${councilResponse.consensus || 'Focus on moisture and gentle care.'}
+${councilResponse.consensus || 'Focus on moisture and gentle care.'}${photoAnalysisBlock(photoAnalysis)}
 
 ## Hosting Aunties (each day type has a specific aunty host)
 ${hostAssignments}

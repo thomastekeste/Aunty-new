@@ -16,6 +16,7 @@ import {
   ScrollView,
   Dimensions,
   Alert,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -161,7 +162,7 @@ export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore }: 
             {/* Social proof */}
             <View style={styles.proof}>
               <Text style={styles.proofText}>
-                "I spent more on wrong products last month than this costs for a full year."
+                &ldquo;I spent more on wrong products last month than this costs for a full year.&rdquo;
               </Text>
             </View>
 
@@ -212,11 +213,23 @@ export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore }: 
               <Text style={styles.restoreText}>Restore Purchases</Text>
             </Pressable>
 
-            {yearlyHasIntroOffer && (
-              <Text style={styles.legalText}>
-                Free trial starts on activation. Subscription auto-renews at {yearlyPrice} unless cancelled at least 24 hours before the end of the trial period.
-              </Text>
-            )}
+            {/* Auto-renew disclosure — always shown (Apple Guideline 3.1.2) */}
+            <Text style={styles.legalText}>
+              {yearlyHasIntroOffer
+                ? `Your free trial starts on activation. The subscription then auto-renews at ${yearlyPrice} unless cancelled at least 24 hours before the trial ends.`
+                : `Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period. Payment is charged to your Apple ID and managed in your account settings.`}
+            </Text>
+
+            {/* Terms + Privacy links (Apple Guideline 3.1.2) */}
+            <View style={styles.legalLinks}>
+              <Pressable onPress={() => Linking.openURL('https://auntycurl.com/terms')} hitSlop={8}>
+                <Text style={styles.legalLink}>Terms of Use</Text>
+              </Pressable>
+              <Text style={styles.legalDot}>·</Text>
+              <Pressable onPress={() => Linking.openURL('https://auntycurl.com/privacy')} hitSlop={8}>
+                <Text style={styles.legalLink}>Privacy Policy</Text>
+              </Pressable>
+            </View>
           </ScrollView>
         </View>
       </View>
@@ -267,7 +280,11 @@ const styles = StyleSheet.create({
 
   guarantee: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.primary, textAlign: 'center', paddingVertical: spacing.lg, paddingHorizontal: spacing.xl },
 
-  legalText: { fontFamily: fonts.body, fontSize: 10, color: colors.dark.textMuted, textAlign: 'center', paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, lineHeight: 14, opacity: 0.6 },
+  legalText: { fontFamily: fonts.body, fontSize: 10, color: colors.dark.textMuted, textAlign: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.sm, lineHeight: 14, opacity: 0.6 },
+
+  legalLinks: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.xs, paddingTop: spacing.sm, paddingBottom: spacing.lg },
+  legalLink: { fontFamily: fonts.body, fontSize: 11, color: colors.dark.textMuted, textDecorationLine: 'underline' },
+  legalDot: { fontFamily: fonts.body, fontSize: 11, color: colors.dark.textMuted },
 
   restore: { alignItems: 'center', paddingVertical: spacing.sm },
   restoreText: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.dark.textMuted, textDecorationLine: 'underline' },

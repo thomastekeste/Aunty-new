@@ -5,11 +5,12 @@
  * Phase 1: Aunty picker carousel
  * Phase 2: Chosen aunty speaks — line-flip SpeechBubble (no typer)
  * Phase 3: Ceremonial CTA
+ *
+ * Warm canvas palette — matches the rest of the consultation flow.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -22,7 +23,7 @@ import { AUNTIES, COUNCIL_ORDER } from '../../constants/aunties';
 import type { AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
 import {
-  colors, auntyColors, fonts, fontSize, spacing, radius, gradients,
+  colors, auntyColors, fonts, fontSize, spacing, radius,
 } from '../../constants/theme';
 import type { OnboardingStackParamList } from '../../types';
 
@@ -98,7 +99,7 @@ export function WelcomeScreen() {
   const lines = selectedId ? INTROS[selectedId] : [];
 
   return (
-    <LinearGradient colors={[...gradients.ceremony]} style={styles.container}>
+    <View style={styles.container}>
       {/* Aunty-color halo behind everything once chosen */}
       {ac ? (
         <Animated.View
@@ -147,7 +148,7 @@ export function WelcomeScreen() {
                             styles.card,
                             sel && {
                               borderColor: c.accent,
-                              backgroundColor: c.accent + '20',
+                              backgroundColor: c.accent + '0D',
                             },
                           ]}
                           accessibilityRole="button"
@@ -231,12 +232,12 @@ export function WelcomeScreen() {
           </Animated.View>
         )}
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.canvas },
   content: { flex: 1 },
 
   halo: {
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
     width: 500,
     height: 500,
     borderRadius: 250,
-    opacity: 0.07,
+    opacity: 0.06,
     top: -150,
     alignSelf: 'center',
   },
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
   hero: {
     fontFamily: fonts.display,
     fontSize: fontSize.display,
-    color: colors.dark.text,
+    color: colors.ink,
     lineHeight: fontSize.display * 1.05,
     letterSpacing: -1.5,
   },
@@ -273,7 +274,7 @@ const styles = StyleSheet.create({
   pickLabel: {
     fontFamily: fonts.serifItalic,
     fontSize: fontSize.lg,
-    color: colors.dark.textMuted,
+    color: colors.muted,
     paddingHorizontal: spacing.xl,
     marginBottom: spacing.lg,
   },
@@ -281,9 +282,9 @@ const styles = StyleSheet.create({
   card: {
     width: CARD_W,
     borderRadius: radius.lg,
-    backgroundColor: 'rgba(255, 250, 240, 0.04)',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(254, 248, 236, 0.10)',
+    borderColor: colors.border,
     overflow: 'hidden',
   },
   cardBar: {
@@ -300,18 +301,18 @@ const styles = StyleSheet.create({
   cardName: {
     fontFamily: fonts.serifSemiBold,
     fontSize: fontSize.md,
-    color: colors.dark.text,
+    color: colors.ink,
     marginTop: 2,
   },
   cardRegion: {
     fontFamily: fonts.serifItalic,
     fontSize: 11,
-    color: colors.dark.textMuted,
+    color: colors.muted,
   },
   hint: {
     fontFamily: fonts.bodyMedium,
     fontSize: 11,
-    color: 'rgba(254, 248, 236, 0.35)',
+    color: colors.muted,
     letterSpacing: 1.4,
     textAlign: 'center',
     marginTop: spacing.md,
@@ -338,7 +339,7 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    opacity: 0.18,
+    opacity: 0.12,
   },
   auntyName: {
     fontFamily: fonts.serifBold,
@@ -348,7 +349,7 @@ const styles = StyleSheet.create({
   auntyRegion: {
     fontFamily: fonts.serifItalic,
     fontSize: fontSize.md,
-    color: colors.dark.textMuted,
+    color: colors.muted,
     marginTop: 2,
     marginBottom: spacing.xl,
   },
@@ -360,7 +361,7 @@ const styles = StyleSheet.create({
   bubbleText: {
     fontFamily: fonts.serifMedium,
     fontSize: fontSize.xl,
-    color: colors.dark.text,
+    color: colors.ink,
     lineHeight: fontSize.xl * 1.4,
     textAlign: 'center',
     letterSpacing: -0.2,

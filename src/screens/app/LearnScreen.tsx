@@ -342,7 +342,7 @@ function HeroArticle({
           <View style={styles.heroTop}>
             <View style={[styles.heroBadge, { borderColor: ac.accent + '30' }]}>
               <Text style={[styles.heroBadgeText, { color: ac.accent }]}>
-                TODAY'S LESSON
+                TODAY&apos;S LESSON
               </Text>
             </View>
             {isRead && (
@@ -411,7 +411,7 @@ function DispatchCard({
             <View style={styles.dispatchEndorsed}>
               <AuntyAvatar auntyId={dispatch.endorsedBy} size={18} />
               <Text style={[styles.dispatchEndorsedText, { color: ac.accent }]}>
-                {aunty.name}'s pick
+                {aunty.name}&apos;s pick
               </Text>
             </View>
           </View>

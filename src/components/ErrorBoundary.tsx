@@ -35,7 +35,7 @@ export class ErrorBoundary extends Component<Props, State> {
             {this.props.fallbackTitle || 'Something went wrong'}
           </Text>
           <Text style={styles.body}>
-            Don't worry — your data is safe. Try again and we'll sort it out.
+            Don&apos;t worry — your data is safe. Try again and we&apos;ll sort it out.
           </Text>
           <Pressable onPress={this.handleRetry} style={styles.button}>
             <Text style={styles.buttonText}>Try Again</Text>

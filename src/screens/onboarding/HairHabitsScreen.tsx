@@ -21,7 +21,6 @@ import {
   fonts,
   fontSize,
   spacing,
-  radius,
 } from '../../constants/theme';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'HairHabits'>;
@@ -72,7 +71,7 @@ export default function HairHabitsScreen() {
   const ac = auntyColors[auntyId];
 
   const questions = [
-    'Tell me \u2014 how often do you wash your hair?',
+    'Tell me — how often do you wash your hair?',
     `And heat tools? Be honest with Aunty ${aunty.name}, I will not judge.`,
   ];
 
@@ -84,7 +83,7 @@ export default function HairHabitsScreen() {
       setSubStep(1);
     } else if (subStep === 1 && heat) {
       updateHairProfile({ heatUse: heat });
-      navigation.navigate('Struggles');
+      navigation.navigate('CurrentProducts');
     }
   };
 
@@ -176,12 +175,12 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: colors.dark.border,
+    backgroundColor: colors.border,
   },
   subLabel: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.xs,
-    color: colors.dark.textMuted,
+    color: colors.muted,
     letterSpacing: 1.4,
     textTransform: 'uppercase',
     marginLeft: spacing.xs,

@@ -1,12 +1,12 @@
 /**
  * OptionCard — Selection card for single/multi-select consultation answers.
  *
- * Dark surface styling tuned for warm-modern "ceremony" backgrounds.
- *   • Animated left accent bar slides in on selection (sister to EditorialCard).
- *   • Interpolated border + fill colors — no jarring snap between states.
- *   • Icon box tints to the aunty's accent when selected.
- *   • Press: 0.985 scale + 0.88 opacity. No layout shift.
- *   • Entrance: staggered fade-up.
+ * Light canvas design: white card on cream background.
+ *   - Warm border (idle) -> accent border (selected)
+ *   - Clean white surface -> soft accent tint (selected)
+ *   - Optional icon box with accent tint on select
+ *   - Press: 0.985 scale + 0.88 opacity. No layout shift.
+ *   - Entrance: staggered fade-up.
  */
 
 import React, { useCallback, useEffect } from 'react';
@@ -17,7 +17,6 @@ import Animated, {
   withTiming,
   withSpring,
   FadeInDown,
-  interpolate,
   interpolateColor,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -34,11 +33,10 @@ import type { AuntyId } from '../constants/aunties';
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const PRESS_SPRING = { damping: 16, stiffness: 220, mass: 0.35 };
 
-const BORDER_IDLE = colors.dark.border;
-const FILL_IDLE = colors.dark.surfaceLight;
-const LABEL_IDLE = 'rgba(254, 248, 236, 0.78)';
-const LABEL_ACTIVE = colors.dark.text;
-const DESC_IDLE = 'rgba(254, 248, 236, 0.55)';
+const BORDER_IDLE = colors.border;
+const FILL_IDLE = colors.surface;
+const LABEL_IDLE = colors.ink;
+const DESC_IDLE = colors.muted;
 
 interface Props {
   label: string;
@@ -93,25 +91,16 @@ export function OptionCard({
     backgroundColor: interpolateColor(
       sel.value,
       [0, 1],
-      [FILL_IDLE, `${ac.accent}1F`],
+      [FILL_IDLE, `${ac.accent}0D`],
     ),
     borderColor: interpolateColor(sel.value, [0, 1], [BORDER_IDLE, ac.accent]),
-  }));
-
-  const labelStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(sel.value, [0, 1], [LABEL_IDLE, LABEL_ACTIVE]),
-  }));
-
-  const accentBarStyle = useAnimatedStyle(() => ({
-    opacity: sel.value,
-    transform: [{ translateX: interpolate(sel.value, [0, 1], [-6, 0]) }],
   }));
 
   const iconBoxStyle = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(
       sel.value,
       [0, 1],
-      ['rgba(255, 255, 255, 0.06)', `${ac.accent}28`],
+      [colors.canvasDeep, `${ac.accent}1A`],
     ),
   }));
 
@@ -135,12 +124,6 @@ export function OptionCard({
         }
       >
         <Animated.View style={[styles.card, cardStyle]}>
-          {/* Left accent bar — slides in on selection */}
-          <Animated.View
-            pointerEvents="none"
-            style={[styles.accentBar, accentBarStyle, { backgroundColor: ac.accent }]}
-          />
-
           {icon && icon.length > 0 ? (
             <Animated.View style={[styles.iconBox, iconBoxStyle]}>
               <Text style={styles.iconText}>{icon}</Text>
@@ -148,9 +131,9 @@ export function OptionCard({
           ) : null}
 
           <View style={styles.textContainer}>
-            <Animated.Text style={[styles.label, labelStyle]} numberOfLines={2}>
+            <Text style={styles.label} numberOfLines={2}>
               {label}
-            </Animated.Text>
+            </Text>
             {description ? (
               <Text style={styles.description} numberOfLines={3}>
                 {description}
@@ -159,9 +142,9 @@ export function OptionCard({
           </View>
 
           <View style={styles.checkCol}>
-            <View style={[styles.checkRing, { borderColor: 'rgba(254, 248, 236, 0.30)' }]} />
+            <View style={styles.checkRing} />
             <Animated.View style={[styles.checkFill, checkStyle, { backgroundColor: ac.accent }]}>
-              <Text style={styles.checkText}>{'\u2713'}</Text>
+              <Text style={styles.checkText}>{'✓'}</Text>
             </Animated.View>
           </View>
         </Animated.View>
@@ -178,22 +161,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: 60,
     borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    paddingLeft: spacing.md + 4,
+    borderWidth: 1,
+    paddingLeft: spacing.md,
     paddingRight: spacing.md,
     paddingVertical: spacing.md,
     gap: spacing.md,
     marginBottom: 4,
-    overflow: 'hidden',
-  },
-  accentBar: {
-    position: 'absolute',
-    left: 0,
-    top: 10,
-    bottom: 10,
-    width: 3,
-    borderTopRightRadius: 2,
-    borderBottomRightRadius: 2,
   },
   iconBox: {
     width: 36,
@@ -212,6 +185,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.base,
     letterSpacing: -0.1,
+    color: LABEL_IDLE,
   },
   description: {
     fontFamily: fonts.body,
@@ -231,7 +205,8 @@ const styles = StyleSheet.create({
     width: CHECK_SIZE,
     height: CHECK_SIZE,
     borderRadius: CHECK_SIZE / 2,
-    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderWidth: 1.5,
+    borderColor: colors.border,
   },
   checkFill: {
     position: 'absolute',

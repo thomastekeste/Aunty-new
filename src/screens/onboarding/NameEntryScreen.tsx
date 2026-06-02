@@ -47,7 +47,7 @@ export default function NameEntryScreen() {
     if (!isValid) return;
     setName(localName.trim());
     if (age || gender) setDemographics({ ageRange: age || undefined, gender: gender || undefined });
-    navigation.navigate('CurlType');
+    navigation.navigate('Location');
   };
 
   return (
@@ -69,7 +69,7 @@ export default function NameEntryScreen() {
           value={localName}
           onChangeText={setLocalName}
           placeholder="Your name"
-          placeholderTextColor="rgba(254, 248, 236, 0.25)"
+          placeholderTextColor={colors.muted + '60'}
           autoFocus
           autoCapitalize="words"
           autoCorrect={false}
@@ -96,13 +96,13 @@ export default function NameEntryScreen() {
                   onPress={() => setAge(selected ? null : opt)}
                   style={[
                     styles.pill,
-                    selected && { borderColor: ac.accent, backgroundColor: ac.accent + '1F', borderWidth: 1.5 },
+                    selected && { borderColor: ac.accent, backgroundColor: ac.accent + '12', borderWidth: 1.5 },
                   ]}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   accessibilityLabel={`Age range ${opt}`}
                 >
-                  <Text style={[styles.pillText, selected && { color: colors.dark.text, fontFamily: fonts.bodySemiBold }]}>
+                  <Text style={[styles.pillText, selected && { color: colors.ink, fontFamily: fonts.bodySemiBold }]}>
                     {opt}
                   </Text>
                 </PressableScale>
@@ -124,13 +124,13 @@ export default function NameEntryScreen() {
                   onPress={() => setGender(selected ? null : opt)}
                   style={[
                     styles.pill,
-                    selected && { borderColor: ac.accent, backgroundColor: ac.accent + '1F', borderWidth: 1.5 },
+                    selected && { borderColor: ac.accent, backgroundColor: ac.accent + '12', borderWidth: 1.5 },
                   ]}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   accessibilityLabel={`Identify as ${opt}`}
                 >
-                  <Text style={[styles.pillText, selected && { color: colors.dark.text, fontFamily: fonts.bodySemiBold }]}>
+                  <Text style={[styles.pillText, selected && { color: colors.ink, fontFamily: fonts.bodySemiBold }]}>
                     {opt}
                   </Text>
                 </PressableScale>
@@ -148,18 +148,18 @@ const styles = StyleSheet.create({
   input: {
     fontFamily: fonts.display,
     fontSize: fontSize.xxl,
-    color: colors.dark.text,
+    color: colors.ink,
     paddingVertical: spacing.xs,
     letterSpacing: letterSpacing.tight,
     lineHeight: fontSize.xxl * 1.2,
   },
-  underline: { height: 2, backgroundColor: colors.dark.border, borderRadius: 1 },
+  underline: { height: 2, backgroundColor: colors.border, borderRadius: 1 },
   underlineFill: { height: '100%', width: '0%', backgroundColor: colors.primary, borderRadius: 1 },
   underlineActive: { width: '100%' },
   label: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.xs,
-    color: colors.dark.textMuted,
+    color: colors.muted,
     letterSpacing: letterSpacing.widest,
     marginBottom: spacing.xs,
   },
@@ -168,16 +168,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.full,
-    borderWidth: 1.5,
-    borderColor: colors.dark.border,
-    backgroundColor: colors.dark.surfaceLight,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     minHeight: 40,
     justifyContent: 'center',
   },
   pillText: {
-    fontFamily: fonts.serifMedium,
+    fontFamily: fonts.bodyMedium,
     fontSize: fontSize.sm,
-    color: colors.dark.textMuted,
+    color: colors.muted,
     letterSpacing: -0.1,
   },
 });

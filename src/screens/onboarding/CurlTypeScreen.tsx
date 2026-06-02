@@ -112,7 +112,7 @@ function CurlCard({
       { rotate: `${sway.value * (selected ? 2.8 : 1.5)}deg` },
       { scale: 1 + selectedLift.value * 0.08 },
     ],
-    opacity: 0.86 + selectedLift.value * 0.14,
+    opacity: 0.7 + selectedLift.value * 0.3,
   }));
 
   return (
@@ -124,6 +124,7 @@ function CurlCard({
           styles.card,
           selected && {
             borderColor: ac.accent,
+            backgroundColor: `${ac.accent}0A`,
           },
         ]}
         accessibilityRole="button"
@@ -134,7 +135,7 @@ function CurlCard({
           <CurlPatternIcon
             type={option.type}
             size={48}
-            color={selected ? ac.accent : 'rgba(254, 248, 236, 0.72)'}
+            color={selected ? ac.accent : colors.muted}
           />
         </Animated.View>
         <Text style={[styles.cardLabel, selected && { color: ac.accent }]}>
@@ -213,10 +214,10 @@ export default function CurlTypeScreen() {
           />
           <Text style={styles.pullQuoteText}>
             {selected.startsWith('2')
-              ? 'Beautiful. Let\u2019s work with that.'
+              ? 'Beautiful. Let’s work with that.'
               : selected.startsWith('3')
               ? 'Love those curls. We know exactly what they need.'
-              : 'Crown texture. Let\u2019s take care of it.'}
+              : 'Crown texture. Let’s take care of it.'}
           </Text>
         </Animated.View>
       )}
@@ -231,7 +232,7 @@ const styles = StyleSheet.create({
   categoryLabel: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.xs,
-    color: colors.dark.textMuted,
+    color: colors.muted,
     letterSpacing: letterSpacing.wider,
     textTransform: 'uppercase',
     marginBottom: spacing.xs,
@@ -242,10 +243,10 @@ const styles = StyleSheet.create({
   },
   card: {
     width: CARD_WIDTH,
-    backgroundColor: 'transparent',
-    borderRadius: radius.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(254, 248, 236, 0.14)',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm + 2,
     paddingHorizontal: spacing.xs,
@@ -253,17 +254,18 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   cardLabel: {
-    fontFamily: fonts.serifBold,
+    fontFamily: fonts.bodyBold,
     fontSize: fontSize.lg,
-    color: colors.dark.text,
+    color: colors.ink,
     letterSpacing: -0.4,
   },
   cardUnderline: {
     width: 18,
-    height: StyleSheet.hairlineWidth * 2,
-    backgroundColor: 'rgba(254, 248, 236, 0.18)',
+    height: 1.5,
+    backgroundColor: colors.border,
     marginTop: 2,
     marginBottom: 2,
+    borderRadius: 1,
   },
   iconWrap: {
     alignItems: 'center',
@@ -272,9 +274,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   cardDesc: {
-    fontFamily: fonts.serifItalic,
+    fontFamily: fonts.body,
     fontSize: 12,
-    color: colors.dark.textMuted,
+    color: colors.muted,
     textAlign: 'center',
     lineHeight: 14,
   },
@@ -287,18 +289,19 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   pullQuoteRule: {
-    width: StyleSheet.hairlineWidth * 3,
+    width: 2,
     alignSelf: 'stretch',
     marginTop: 4,
     marginBottom: 4,
     opacity: 0.8,
+    borderRadius: 1,
   },
   pullQuoteText: {
     flex: 1,
-    fontFamily: fonts.serifItalic,
-    fontSize: 17,
-    lineHeight: 24,
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.md,
+    lineHeight: fontSize.md * 1.5,
     letterSpacing: -0.15,
-    color: 'rgba(254, 248, 236, 0.82)',
+    color: colors.inkLight,
   },
 });

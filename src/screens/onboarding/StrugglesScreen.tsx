@@ -17,6 +17,7 @@ import { AUNTIES } from '../../constants/aunties';
 import type { OnboardingStackParamList } from '../../types';
 import {
   colors,
+  auntyColors,
   fonts,
   fontSize,
   spacing,
@@ -39,7 +40,7 @@ const STRUGGLES: Struggle[] = [
   { id: 'scalp-issues', label: 'Scalp issues', description: 'Itchy, flaky, irritated.', icon: '' },
   { id: 'product-buildup', label: 'Buildup', description: 'Heavy, waxy, coated.', icon: '' },
   { id: 'time', label: 'Takes too long', description: 'Need it faster.', icon: '' },
-  { id: 'confusion', label: 'Don\u2019t know what to do', description: 'Overwhelmed by advice.', icon: '' },
+  { id: 'confusion', label: 'Don’t know what to do', description: 'Overwhelmed by advice.', icon: '' },
 ];
 
 export default function StrugglesScreen() {
@@ -103,7 +104,7 @@ export default function StrugglesScreen() {
       {selected.size >= 3 && (
         <Animated.View entering={FadeInDown.duration(400)} style={styles.empathy}>
           <Text style={styles.empathyText}>
-            That's a lot to carry alone. This is exactly why we're here — every single one, we address it.
+            That&apos;s a lot to carry alone. This is exactly why we&apos;re here — every single one, we address it.
           </Text>
         </Animated.View>
       )}
@@ -115,7 +116,7 @@ const styles = StyleSheet.create({
   multiHint: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.xs,
-    color: colors.dark.textMuted,
+    color: colors.muted,
     letterSpacing: 1.4,
     textTransform: 'uppercase',
     marginBottom: spacing.sm,
@@ -124,18 +125,19 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   empathy: {
-    backgroundColor: colors.dark.surfaceLight,
+    backgroundColor: colors.surfaceTinted,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     marginTop: spacing.md,
   },
   empathyText: {
-    fontFamily: fonts.serifItalic,
+    fontFamily: fonts.bodyMedium,
     fontSize: fontSize.sm,
     color: colors.primary,
-    lineHeight: fontSize.sm * 1.45,
+    lineHeight: fontSize.sm * 1.5,
     textAlign: 'center',
-    letterSpacing: -0.05,
   },
 });

@@ -11,6 +11,7 @@
     "lint": "npx expo lint"
   },
   "dependencies": {
+    "@expo-google-fonts/dancing-script": "^0.4.2",
     "@expo-google-fonts/playfair-display": "^0.4.2",
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@expo/metro-runtime": "~55.0.9",

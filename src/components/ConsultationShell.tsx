@@ -1,8 +1,8 @@
 /**
- * ConsultationShell — Dark-mode ceremonial wrapper for all consultation questions.
+ * ConsultationShell — Warm-canvas consultation wrapper.
  *
- * Provides: progress bar, back navigation, aunty avatar + speech bubble,
- * scrollable content area, and a bottom CTA button.
+ * Light mode redesign: cream canvas, segmented progress,
+ * aunty avatar + name, scrollable body, bottom CTA.
  */
 
 import React from 'react';
@@ -12,7 +12,6 @@ import {
   ScrollView,
   Pressable,
   StyleSheet,
-  Dimensions,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -22,7 +21,7 @@ import { useNavigation } from '@react-navigation/native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { AuntyAvatar } from './AuntyAvatar';
-import { Button } from './Button';
+import { CeremonialButton } from './CeremonialButton';
 import { AUNTIES } from '../constants/aunties';
 import type { AuntyId } from '../constants/aunties';
 import {
@@ -32,11 +31,7 @@ import {
   fontSize,
   spacing,
   radius,
-  gradients,
-  letterSpacing,
 } from '../constants/theme';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface Props {
   auntyId: AuntyId;
@@ -71,7 +66,6 @@ export function ConsultationShell({
   const navigation = useNavigation();
   const aunty = AUNTIES[auntyId];
   const ac = auntyColors[auntyId];
-  const progress = step / totalSteps;
 
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -84,53 +78,70 @@ export function ConsultationShell({
 
   const content = (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Progress bar */}
-      <Animated.View
-        entering={FadeIn.duration(400)}
-        style={styles.progressWrapper}
-        accessibilityRole="progressbar"
-        accessibilityLabel={`Step ${step} of ${totalSteps}`}
-        accessibilityValue={{ min: 0, max: totalSteps, now: step }}
-      >
-        <View style={styles.progressTrack}>
-          <LinearGradient
-            colors={[...gradients.gold]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[styles.progressFill, { width: `${progress * 100}%` }]}
-          />
-        </View>
-        <Text style={styles.progressLabel}>
-          {step} of {totalSteps}
-        </Text>
-      </Animated.View>
+      {/* Compact header: back + segmented progress + step */}
+      <View style={styles.header}>
+        {showBack ? (
+          <Pressable
+            onPress={handleBack}
+            style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Text style={styles.backChevron}>{'‹'}</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.backBtn} />
+        )}
 
-      {showBack && (
-        <Pressable
-          onPress={handleBack}
-          style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
+        <View
+          style={styles.progressRow}
+          accessibilityRole="progressbar"
+          accessibilityLabel={`Step ${step} of ${totalSteps}`}
+          accessibilityValue={{ min: 0, max: totalSteps, now: step }}
         >
-          <Text style={styles.backArrow}>{'\u2190'}</Text>
-        </Pressable>
-      )}
+          {Array.from({ length: totalSteps }).map((_, i) => {
+            const idx = i + 1;
+            const isCurrent = idx === step;
+            const isPast = idx < step;
+            return (
+              <View key={i} style={styles.segmentWrap}>
+                <View
+                  style={[
+                    styles.segment,
+                    isPast && { backgroundColor: ac.accent },
+                    isCurrent && { backgroundColor: ac.accent, opacity: 0.5 },
+                  ]}
+                />
+              </View>
+            );
+          })}
+        </View>
+
+        <Text style={styles.stepLabel}>
+          {step}/{totalSteps}
+        </Text>
+      </View>
 
       {/* Aunty + question */}
-      <View style={styles.questionRow}>
-        <AuntyAvatar auntyId={auntyId} size={40} showRing />
-        <Text style={[styles.questionText, { color: ac.accent }]}>{aunty.name}</Text>
-      </View>
-      <Text style={styles.question} accessibilityRole="header">
-        {question}
-      </Text>
+      <Animated.View entering={FadeIn.duration(300)} style={styles.questionRow}>
+        <AuntyAvatar auntyId={auntyId} size={32} showRing />
+        <Text style={[styles.auntyName, { color: ac.accent }]}>{aunty.name}</Text>
+      </Animated.View>
 
-      {/* Options */}
+      <Animated.Text
+        entering={FadeInDown.delay(60).duration(380)}
+        style={styles.question}
+        accessibilityRole="header"
+      >
+        {question}
+      </Animated.Text>
+
+      {/* Options / content */}
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 100 },
+          { paddingBottom: insets.bottom + 120 },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -139,16 +150,16 @@ export function ConsultationShell({
       </ScrollView>
 
       {/* Bottom CTA */}
-      <View style={[styles.ctaContainer, { paddingBottom: insets.bottom + spacing.md }]}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.xs }]}>
         <LinearGradient
-          colors={['rgba(26, 15, 8, 0)', 'rgba(26, 15, 8, 0.95)', colors.dark.bg]}
-          style={styles.ctaGradient}
+          colors={['rgba(254, 248, 236, 0)', 'rgba(254, 248, 236, 0.92)', colors.canvas]}
+          style={styles.footerFade}
+          pointerEvents="none"
         />
-        <View style={styles.ctaInner}>
-          <Button
+        <View style={styles.footerInner}>
+          <CeremonialButton
             label={ctaLabel}
             onPress={onCtaPress}
-            variant="primary"
             disabled={ctaDisabled}
             loading={ctaLoading}
             size="lg"
@@ -175,91 +186,103 @@ export function ConsultationShell({
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-    backgroundColor: colors.dark.bg,
+    backgroundColor: colors.canvas,
   },
   container: {
     flex: 1,
-    backgroundColor: colors.dark.bg,
+    backgroundColor: colors.canvas,
   },
-  progressWrapper: {
+
+  // -- Header --
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
     gap: spacing.sm,
   },
-  progressTrack: {
-    flex: 1,
-    height: 3,
-    backgroundColor: colors.dark.border,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  progressLabel: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: colors.dark.textMuted,
-    letterSpacing: letterSpacing.wide,
-  },
-  backButton: {
-    marginLeft: spacing.md,
-    marginTop: spacing.xs,
-    width: 44,
-    height: 44,
-    borderRadius: radius.full,
+  backBtn: {
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backButtonPressed: {
-    backgroundColor: colors.dark.surfaceLight,
-  },
-  backArrow: {
+  pressed: { opacity: 0.5 },
+  backChevron: {
     fontFamily: fonts.body,
     fontSize: fontSize.xl,
-    color: colors.dark.text,
+    lineHeight: fontSize.xl,
+    color: colors.ink,
   },
+  progressRow: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 4,
+    alignItems: 'center',
+  },
+  segmentWrap: {
+    flex: 1,
+    height: 3,
+  },
+  segment: {
+    flex: 1,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: colors.border,
+  },
+  stepLabel: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    minWidth: 28,
+    textAlign: 'right',
+  },
+
+  // -- Aunty + question --
   questionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
+    marginTop: spacing.xs,
     marginBottom: spacing.sm,
   },
-  questionText: {
+  auntyName: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.md,
   },
   question: {
     fontFamily: fonts.display,
-    fontSize: fontSize.xxl,
-    lineHeight: fontSize.xxl * 1.18,
-    letterSpacing: letterSpacing.tight,
-    color: colors.dark.text,
+    fontSize: fontSize.xl,
+    lineHeight: fontSize.xl * 1.15,
+    letterSpacing: -0.5,
+    color: colors.ink,
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
   },
+
+  // -- Body --
   scrollContent: {
     paddingHorizontal: spacing.lg,
   },
-  ctaContainer: {
+
+  // -- Footer --
+  footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
   },
-  ctaGradient: {
+  footerFade: {
     position: 'absolute',
-    top: -40,
+    top: -60,
     left: 0,
     right: 0,
-    height: 40,
+    height: 60,
   },
-  ctaInner: {
-    backgroundColor: colors.dark.bg,
+  footerInner: {
+    backgroundColor: colors.canvas,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
   },

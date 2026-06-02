@@ -6,7 +6,7 @@
  * Premium picks elevated. Budget-friendly tagged.
  */
 
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -25,11 +25,17 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
+import { ProductThumb } from '../../components/ProductThumb';
 import { AUNTIES } from '../../constants/aunties';
 import { PRODUCTS, CATEGORY_LABELS, type Product, type ProductCategory } from '../../constants/products';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { buildRoutine } from '../../utils/recommendation';
+import { buildAffiliateUrl } from '../../utils/affiliate';
+import { DISCLAIMER_SHORT, AFFILIATE_DISCLOSURE } from '../../constants/legal';
+import type { ProductScope, BrandTier } from '../../types';
 import {
   colors,
   auntyColors,
@@ -194,10 +200,72 @@ export default function ProductsScreen() {
     return score >= 2;
   }, [profile.curlType, profile.porosity, profile.primaryGoal]);
 
+  // Curated prescription — the saved routine, shown first.
+  const lineup = useMemo(
+    () =>
+      buildRoutine(
+        (profile.productScope as ProductScope) || 'routine',
+        (profile.brandTier as BrandTier) || 'mix',
+        profile.productBudgetTotal,
+        profile,
+      ),
+    [profile],
+  );
+
   const grouped = useMemo(() => groupByCategory(filtered), [filtered]);
   const tabs = useMemo(() => Array.from(grouped.keys()), [grouped]);
   const [activeTab, setActiveTab] = useState<ProductCategory>(tabs[0] || 'cleanser');
   const activeProducts = grouped.get(activeTab) || [];
+
+  // ─── Product feedback (owned / bought / rating) ──────────────────
+  const [owned, setOwned] = useState<Record<string, boolean>>({});
+  const [purchased, setPurchased] = useState<Record<string, { purchasedAt: string }>>({});
+  const [ratings, setRatings] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [o, p, r] = await AsyncStorage.multiGet([
+          'product_owned_v1',
+          'product_purchased_v1',
+          'product_ratings_v1',
+        ]);
+        if (o[1]) setOwned(JSON.parse(o[1]));
+        if (p[1]) setPurchased(JSON.parse(p[1]));
+        if (r[1]) setRatings(JSON.parse(r[1]));
+      } catch {
+        // best effort
+      }
+    })();
+  }, []);
+
+  const toggleOwned = useCallback((id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setOwned((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      AsyncStorage.setItem('product_owned_v1', JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, []);
+
+  const markBought = useCallback((id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setPurchased((prev) => {
+      if (prev[id]) return prev; // record once
+      const next = { ...prev, [id]: { purchasedAt: new Date().toISOString() } };
+      AsyncStorage.setItem('product_purchased_v1', JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, []);
+
+  const rateProduct = useCallback((id: string, value: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setRatings((prev) => {
+      const next = { ...prev, [id]: value };
+      AsyncStorage.setItem('product_ratings_v1', JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, []);
 
   // Separate premium picks
   const premiumProducts = activeProducts.filter((p) => p.isPremiumPick);
@@ -205,16 +273,63 @@ export default function ProductsScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.sm }]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[lineup.length > 0 ? 2 : 1]}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+      >
       {/* ─── Header ──────────────────────────────────────── */}
       <View style={styles.header}>
-        <Text style={styles.overline}>AUNTY'S PICKS</Text>
+        <Text style={styles.overline}>AUNTY&apos;S PICKS</Text>
         <Text style={styles.title}>Your Products</Text>
         <Text style={styles.subtitle}>
           Matched to {[profile.curlType, profile.porosity ? `${profile.porosity} porosity` : null].filter(Boolean).join(', ') || 'your'} hair
         </Text>
       </View>
 
-      {/* ─── Category Tabs ─────────────────────────────────── */}
+      {/* ─── Your Lineup (curated prescription) ────────────── */}
+      {lineup.length > 0 && (
+        <View style={styles.lineupSection}>
+          <View style={styles.lineupHeader}>
+            <SparkleIcon size={12} />
+            <Text style={styles.sectionLabel}>Your Lineup</Text>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.lineupRow}
+          >
+            {lineup.map((item) => {
+              const p = item.product;
+              const pac = auntyColors[p.recommendedBy];
+              return (
+                <Pressable
+                  key={item.slot.key}
+                  onPress={() => {
+                    if (p.affiliateUrl) {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      Linking.openURL(buildAffiliateUrl(p.affiliateUrl));
+                    }
+                  }}
+                  style={styles.lineupCard}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.slot.label}: ${p.brand} ${p.name}, ${p.price}`}
+                >
+                  <Text style={[styles.lineupSlot, { color: pac.accent }]}>{item.slot.label.toUpperCase()}</Text>
+                  <ProductThumb imageUrl={p.imageUrl} brand={p.brand} accent={pac.accent} size={84} />
+                  <Text style={styles.lineupBrand} numberOfLines={1}>{p.brand}</Text>
+                  <Text style={styles.lineupName} numberOfLines={2}>{p.name}</Text>
+                  <Text style={styles.lineupPrice}>{p.price}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          <Text style={styles.exploreLabel}>EXPLORE MORE</Text>
+        </View>
+      )}
+
+      {/* ─── Category Tabs (sticky) ───────────────────────── */}
+      <View style={styles.tabStickyWrap}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -248,13 +363,10 @@ export default function ProductsScreen() {
           );
         })}
       </ScrollView>
+      </View>
 
       {/* ─── Product List ──────────────────────────────────── */}
-      <ScrollView
-        style={styles.productScroll}
-        contentContainerStyle={[styles.productList, { paddingBottom: insets.bottom + 100 }]}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.productList}>
         {/* Premium Picks Section */}
         {premiumProducts.length > 0 && (
           <View style={styles.sectionBlock}>
@@ -263,7 +375,19 @@ export default function ProductsScreen() {
               <Text style={styles.sectionLabel}>Premium Picks</Text>
             </View>
             {premiumProducts.map((p, i) => (
-              <ProductCard key={p.id} product={p} index={i} isPremium isMatched={isMatchedForUser(p)} />
+              <ProductCard
+                key={p.id}
+                product={p}
+                index={i}
+                isPremium
+                isMatched={isMatchedForUser(p)}
+                owned={!!owned[p.id]}
+                purchased={!!purchased[p.id]}
+                userRating={ratings[p.id] ?? 0}
+                onToggleOwned={() => toggleOwned(p.id)}
+                onMarkBought={() => markBought(p.id)}
+                onRate={(v) => rateProduct(p.id, v)}
+              />
             ))}
           </View>
         )}
@@ -283,6 +407,12 @@ export default function ProductsScreen() {
                 product={p}
                 index={premiumProducts.length + i}
                 isMatched={isMatchedForUser(p)}
+                owned={!!owned[p.id]}
+                purchased={!!purchased[p.id]}
+                userRating={ratings[p.id] ?? 0}
+                onToggleOwned={() => toggleOwned(p.id)}
+                onMarkBought={() => markBought(p.id)}
+                onRate={(v) => rateProduct(p.id, v)}
               />
             ))}
           </View>
@@ -300,6 +430,13 @@ export default function ProductsScreen() {
             </Text>
           </View>
         )}
+      </View>
+
+      {/* ─── Disclosure footer ─────────────────────────────── */}
+      <View style={styles.disclosure}>
+        <Text style={styles.disclosureText}>{DISCLAIMER_SHORT}</Text>
+        <Text style={styles.disclosureText}>{AFFILIATE_DISCLOSURE}</Text>
+      </View>
       </ScrollView>
     </View>
   );
@@ -312,11 +449,23 @@ function ProductCard({
   index,
   isPremium = false,
   isMatched = false,
+  owned = false,
+  purchased = false,
+  userRating = 0,
+  onToggleOwned,
+  onMarkBought,
+  onRate,
 }: {
   product: Product;
   index: number;
   isPremium?: boolean;
   isMatched?: boolean;
+  owned?: boolean;
+  purchased?: boolean;
+  userRating?: number;
+  onToggleOwned?: () => void;
+  onMarkBought?: () => void;
+  onRate?: (value: number) => void;
 }) {
   const ac = auntyColors[p.recommendedBy];
   const aunty = AUNTIES[p.recommendedBy];
@@ -324,7 +473,7 @@ function ProductCard({
   const handlePress = useCallback(() => {
     if (p.affiliateUrl) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      Linking.openURL(p.affiliateUrl);
+      Linking.openURL(buildAffiliateUrl(p.affiliateUrl));
     }
   }, [p.affiliateUrl]);
 
@@ -332,20 +481,28 @@ function ProductCard({
     <Animated.View entering={FadeInDown.delay(index * 40).duration(300)}>
       <PressableCard onPress={handlePress}>
         <View style={[styles.card, isPremium && styles.cardPremium]}>
-          {/* Brand + Rating + Price row */}
-          <View style={styles.cardTopRow}>
-            <View style={styles.cardBrandCol}>
-              <Text style={styles.cardBrand}>{p.brand}</Text>
-              <Text style={styles.cardSizeInline}>{p.size}</Text>
-            </View>
-            <View style={styles.cardPriceCol}>
-              <Text style={styles.cardPrice}>{p.price}</Text>
-              <StarRating rating={p.rating} />
+          {/* Thumbnail + brand/name/price */}
+          <View style={styles.cardHead}>
+            <ProductThumb
+              imageUrl={p.imageUrl}
+              brand={p.brand}
+              accent={ac.accent}
+              size={72}
+            />
+            <View style={styles.cardHeadText}>
+              <View style={styles.cardTopRow}>
+                <View style={styles.cardBrandCol}>
+                  <Text style={styles.cardBrand}>{p.brand}</Text>
+                  <Text style={styles.cardSizeInline}>{p.size}</Text>
+                </View>
+                <View style={styles.cardPriceCol}>
+                  <Text style={styles.cardPrice}>{p.price}</Text>
+                  <StarRating rating={p.rating} />
+                </View>
+              </View>
+              <Text style={styles.cardName} numberOfLines={2}>{p.name}</Text>
             </View>
           </View>
-
-          {/* Name */}
-          <Text style={styles.cardName} numberOfLines={2}>{p.name}</Text>
 
           {/* Description + Tags inline */}
           <Text style={styles.cardDesc} numberOfLines={2}>{p.description}</Text>
@@ -380,9 +537,45 @@ function ProductCard({
                 {aunty.name} says
               </Text>
               <Text style={styles.auntyQuote} numberOfLines={2}>
-                "{p.whyItWorks}"
+                &ldquo;{p.whyItWorks}&rdquo;
               </Text>
             </View>
+          </View>
+
+          {/* ─── Feedback actions ───────────────────────────── */}
+          <View style={styles.feedbackRow}>
+            <Pressable
+              onPress={onToggleOwned}
+              style={[styles.feedbackPill, owned && styles.feedbackPillActive]}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityState={{ selected: owned }}
+              accessibilityLabel="I already use this"
+            >
+              <Text style={[styles.feedbackPillText, owned && styles.feedbackPillTextActive]}>
+                {owned ? '✓ I use this' : 'I already use this'}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={onMarkBought}
+              style={[styles.feedbackPill, purchased && styles.feedbackPillActive]}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityState={{ selected: purchased }}
+              accessibilityLabel="I bought this"
+            >
+              <Text style={[styles.feedbackPillText, purchased && styles.feedbackPillTextActive]}>
+                {purchased ? '✓ Bought' : 'I bought this'}
+              </Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.feedbackStars} accessibilityRole="adjustable" accessibilityLabel="Rate this product">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Pressable key={i} onPress={() => onRate?.(i)} hitSlop={6} style={styles.starBtn} accessibilityLabel={`${i} star${i > 1 ? 's' : ''}`}>
+                <StarIcon filled={i <= userRating} size={18} />
+              </Pressable>
+            ))}
           </View>
         </View>
       </PressableCard>
@@ -396,6 +589,69 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.canvas,
+  },
+
+  // Your Lineup band
+  lineupSection: {
+    marginBottom: spacing.sm,
+  },
+  lineupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  lineupRow: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  lineupCard: {
+    width: 130,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    padding: spacing.sm,
+    alignItems: 'center',
+    gap: 4,
+  },
+  lineupSlot: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 9,
+    letterSpacing: letterSpacing.wide,
+    alignSelf: 'flex-start',
+  },
+  lineupBrand: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: letterSpacing.wide,
+    marginTop: 2,
+    alignSelf: 'flex-start',
+  },
+  lineupName: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    alignSelf: 'flex-start',
+    lineHeight: fontSize.sm * 1.3,
+  },
+  lineupPrice: {
+    fontFamily: fonts.display,
+    fontSize: fontSize.md,
+    color: colors.ink,
+    alignSelf: 'flex-start',
+    marginTop: 2,
+  },
+  exploreLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    letterSpacing: letterSpacing.widest,
+    color: colors.muted,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.md,
   },
 
   // Header
@@ -480,12 +736,13 @@ const styles = StyleSheet.create({
   },
 
   // Product list
-  productScroll: {
-    flex: 1,
+  tabStickyWrap: {
+    backgroundColor: colors.canvas,
   },
   productList: {
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
+    paddingTop: spacing.xs,
   },
 
   // Sections
@@ -517,6 +774,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.primaryMuted,
     ...shadows.md,
+  },
+  cardHead: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  cardHeadText: {
+    flex: 1,
+    gap: spacing.xs,
   },
   cardTopRow: {
     flexDirection: 'row',
@@ -634,6 +900,41 @@ const styles = StyleSheet.create({
     lineHeight: fontSize.sm * 1.5,
   },
 
+  // Feedback (owned / bought / rating)
+  feedbackRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  feedbackPill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  feedbackPillActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  feedbackPillText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.primary,
+  },
+  feedbackPillTextActive: {
+    color: colors.surface,
+  },
+  feedbackStars: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  starBtn: {
+    padding: 2,
+  },
+
   // Empty state
   emptyState: {
     alignItems: 'center',
@@ -652,5 +953,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: fontSize.md * 1.5,
     paddingHorizontal: spacing.xl,
+  },
+  disclosure: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
+    gap: spacing.xs,
+  },
+  disclosureText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    textAlign: 'center',
+    lineHeight: fontSize.xs * 1.4,
   },
 });

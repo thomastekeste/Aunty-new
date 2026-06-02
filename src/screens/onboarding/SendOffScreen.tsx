@@ -1,52 +1,44 @@
 /**
  * SendOffScreen — The emotional close.
  *
- * Three lines that flip in place. Auntie's signature in italic at the close.
+ * "The Letter": the council's blessing writes itself in gold script and is
+ * signed by your aunty (see HandwrittenBlessing). On complete, the "Let's go"
+ * CTA rises over the warm cream ground.
  */
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { SpeechBubble } from '../../components/SpeechBubble';
+import { HandwrittenBlessing } from '../../components/HandwrittenBlessing';
 import { CeremonialButton } from '../../components/CeremonialButton';
-import { AUNTIES } from '../../constants/aunties';
 import type { AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { API_URL } from '../../services/api';
 import { supabase } from '../../services/supabase';
-import {
-  colors,
-  auntyColors,
-  fonts,
-  fontSize,
-  spacing,
-  gradients,
-} from '../../constants/theme';
+import { colors, fonts, fontSize, spacing, radius } from '../../constants/theme';
 
 export default function SendOffScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const { state, complete } = useOnboarding();
   const name = state.data.name || 'Queen';
   const auntyId: AuntyId = state.data.chosenAuntyId || 'denise';
-  const aunty = AUNTIES[auntyId];
-  const ac = auntyColors[auntyId];
 
   const [showButton, setShowButton] = useState(false);
-
-  const lines = [
-    `${name}, your crown was never broken.`,
-    'It just needed someone who speaks its language.',
-    'Now go wear it like you mean it.',
-  ];
+  const [runId, setRunId] = useState(0); // dev replay: remounts the animation
 
   const handleComplete = useCallback(() => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setShowButton(true);
+  }, []);
+
+  const handleReplay = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowButton(false);
+    setRunId((n) => n + 1);
   }, []);
 
   const handleBegin = useCallback(async () => {
@@ -67,97 +59,71 @@ export default function SendOffScreen() {
   }, [complete, state.data]);
 
   return (
-    <LinearGradient colors={[...gradients.ceremony]} style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}>
-        <Animated.View entering={FadeInUp.delay(120).duration(700)} style={styles.avatarWrap}>
-          <View style={[styles.glow, { backgroundColor: ac.accent }]} />
-          <AuntyAvatar auntyId={auntyId} size={88} showRing glowing />
-        </Animated.View>
+    <View style={styles.container}>
+      <HandwrittenBlessing key={runId} name={name} chosenAuntyId={auntyId} onComplete={handleComplete} />
 
-        <Animated.Text
-          entering={FadeIn.delay(400).duration(500)}
-          style={[styles.name, { color: ac.accent }]}
+      {__DEV__ && (
+        <View
+          pointerEvents="box-none"
+          style={[styles.devBar, { paddingTop: insets.top + spacing.sm }]}
         >
-          {aunty.name}
-        </Animated.Text>
-        <Animated.Text
-          entering={FadeIn.delay(520).duration(420)}
-          style={styles.tagline}
-        >
-          {aunty.signOff}
-        </Animated.Text>
-        <Animated.View
-          entering={FadeIn.delay(620).duration(420)}
-          style={[styles.nameRule, { backgroundColor: ac.accent }]}
-        />
-
-        <View style={styles.bubbleWrap}>
-          <SpeechBubble
-            lines={lines}
-            holdMs={1900}
-            fadeMs={420}
-            shimmer
-            quoteMarkColor={ac.accent}
-            textStyle={[styles.line, { color: colors.dark.text }]}
-            onComplete={handleComplete}
-          />
+          {navigation.canGoBack() && (
+            <Pressable onPress={() => navigation.goBack()} hitSlop={10} style={styles.devPill}>
+              <Text style={styles.devPillText}>{'\u2039'} Back</Text>
+            </Pressable>
+          )}
+          <Pressable onPress={handleReplay} hitSlop={10} style={styles.devPill}>
+            <Text style={styles.devPillText}>{'\u21BB'} Replay</Text>
+          </Pressable>
         </View>
+      )}
 
-        <View style={{ flex: 1 }} />
-
-        {showButton && (
-          <>
-            <Animated.View entering={FadeInDown.duration(420)} style={styles.btnWrap}>
-              <CeremonialButton label="Let's go" onPress={handleBegin} size="lg" />
-            </Animated.View>
-            <Animated.Text entering={FadeIn.delay(280)} style={styles.signature}>
-              {'\u2014 '}{aunty.name}
-            </Animated.Text>
-          </>
-        )}
-      </View>
-    </LinearGradient>
+      {showButton && (
+        <View
+          pointerEvents="box-none"
+          style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.xl }]}
+        >
+          <Animated.View entering={FadeInDown.duration(500)} style={styles.btnWrap}>
+            <CeremonialButton label="Let's go" onPress={handleBegin} size="lg" />
+          </Animated.View>
+        </View>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { flex: 1, alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xxl },
-  avatarWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg },
-  glow: { position: 'absolute', width: 160, height: 160, borderRadius: 80, opacity: 0.18 },
-  name: {
-    fontFamily: fonts.serifBold,
-    fontSize: fontSize.xxl,
-    letterSpacing: -0.4,
-    marginBottom: 4,
+  container: { flex: 1, backgroundColor: colors.canvas },
+  devBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    zIndex: 30,
   },
-  tagline: {
-    fontFamily: fonts.serifItalic,
-    fontSize: fontSize.md,
-    color: colors.dark.textMuted,
-    letterSpacing: 0.2,
-    marginBottom: spacing.md,
+  devPill: {
+    backgroundColor: 'rgba(45, 27, 14, 0.85)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
   },
-  nameRule: {
-    width: 48,
-    height: StyleSheet.hairlineWidth * 2,
-    opacity: 0.6,
-    marginBottom: spacing.xl,
+  devPillText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.canvas,
+    letterSpacing: 0.3,
   },
-  bubbleWrap: { width: '100%', minHeight: 200, justifyContent: 'center' },
-  line: {
-    fontFamily: fonts.display,
-    fontSize: fontSize.xxl,
-    color: colors.dark.text,
-    lineHeight: fontSize.xxl * 1.3,
-    letterSpacing: -0.4,
-    textAlign: 'center',
+  bottomBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    zIndex: 10,
   },
-  btnWrap: { width: '100%', marginBottom: spacing.md },
-  signature: {
-    fontFamily: fonts.serifItalic,
-    fontSize: fontSize.md,
-    color: colors.dark.textMuted,
-    marginTop: spacing.sm,
-  },
+  btnWrap: { width: '100%' },
 });

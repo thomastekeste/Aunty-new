@@ -5,7 +5,7 @@
  * Saves to AsyncStorage with full history tracking.
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -27,7 +27,7 @@ import { useNavigation } from '@react-navigation/native';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { PhotoAnalysisCard } from '../../components/PhotoAnalysisCard';
 import { analyzePhoto } from '../../services/api';
-import type { PhotoAnalysis } from '../../types';
+import type { PhotoAnalysis, ProductScope, BrandTier } from '../../types';
 import { Button } from '../../components/Button';
 import {
   colors,
@@ -40,6 +40,8 @@ import {
 } from '../../constants/theme';
 import { AUNTIES, type AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { PRODUCTS } from '../../constants/products';
+import { buildRoutine } from '../../utils/recommendation';
 
 type Mood = 'great' | 'good' | 'okay' | 'struggling';
 
@@ -142,6 +144,27 @@ export default function CheckInScreen() {
   const [onboardingDate, setOnboardingDate] = useState<string | undefined>();
   const [streak, setStreak] = useState(0);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
+  const [healthScore, setHealthScore] = useState<number | null>(null);
+  const [productsUsed, setProductsUsed] = useState<string[]>([]);
+
+  // Products to offer for "used this week" — the recommended routine, else all.
+  const profile = state.data.hairProfile;
+  const checkinProducts = useMemo(() => {
+    const routine = buildRoutine(
+      (profile.productScope as ProductScope) || 'routine',
+      (profile.brandTier as BrandTier) || 'mix',
+      profile.productBudgetTotal,
+      profile,
+    ).map((item) => item.product);
+    return routine.length > 0 ? routine : PRODUCTS;
+  }, [profile]);
+
+  const toggleProductUsed = useCallback((name: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setProductsUsed((prev) =>
+      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name],
+    );
+  }, []);
 
   useEffect(() => {
     AsyncStorage.getItem('onboarding_completed_at')
@@ -240,6 +263,8 @@ export default function CheckInScreen() {
       mood: selectedMood,
       notes: notes.trim(),
       photoUri,
+      healthScore: healthScore ?? undefined,
+      productsUsed,
       timestamp: new Date().toISOString(),
       auntyId,
       weekNumber,
@@ -259,7 +284,7 @@ export default function CheckInScreen() {
     setAuntyResponse(getAuntyResponse(aunty, selectedMood));
     setStreak((s) => s + 1);
     setSubmitted(true);
-  }, [selectedMood, notes, photoUri, weekNumber, auntyId, aunty]);
+  }, [selectedMood, notes, photoUri, healthScore, productsUsed, weekNumber, auntyId, aunty]);
 
   const handleDone = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -332,7 +357,7 @@ export default function CheckInScreen() {
         {/* Aunty avatar + question */}
         <Animated.View entering={FadeInDown.duration(300)} style={styles.questionSection}>
           <AuntyAvatar auntyId={auntyId} size={56} showRing glowing />
-          <Text style={styles.questionText}>How's your hair this week?</Text>
+          <Text style={styles.questionText}>How&apos;s your hair this week?</Text>
           <Text style={styles.questionSub}>Week {weekNumber} · {aunty.name} wants to know</Text>
         </Animated.View>
 
@@ -358,6 +383,53 @@ export default function CheckInScreen() {
               </Pressable>
             );
           })}
+        </Animated.View>
+
+        {/* Hair health score */}
+        <Animated.View entering={FadeInDown.delay(140).duration(300)} style={styles.healthSection}>
+          <Text style={styles.sectionLabel}>How does your hair feel overall this week?</Text>
+          <View style={styles.healthRow}>
+            {Array.from({ length: 10 }).map((_, i) => {
+              const value = i + 1;
+              const isSelected = healthScore === value;
+              return (
+                <Pressable
+                  key={value}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setHealthScore(value); }}
+                  style={[styles.healthPill, isSelected && styles.healthPillActive]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityLabel={`Health score ${value} out of 10`}
+                >
+                  <Text style={[styles.healthPillText, isSelected && styles.healthPillTextActive]}>{value}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Animated.View>
+
+        {/* Products used this week */}
+        <Animated.View entering={FadeInDown.delay(170).duration(300)} style={styles.productsSection}>
+          <Text style={styles.sectionLabel}>Which products did you use this week?</Text>
+          <View style={styles.productsWrap}>
+            {checkinProducts.map((p) => {
+              const isSelected = productsUsed.includes(p.name);
+              return (
+                <Pressable
+                  key={p.id}
+                  onPress={() => toggleProductUsed(p.name)}
+                  style={[styles.productPill, isSelected && styles.productPillActive]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityLabel={`${p.brand} ${p.name}`}
+                >
+                  <Text style={[styles.productPillText, isSelected && styles.productPillTextActive]} numberOfLines={1}>
+                    {p.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </Animated.View>
 
         {/* Photo section */}
@@ -538,6 +610,77 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: fontSize.xs,
     color: colors.dark.textMuted,
+  },
+
+  // Health score
+  healthSection: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  sectionLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.dark.text,
+    marginBottom: spacing.sm,
+  },
+  healthRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  healthPill: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+    backgroundColor: colors.dark.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  healthPillActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  healthPillText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.dark.textMuted,
+  },
+  healthPillTextActive: {
+    color: '#fff',
+  },
+
+  // Products used
+  productsSection: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  productsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  productPill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+    backgroundColor: colors.dark.surfaceLight,
+    maxWidth: '100%',
+  },
+  productPillActive: {
+    backgroundColor: colors.primary + '22',
+    borderColor: colors.primary,
+  },
+  productPillText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.xs,
+    color: colors.dark.textMuted,
+  },
+  productPillTextActive: {
+    color: colors.dark.text,
   },
 
   // Photo

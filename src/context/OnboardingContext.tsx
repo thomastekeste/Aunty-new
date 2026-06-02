@@ -5,7 +5,7 @@
 
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { OnboardingData, HairProfile, CouncilResponse, WeeklyRitual } from '../types';
+import type { OnboardingData, HairProfile, CouncilResponse, WeeklyRitual, PhotoAnalysis } from '../types';
 import type { AuntyId } from '../constants/aunties';
 
 const STORAGE_KEY = 'onboarding_progress';
@@ -19,10 +19,12 @@ interface OnboardingState {
 
 type Action =
   | { type: 'SET_NAME'; payload: string }
+  | { type: 'SET_CITY'; payload: string }
   | { type: 'SET_CHOSEN_AUNTY'; payload: AuntyId }
   | { type: 'SET_DEMOGRAPHICS'; payload: { ageRange?: string; gender?: string } }
   | { type: 'UPDATE_HAIR_PROFILE'; payload: Partial<HairProfile> }
   | { type: 'SET_PHOTOS'; payload: Partial<OnboardingData['photos']> }
+  | { type: 'SET_PHOTO_ANALYSIS'; payload: PhotoAnalysis }
   | { type: 'SET_COUNCIL_RESPONSE'; payload: CouncilResponse }
   | { type: 'SET_ROUTINE'; payload: WeeklyRitual }
   | { type: 'SET_PHASE'; payload: number }
@@ -45,6 +47,8 @@ function reducer(state: OnboardingState, action: Action): OnboardingState {
   switch (action.type) {
     case 'SET_NAME':
       return { ...state, data: { ...state.data, name: action.payload } };
+    case 'SET_CITY':
+      return { ...state, data: { ...state.data, city: action.payload } };
     case 'SET_CHOSEN_AUNTY':
       return { ...state, data: { ...state.data, chosenAuntyId: action.payload } };
     case 'SET_DEMOGRAPHICS':
@@ -62,6 +66,8 @@ function reducer(state: OnboardingState, action: Action): OnboardingState {
         ...state,
         data: { ...state.data, photos: { ...state.data.photos, ...action.payload } },
       };
+    case 'SET_PHOTO_ANALYSIS':
+      return { ...state, data: { ...state.data, photoAnalysis: action.payload } };
     case 'SET_COUNCIL_RESPONSE':
       return { ...state, data: { ...state.data, councilResponse: action.payload } };
     case 'SET_ROUTINE':
@@ -96,10 +102,12 @@ async function persistState(state: OnboardingState) {
 interface ContextValue {
   state: OnboardingState;
   setName: (name: string) => void;
+  setCity: (city: string) => void;
   setChosenAunty: (auntyId: AuntyId) => void;
   setDemographics: (data: { ageRange?: string; gender?: string }) => void;
   updateHairProfile: (data: Partial<HairProfile>) => void;
   setPhotos: (photos: Partial<OnboardingData['photos']>) => void;
+  setPhotoAnalysis: (analysis: PhotoAnalysis) => void;
   setCouncilResponse: (response: CouncilResponse) => void;
   setRoutine: (routine: WeeklyRitual) => void;
   setPhase: (phase: number) => void;
@@ -157,10 +165,12 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   const value: ContextValue = {
     state,
     setName: useCallback((name) => dispatch({ type: 'SET_NAME', payload: name }), []),
+    setCity: useCallback((city: string) => dispatch({ type: 'SET_CITY', payload: city }), []),
     setChosenAunty: useCallback((auntyId: AuntyId) => dispatch({ type: 'SET_CHOSEN_AUNTY', payload: auntyId }), []),
     setDemographics: useCallback((data: { ageRange?: string; gender?: string }) => dispatch({ type: 'SET_DEMOGRAPHICS', payload: data }), []),
     updateHairProfile: useCallback((data) => dispatch({ type: 'UPDATE_HAIR_PROFILE', payload: data }), []),
     setPhotos: useCallback((photos) => dispatch({ type: 'SET_PHOTOS', payload: photos }), []),
+    setPhotoAnalysis: useCallback((a: PhotoAnalysis) => dispatch({ type: 'SET_PHOTO_ANALYSIS', payload: a }), []),
     setCouncilResponse: useCallback((r) => dispatch({ type: 'SET_COUNCIL_RESPONSE', payload: r }), []),
     setRoutine: useCallback((r) => dispatch({ type: 'SET_ROUTINE', payload: r }), []),
     setPhase: useCallback((p) => dispatch({ type: 'SET_PHASE', payload: p }), []),

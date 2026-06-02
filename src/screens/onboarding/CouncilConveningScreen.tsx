@@ -37,7 +37,7 @@ import type { AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { analyzePhoto, API_URL } from '../../services/api';
 import { supabase } from '../../services/supabase';
-import type { OnboardingStackParamList, CouncilResponse, WeeklyRitual } from '../../types';
+import type { OnboardingStackParamList, CouncilResponse, WeeklyRitual, PhotoAnalysis } from '../../types';
 import {
   colors,
   auntyColors,
@@ -303,7 +303,7 @@ function ParticleField() {
       const angle = (i / 36) * Math.PI * 2 + (i % 3) * 0.4;
       const r = 60 + (i % 5) * 36;
       const size = 1.5 + (i % 4) * 0.7;
-      const opacity = 0.06 + ((i % 7) * 0.02);
+      const opacity = 0.12 + ((i % 7) * 0.03);
       return {
         key: i,
         left: Math.cos(angle) * r,
@@ -326,7 +326,7 @@ function ParticleField() {
             width: p.size,
             height: p.size,
             borderRadius: p.size / 2,
-            backgroundColor: '#F5DFA0',
+            backgroundColor: colors.primary,
             opacity: p.opacity,
           }}
         />
@@ -373,7 +373,7 @@ function ScrollItem({ label, done, index }: { label: string; done: boolean; inde
 export default function CouncilConveningScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
-  const { state, setCouncilResponse, setRoutine } = useOnboarding();
+  const { state, setCouncilResponse, setRoutine, setPhotoAnalysis } = useOnboarding();
   const auntyId: AuntyId = state.data.chosenAuntyId || 'denise';
   const aunty = AUNTIES[auntyId];
   const ac = auntyColors[auntyId];
@@ -405,12 +405,24 @@ export default function CouncilConveningScreen() {
 
   const fetchCouncilData = async () => {
     try {
-      // Run photo analysis in parallel with council generation (non-blocking)
+      // Analyze the photo FIRST (capped) so the council can actually use what
+      // it sees. Falls back gracefully if there's no photo or it times out —
+      // the council still runs on the self-reported profile.
+      let photoAnalysis: PhotoAnalysis | null = null;
       const photoUri = photos?.front || photos?.back || photos?.closeup;
       if (photoUri) {
-        analyzePhoto(photoUri).catch((err) =>
-          console.warn('[CouncilConvening] Photo analysis failed (non-blocking):', err),
-        );
+        try {
+          const res = await Promise.race([
+            analyzePhoto(photoUri),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('photo-analysis-timeout')), 15000),
+            ),
+          ]);
+          photoAnalysis = (res as { analysis: PhotoAnalysis }).analysis ?? null;
+          if (photoAnalysis) setPhotoAnalysis(photoAnalysis);
+        } catch (err) {
+          console.warn('[CouncilConvening] Photo analysis skipped:', err);
+        }
       }
 
       // Get auth token for API calls
@@ -423,7 +435,7 @@ export default function CouncilConveningScreen() {
       const councilRes = await fetch(`${API_URL}/api/council/generate`, {
         method: 'POST',
         headers: authHeaders,
-        body: JSON.stringify({ name, hairProfile }),
+        body: JSON.stringify({ name, hairProfile, photoAnalysis }),
       });
       if (!councilRes.ok) throw new Error(`Council API error: ${councilRes.status}`);
       const councilData: CouncilResponse = await councilRes.json();
@@ -432,7 +444,7 @@ export default function CouncilConveningScreen() {
       const routineRes = await fetch(`${API_URL}/api/routine/generate`, {
         method: 'POST',
         headers: authHeaders,
-        body: JSON.stringify({ name, hairProfile }),
+        body: JSON.stringify({ name, hairProfile, councilResponse: councilData, photoAnalysis }),
       });
       if (!routineRes.ok) throw new Error(`Routine API error: ${routineRes.status}`);
       const routineData: WeeklyRitual = await routineRes.json();
@@ -491,8 +503,7 @@ export default function CouncilConveningScreen() {
   const statusLine = getStatusForAunty(activeAunty, name || 'Love', hairProfile);
 
   return (
-    <LinearGradient
-      colors={[...gradients.ceremony]}
+    <View
       style={[styles.container, { paddingTop: insets.top }]}
       accessibilityLabel={`The council is convening. ${aunty.name} is finalizing your plan.`}
     >
@@ -549,13 +560,14 @@ export default function CouncilConveningScreen() {
           </Animated.View>
         )}
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.canvas,
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
   },
@@ -672,7 +684,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontFamily: fonts.serifItalic,
     fontSize: fontSize.md,
-    color: colors.dark.text,
+    color: colors.ink,
     textAlign: 'center',
     lineHeight: fontSize.md * 1.4,
   },
@@ -693,17 +705,17 @@ const styles = StyleSheet.create({
   scrollLabel: {
     fontFamily: fonts.serifItalic,
     fontSize: fontSize.sm,
-    color: 'rgba(254, 248, 236, 0.4)',
+    color: colors.muted,
     minWidth: 180,
   },
   scrollLabelDone: {
-    color: colors.dark.text,
+    color: colors.ink,
     fontFamily: fonts.serifSemiBold,
   },
   scrollLineWrap: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(254, 248, 236, 0.08)',
+    backgroundColor: colors.border,
   },
   scrollLine: {
     height: 1,

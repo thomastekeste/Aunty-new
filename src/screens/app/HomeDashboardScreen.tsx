@@ -585,7 +585,7 @@ export default function HomeDashboardScreen() {
               <AuntyAvatar auntyId={auntyId} size={32} showRing={false} />
               <View style={styles.whisperContent}>
                 <Text style={styles.whisperText} numberOfLines={2}>
-                  "{whisperText}"
+                  &ldquo;{whisperText}&rdquo;
                 </Text>
                 <Text style={[styles.whisperName, { color: ac.accent }]}>
                   — Aunty {aunty.name}
@@ -610,7 +610,7 @@ export default function HomeDashboardScreen() {
             >
               <GridIcon type="checkin" color={ac.accent} />
               <Text style={styles.gridLabel}>Check-In</Text>
-              <Text style={styles.gridSub}>How's this week?</Text>
+              <Text style={styles.gridSub}>How&apos;s this week?</Text>
             </PressableScale>
 
             {/* Journey */}

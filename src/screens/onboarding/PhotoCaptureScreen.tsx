@@ -10,15 +10,13 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Image, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { CeremonialButton } from '../../components/CeremonialButton';
-import { PressableScale } from '../../components/PressableScale';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
 import {
@@ -28,7 +26,6 @@ import {
   fontSize,
   spacing,
   radius,
-  gradients,
 } from '../../constants/theme';
 import type { OnboardingStackParamList } from '../../types';
 
@@ -36,10 +33,10 @@ type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'PhotoCapture'>;
 
 type PhotoSlot = 'front' | 'back' | 'closeup';
 
-const SLOTS: { key: PhotoSlot; label: string; hint: string; emoji: string }[] = [
-  { key: 'front', label: 'Front view', hint: 'Face the camera, hair down', emoji: '📸' },
-  { key: 'back', label: 'Side or back', hint: 'Show your length + curl pattern', emoji: '🪞' },
-  { key: 'closeup', label: 'Close-up', hint: 'Get close to show texture + porosity', emoji: '🔍' },
+const SLOTS: { key: PhotoSlot; label: string; hint: string }[] = [
+  { key: 'front', label: 'Front view', hint: 'Face the camera, hair down' },
+  { key: 'back', label: 'Side or back', hint: 'Show your length and curl pattern' },
+  { key: 'closeup', label: 'Close-up', hint: 'Get close to show texture and porosity' },
 ];
 
 export default function PhotoCaptureScreen() {
@@ -127,68 +124,64 @@ export default function PhotoCaptureScreen() {
   }, [navigation]);
 
   return (
-    <LinearGradient colors={[...gradients.ceremony]} style={styles.container}>
-      <View style={[styles.content, { paddingTop: insets.top + spacing.lg }]}>
+    <View style={styles.container}>
+      <View style={[styles.content, { paddingTop: insets.top + spacing.xxl }]}>
 
-        {/* Aunty header */}
-        <Animated.View entering={FadeIn.duration(400)} style={styles.auntyHeader}>
-          <AuntyAvatar auntyId={auntyId} size={44} />
-          <View>
-            <Text style={[styles.auntyName, { color: ac.accent }]}>{aunty.name}</Text>
-            <Text style={styles.auntyMessage}>Let me see that hair, baby.</Text>
-          </View>
+        {/* Aunty header — quiet, centered */}
+        <Animated.View entering={FadeIn.duration(500)} style={styles.auntyHeader}>
+          <AuntyAvatar auntyId={auntyId} size={56} showRing glowing />
+          <Text style={[styles.auntyName, { color: ac.accent }]}>{aunty.name}</Text>
+          <Text style={styles.auntyMessage}>Let me see that hair, baby.</Text>
         </Animated.View>
 
         {/* Title */}
-        <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.titleWrap}>
+        <Animated.View entering={FadeIn.delay(150).duration(460)} style={styles.titleWrap}>
           <Text style={styles.title}>Show the council</Text>
           <Text style={styles.subtitle}>
-            Photos help the aunties see what they're working with.{'\n'}
-            Take one or all three — or skip if you're not ready.
+            Photos help the aunties see what they&apos;re working with. Take one, all three, or skip for now.
           </Text>
         </Animated.View>
 
-        {/* Photo slots */}
+        {/* Photo slots — open rows divided by hairlines */}
         <View style={styles.slotsContainer}>
           {SLOTS.map((slot, index) => (
             <Animated.View
               key={slot.key}
-              entering={FadeInDown.delay(200 + index * 80).duration(350)}
+              entering={FadeIn.delay(250 + index * 90).duration(420)}
+              style={[styles.slotRow, index > 0 && styles.slotRowDivided]}
             >
               {photos[slot.key] ? (
-                <View style={styles.filledSlot}>
+                <View style={styles.rowInner}>
                   <Image source={{ uri: photos[slot.key]! }} style={styles.preview} />
-                  <View style={styles.filledInfo}>
+                  <View style={styles.slotTextWrap}>
                     <Text style={styles.slotLabel}>{slot.label}</Text>
-                    <Text style={[styles.slotCheck, { color: ac.accent }]}>Added {'✓'}</Text>
+                    <Text style={[styles.slotCheck, { color: ac.accent }]}>Added</Text>
                   </View>
-                  <PressableScale
+                  <Pressable
                     onPress={() => handleRemove(slot.key)}
-                    scaleTo={0.9}
-                    haptic="light"
-                    style={styles.removeBtn}
+                    hitSlop={12}
                     accessibilityRole="button"
                     accessibilityLabel={`Remove ${slot.label} photo`}
                   >
-                    <Text style={styles.removeText}>{'✕'}</Text>
-                  </PressableScale>
+                    <Text style={styles.removeText}>Remove</Text>
+                  </Pressable>
                 </View>
               ) : (
-                <PressableScale
+                <Pressable
                   onPress={() => handleCapture(slot.key)}
-                  scaleTo={0.97}
-                  haptic="light"
-                  style={[styles.emptySlot, { borderColor: ac.accent + '25' }]}
+                  style={styles.rowInner}
                   accessibilityRole="button"
                   accessibilityLabel={`Add ${slot.label} photo`}
                 >
-                  <Text style={styles.slotEmoji}>{slot.emoji}</Text>
+                  <Text style={[styles.slotIndex, { color: ac.accent }]}>
+                    {`0${index + 1}`}
+                  </Text>
                   <View style={styles.slotTextWrap}>
                     <Text style={styles.slotLabel}>{slot.label}</Text>
                     <Text style={styles.slotHint}>{slot.hint}</Text>
                   </View>
-                  <Text style={[styles.addIcon, { color: ac.accent }]}>+</Text>
-                </PressableScale>
+                  <Text style={[styles.addAction, { color: ac.accent }]}>Add</Text>
+                </Pressable>
               )}
             </Animated.View>
           ))}
@@ -197,7 +190,7 @@ export default function PhotoCaptureScreen() {
 
       {/* Footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
-        <Animated.View entering={FadeInUp.delay(500)}>
+        <Animated.View entering={FadeIn.delay(550).duration(460)}>
           <CeremonialButton
             label={photoCount > 0 ? `Continue with ${photoCount} photo${photoCount > 1 ? 's' : ''}` : 'Continue without photos'}
             onPress={handleContinue}
@@ -208,12 +201,12 @@ export default function PhotoCaptureScreen() {
           <Text style={styles.skipText}>Skip for now</Text>
         </Pressable>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.canvas },
 
   content: {
     flex: 1,
@@ -221,110 +214,100 @@ const styles = StyleSheet.create({
   },
 
   auntyHeader: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
+    marginBottom: spacing.xl,
   },
   auntyName: {
-    fontFamily: fonts.serifSemiBold,
+    fontFamily: fonts.display,
     fontSize: fontSize.lg,
     letterSpacing: -0.2,
-    lineHeight: fontSize.lg * 1.1,
+    marginTop: spacing.sm,
   },
   auntyMessage: {
-    fontFamily: fonts.serifItalic,
-    fontSize: fontSize.xs,
-    color: colors.dark.textMuted,
-    marginTop: 1,
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.muted,
+    marginTop: 2,
   },
 
   titleWrap: {
-    marginBottom: spacing.lg,
+    alignItems: 'center',
+    marginBottom: spacing.xl,
   },
   title: {
     fontFamily: fonts.display,
-    fontSize: fontSize.xl,
-    color: colors.dark.text,
-    letterSpacing: -0.4,
-    marginBottom: spacing.xs,
+    fontSize: fontSize.xxl,
+    color: colors.ink,
+    letterSpacing: -0.5,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   subtitle: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
-    color: colors.dark.textMuted,
-    lineHeight: fontSize.sm * 1.55,
+    color: colors.muted,
+    lineHeight: fontSize.sm * 1.6,
+    textAlign: 'center',
+    paddingHorizontal: spacing.md,
   },
 
   slotsContainer: {
-    gap: spacing.sm,
+    marginTop: spacing.xs,
   },
 
-  emptySlot: {
+  slotRow: {
+    paddingVertical: spacing.lg,
+  },
+  slotRowDivided: {
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  rowInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.dark.surfaceLight,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    padding: spacing.md,
-    gap: spacing.sm,
+    gap: spacing.md,
   },
-  slotEmoji: {
-    fontSize: 24,
+  slotIndex: {
+    fontFamily: fonts.display,
+    fontSize: fontSize.md,
+    letterSpacing: 0.5,
+    width: 28,
   },
   slotTextWrap: {
     flex: 1,
   },
   slotLabel: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.sm,
-    color: colors.dark.text,
+    fontSize: fontSize.base,
+    color: colors.ink,
+    letterSpacing: -0.2,
   },
   slotHint: {
     fontFamily: fonts.body,
     fontSize: fontSize.xs,
-    color: colors.dark.textMuted,
-    marginTop: 1,
+    color: colors.muted,
+    marginTop: 2,
   },
-  addIcon: {
+  addAction: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.xl,
-  },
-
-  filledSlot: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.dark.surfaceLight,
-    borderRadius: radius.lg,
-    padding: spacing.sm,
-    gap: spacing.sm,
+    fontSize: fontSize.sm,
+    letterSpacing: 0.3,
   },
   preview: {
-    width: 56,
-    height: 72,
+    width: 52,
+    height: 68,
     borderRadius: radius.md,
-  },
-  filledInfo: {
-    flex: 1,
   },
   slotCheck: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.xs,
     marginTop: 2,
-  },
-  removeBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.dark.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
+    letterSpacing: 0.3,
   },
   removeText: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.xs,
-    color: colors.dark.textMuted,
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.muted,
   },
 
   footer: {
@@ -338,6 +321,6 @@ const styles = StyleSheet.create({
   skipText: {
     fontFamily: fonts.bodyMedium,
     fontSize: fontSize.sm,
-    color: colors.dark.textMuted,
+    color: colors.muted,
   },
 });

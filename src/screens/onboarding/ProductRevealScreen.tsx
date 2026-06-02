@@ -1,12 +1,13 @@
 /**
- * ProductRevealScreen — Paywall first, products after.
+ * ProductRevealScreen — Paywall first, prescription after.
  *
- * Step 1: Trust badges + blurred teaser count + paywall CTA
- * Step 2: AFTER paying → category tabs with full product cards
- * Skip path → straight to SendOff, no products shown
+ * Step 1: Trust teaser — "your aunty built your N-piece routine" + total
+ * Step 2: AFTER paying → the prescribed routine, ONE product per category,
+ *         each with a "Swap" control to cycle through alternates.
+ * Skip path → straight to SendOff, no products shown.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -14,41 +15,16 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
+import { ProductThumb } from '../../components/ProductThumb';
 import { Button } from '../../components/Button';
 import { PaywallModal } from '../../components/PaywallModal';
 import { AUNTIES } from '../../constants/aunties';
-import { PRODUCTS, type Product, type ProductCategory } from '../../constants/products';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { colors, auntyColors, fonts, fontSize, spacing, radius, shadows, letterSpacing } from '../../constants/theme';
-import type { OnboardingStackParamList } from '../../types';
+import { buildRoutine, type RoutineItem } from '../../utils/recommendation';
+import type { OnboardingStackParamList, ProductScope, BrandTier } from '../../types';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'ProductReveal'>;
-
-const SCOPE_TO_TIER: Record<string, number> = { basics: 1, routine: 2, full: 3, everything: 4 };
-const BUDGET_TO_MAX: Record<string, number> = { 'under-30': 30, '30-60': 60, '60-100': 100, '100-plus': 999 };
-
-const CAT_LABELS: Record<string, string> = {
-  cleanser: 'Shampoo', conditioner: 'Conditioner', 'deep-conditioner': 'Mask',
-  'leave-in': 'Leave-In', styler: 'Styler', gel: 'Gel', cream: 'Cream',
-  oil: 'Oil', 'protein-treatment': 'Protein', 'scalp-treatment': 'Scalp',
-  tool: 'Tools', accessory: 'Accessories',
-};
-
-function getProducts(scope?: string, budget?: string): Product[] {
-  const maxTier = SCOPE_TO_TIER[scope || 'routine'] || 2;
-  const maxPrice = BUDGET_TO_MAX[budget || '60-100'] || 100;
-  return PRODUCTS.filter((p) => (p.scopeTier ?? 3) <= maxTier && (p.priceValue ?? 20) <= maxPrice);
-}
-
-function groupBy(products: Product[]): Map<ProductCategory, Product[]> {
-  const map = new Map<ProductCategory, Product[]>();
-  for (const p of products) {
-    const list = map.get(p.category) || [];
-    list.push(p);
-    map.set(p.category, list);
-  }
-  return map;
-}
 
 export default function ProductRevealScreen() {
   const insets = useSafeAreaInsets();
@@ -58,52 +34,77 @@ export default function ProductRevealScreen() {
   const [showPaywall, setShowPaywall] = useState(false);
 
   const profile = state.data.hairProfile;
-  const products = useMemo(() => getProducts(profile.productScope, profile.productBudget), [profile.productScope, profile.productBudget]);
-  const grouped = useMemo(() => groupBy(products), [products]);
-  const tabs = useMemo(() => Array.from(grouped.keys()), [grouped]);
-  const [activeTab, setActiveTab] = useState<ProductCategory | null>(null);
+  const chosenAuntyId = state.data.chosenAuntyId || 'denise';
+  const ac = auntyColors[chosenAuntyId];
+  const aunty = AUNTIES[chosenAuntyId];
 
-  // Set first tab when unlocked
+  const routine = useMemo<RoutineItem[]>(
+    () =>
+      buildRoutine(
+        (profile.productScope as ProductScope) || 'routine',
+        (profile.brandTier as BrandTier) || 'mix',
+        profile.productBudgetTotal,
+        profile,
+      ),
+    [profile],
+  );
+
+  // Per-slot swap index (which option in [product, ...alternates] is shown).
+  const [swapIdx, setSwapIdx] = useState<Record<string, number>>({});
+
+  const total = useMemo(
+    () =>
+      routine.reduce((acc, item) => {
+        const opts = [item.product, ...item.alternates];
+        const chosen = opts[(swapIdx[item.slot.key] ?? 0) % opts.length];
+        return acc + (chosen.priceValue ?? 0);
+      }, 0),
+    [routine, swapIdx],
+  );
+
   const handleUnlock = () => {
     setShowPaywall(false);
     setUnlocked(true);
-    setActiveTab(tabs[0] || null);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  const activeProducts = activeTab ? grouped.get(activeTab) || [] : [];
-  const chosenAuntyId = state.data.chosenAuntyId || 'denise';
-  const ac = auntyColors[chosenAuntyId];
+  const handleSwap = (slotKey: string, optionCount: number) => {
+    if (optionCount <= 1) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSwapIdx((prev) => ({ ...prev, [slotKey]: ((prev[slotKey] ?? 0) + 1) % optionCount }));
+  };
 
   // ─── PRE-PAYWALL: Trust + CTA ────────────────────────────────
   if (!unlocked) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <ScrollView contentContainerStyle={[styles.prePaywall, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
-          {/* Hook */}
           <Animated.View entering={FadeIn.delay(200).duration(500)}>
-            <Text style={styles.title}>We Found {products.length} Products{'\n'}For Your Hair</Text>
+            <Text style={styles.title}>{aunty.name} Built Your{'\n'}{routine.length}-Piece Routine</Text>
             <Text style={styles.subtitle}>
-              Every one vetted for {profile.curlType || 'your'} texture. No silicones. No sulfates. Just what works.
+              One pick per step, matched to your {profile.curlType || ''} texture. No silicones. No sulfates. Just what works.
             </Text>
           </Animated.View>
 
-          {/* Category preview */}
+          {/* Routine preview */}
           <Animated.View entering={FadeInDown.delay(350)} style={styles.categoryPreview}>
-            <Text style={styles.previewTitle}>YOUR PRODUCT CATEGORIES</Text>
-            {tabs.map((cat) => (
-              <View key={cat} style={styles.categoryRow}>
+            <Text style={styles.previewTitle}>YOUR ROUTINE</Text>
+            {routine.map((item) => (
+              <View key={item.slot.key} style={styles.categoryRow}>
                 <View style={[styles.categoryDot, { backgroundColor: ac.accent }]} />
-                <Text style={styles.categoryName}>{CAT_LABELS[cat] || cat}</Text>
-                <Text style={styles.categoryCount}>{grouped.get(cat)?.length} picks</Text>
+                <Text style={styles.categoryName}>{item.slot.label}</Text>
+                <Text style={styles.categoryCount}>{item.product.price}</Text>
               </View>
             ))}
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Routine total</Text>
+              <Text style={[styles.totalValue, { color: ac.accent }]}>~${Math.round(total)}</Text>
+            </View>
           </Animated.View>
 
-          {/* CTA */}
           <Animated.View entering={FadeInDown.delay(550)} style={styles.ctaSection}>
             <Button
-              label="See My Products"
+              label="See My Routine"
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowPaywall(true); }}
               variant="primary"
               size="lg"
@@ -123,64 +124,73 @@ export default function ProductRevealScreen() {
     );
   }
 
-  // ─── POST-PAYWALL: Tabs + Full Products ──────────────────────
+  // ─── POST-PAYWALL: The prescription ──────────────────────────
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.overline}>YOUR RECOMMENDATIONS</Text>
-        <Text style={styles.titleSmall}>Products For You</Text>
+        <Text style={styles.overline}>YOUR PRESCRIPTION</Text>
+        <Text style={styles.titleSmall}>The {routine.length}-Piece Routine</Text>
       </View>
 
-      {/* Category tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScroll} contentContainerStyle={styles.tabRow}>
-        {tabs.map((cat) => {
-          const isActive = activeTab === cat;
-          return (
-            <Pressable
-              key={cat}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveTab(cat); }}
-              style={[styles.tab, isActive && styles.tabActive]}
-            >
-              <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{CAT_LABELS[cat] || cat}</Text>
-              <View style={[styles.tabBadge, isActive && styles.tabBadgeActive]}>
-                <Text style={[styles.tabBadgeText, isActive && styles.tabBadgeTextActive]}>{grouped.get(cat)?.length}</Text>
-              </View>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
-      {/* Products for active tab */}
       <ScrollView style={styles.productScroll} contentContainerStyle={[styles.productList, { paddingBottom: insets.bottom + 100 }]} showsVerticalScrollIndicator={false}>
-        {activeProducts.map((p, i) => {
-          const ac = auntyColors[p.recommendedBy];
+        {routine.map((item, i) => {
+          const opts = [item.product, ...item.alternates];
+          const idx = (swapIdx[item.slot.key] ?? 0) % opts.length;
+          const p = opts[idx];
+          const pac = auntyColors[p.recommendedBy];
           return (
-            <Animated.View key={p.id} entering={FadeInDown.delay(i * 60)}>
-              <View style={[styles.card, { borderLeftColor: ac.accent }]}>
-                <View style={styles.cardTop}>
-                  <Text style={styles.cardBrand}>{p.brand}</Text>
-                  <Text style={styles.cardPrice}>{p.price}</Text>
+            <Animated.View key={item.slot.key} entering={FadeInDown.delay(i * 60)}>
+              <View style={[styles.card, { borderLeftColor: pac.accent }]}>
+                <View style={styles.slotRow}>
+                  <Text style={[styles.slotLabel, { color: ac.accent }]}>{item.slot.label.toUpperCase()}</Text>
+                  {item.aboveBudget && <Text style={styles.aboveBudget}>slightly above budget</Text>}
                 </View>
-                <Text style={styles.cardName}>{p.name}</Text>
+                <View style={styles.cardHead}>
+                  <ProductThumb imageUrl={p.imageUrl} brand={p.brand} accent={pac.accent} size={64} />
+                  <View style={styles.cardHeadText}>
+                    <View style={styles.cardTop}>
+                      <Text style={styles.cardBrand}>{p.brand}</Text>
+                      <Text style={styles.cardPrice}>{p.price}</Text>
+                    </View>
+                    <Text style={styles.cardName} numberOfLines={2}>{p.name}</Text>
+                  </View>
+                </View>
                 <Text style={styles.cardDesc}>{p.description}</Text>
                 <View style={styles.auntyRow}>
                   <AuntyAvatar auntyId={p.recommendedBy} size={28} showRing />
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.auntyName, { color: ac.accent }]}>{AUNTIES[p.recommendedBy].name} says:</Text>
-                    <Text style={styles.auntyQuote}>"{p.whyItWorks}"</Text>
+                    <Text style={[styles.auntyName, { color: pac.accent }]}>{AUNTIES[p.recommendedBy].name} says:</Text>
+                    <Text style={styles.auntyQuote}>&ldquo;{p.whyItWorks}&rdquo;</Text>
                   </View>
                 </View>
-                {p.isBudgetFriendly && (
-                  <View style={styles.budgetTag}><Text style={styles.budgetText}>BUDGET FRIENDLY</Text></View>
-                )}
+                <View style={styles.cardFooter}>
+                  {p.isBudgetFriendly && (
+                    <View style={styles.budgetTag}><Text style={styles.budgetText}>BUDGET FRIENDLY</Text></View>
+                  )}
+                  <View style={{ flex: 1 }} />
+                  {opts.length > 1 && (
+                    <Pressable
+                      onPress={() => handleSwap(item.slot.key, opts.length)}
+                      style={({ pressed }) => [styles.swapBtn, { borderColor: ac.accent }, pressed && { opacity: 0.6 }]}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Swap ${item.slot.label} — option ${idx + 1} of ${opts.length}`}
+                    >
+                      <Text style={[styles.swapText, { color: ac.accent }]}>↻ Swap ({idx + 1}/{opts.length})</Text>
+                    </Pressable>
+                  )}
+                </View>
               </View>
             </Animated.View>
           );
         })}
+
+        <View style={styles.grandTotalRow}>
+          <Text style={styles.grandTotalLabel}>Routine total</Text>
+          <Text style={[styles.grandTotalValue, { color: ac.accent }]}>~${Math.round(total)}</Text>
+        </View>
       </ScrollView>
 
-      {/* Continue button */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.sm }]}>
         <Button label="Continue" onPress={() => navigation.navigate('SendOff')} variant="primary" size="lg" />
       </View>
@@ -197,46 +207,33 @@ const styles = StyleSheet.create({
   title: { fontFamily: fonts.display, fontSize: fontSize.xxxl, color: colors.ink, letterSpacing: letterSpacing.tight, lineHeight: fontSize.xxxl * 1.15, marginTop: spacing.xs },
   subtitle: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.muted, marginTop: spacing.sm, lineHeight: fontSize.md * 1.5 },
 
-  sellSection: { gap: spacing.md },
-  sellCard: { flexDirection: 'row', gap: spacing.md },
-  sellNum: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  sellNumText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.sm, color: '#fff' },
-  sellTitle: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.md, color: colors.ink, marginBottom: 2 },
-  sellDesc: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.muted, lineHeight: fontSize.sm * 1.5 },
-  comparison: { paddingHorizontal: spacing.md, paddingVertical: spacing.lg, backgroundColor: colors.primaryMuted, borderRadius: radius.md },
-  comparisonText: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.primaryDeep, textAlign: 'center', lineHeight: fontSize.sm * 1.5 },
-
   categoryPreview: { gap: spacing.sm },
   previewTitle: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.sm, color: colors.muted, letterSpacing: letterSpacing.wide, marginBottom: spacing.xs },
   categoryRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
   categoryDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary },
   categoryName: { fontFamily: fonts.bodyMedium, fontSize: fontSize.md, color: colors.ink, flex: 1 },
   categoryCount: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.muted },
+  totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.borderLight },
+  totalLabel: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.md, color: colors.ink },
+  totalValue: { fontFamily: fonts.display, fontSize: fontSize.xl },
 
   ctaSection: { gap: spacing.md, marginTop: spacing.md },
   skipBtn: { paddingVertical: spacing.md, alignItems: 'center' },
-  skipText: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.muted },
   skipTextMuted: { fontFamily: fonts.body, fontSize: fontSize.xs, color: 'rgba(0,0,0,0.25)' },
 
   // Post-paywall
   header: { paddingHorizontal: spacing.lg, marginBottom: spacing.md },
   titleSmall: { fontFamily: fonts.display, fontSize: fontSize.xxl, color: colors.ink, letterSpacing: letterSpacing.tight, marginTop: spacing.xs },
 
-  tabScroll: { maxHeight: 44, marginBottom: spacing.sm },
-  tabRow: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: 'center' },
-  tab: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
-  tabActive: { backgroundColor: colors.ink, borderColor: colors.ink },
-  tabLabel: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.muted },
-  tabLabelActive: { color: colors.canvas },
-  tabBadge: { backgroundColor: colors.canvasDeep, borderRadius: radius.full, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  tabBadgeActive: { backgroundColor: 'rgba(254,248,236,0.2)' },
-  tabBadgeText: { fontFamily: fonts.bodySemiBold, fontSize: 10, color: colors.muted },
-  tabBadgeTextActive: { color: colors.canvas },
-
   productScroll: { flex: 1 },
   productList: { paddingHorizontal: spacing.lg, gap: spacing.sm },
 
   card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderLeftWidth: 3, padding: spacing.md, gap: spacing.sm, ...shadows.sm },
+  slotRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  slotLabel: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, letterSpacing: letterSpacing.wide },
+  aboveBudget: { fontFamily: fonts.body, fontSize: 10, color: colors.muted, fontStyle: 'italic' },
+  cardHead: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  cardHeadText: { flex: 1, gap: 4 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardBrand: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.muted, textTransform: 'uppercase', letterSpacing: letterSpacing.wide },
   cardPrice: { fontFamily: fonts.display, fontSize: fontSize.lg, color: colors.ink },
@@ -245,8 +242,15 @@ const styles = StyleSheet.create({
   auntyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   auntyName: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs },
   auntyQuote: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkLight, fontStyle: 'italic', lineHeight: fontSize.sm * 1.5 },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   budgetTag: { alignSelf: 'flex-start', backgroundColor: 'rgba(26,122,74,0.1)', borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 2 },
   budgetText: { fontFamily: fonts.bodySemiBold, fontSize: 9, color: colors.success, letterSpacing: letterSpacing.wider },
+  swapBtn: { borderWidth: 1, borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: 6 },
+  swapText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, letterSpacing: 0.2 },
+
+  grandTotalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.md, marginTop: spacing.xs },
+  grandTotalLabel: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.md, color: colors.ink },
+  grandTotalValue: { fontFamily: fonts.display, fontSize: fontSize.xxl },
 
   bottomBar: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, backgroundColor: colors.canvas, borderTopWidth: 1, borderTopColor: colors.borderLight },
 });

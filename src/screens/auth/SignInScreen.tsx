@@ -39,7 +39,7 @@ type Nav = NativeStackNavigationProp<any, 'SignIn'>;
 export default function SignInScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
-  const { signIn } = useAuth();
+  const { signIn, resetPassword } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -70,10 +70,36 @@ export default function SignInScreen() {
 
   const handleForgotPassword = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (!email.includes('@')) {
+      Alert.alert(
+        'Reset Password',
+        'Enter your email address in the field above, then tap "Forgot password" again and we\'ll send you a reset link.',
+        [{ text: 'OK' }],
+      );
+      return;
+    }
     Alert.alert(
       'Reset Password',
-      'Password reset functionality coming soon. Contact support if you need help.',
-      [{ text: 'OK' }],
+      `Send a password reset link to ${email.trim()}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send Link',
+          onPress: async () => {
+            const result = await resetPassword(email.trim());
+            if (result.error) {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Alert.alert('Reset Failed', result.error);
+            } else {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Alert.alert(
+                'Check Your Email',
+                `If an account exists for ${email.trim()}, a password reset link is on its way.`,
+              );
+            }
+          },
+        },
+      ],
     );
   };
 

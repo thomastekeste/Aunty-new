@@ -1,7 +1,6 @@
 /**
  * PorosityTestScreen — Marcia hosts the porosity water test.
  *
- * "Time fi test di roots."
  * Interactive three-option test: float, sink slowly, sink fast.
  * Quiz-based fallback for users who haven't done the water test.
  */
@@ -156,7 +155,6 @@ export default function PorosityTestScreen() {
         if (quizIndex < 4) {
           setQuizIndex(quizIndex + 1);
         } else {
-          // All 5 questions answered
           const result = calculatePorosity(newAnswers);
           setSelected(result);
         }
@@ -187,7 +185,6 @@ export default function PorosityTestScreen() {
             accessibilityRole="text"
             accessibilityLabel="The Water Glass Test: Take a clean strand of hair. Drop it in a glass of room-temperature water. Wait 2 to 4 minutes and observe."
           >
-            <Text style={styles.instructionIcon}>{'🧪'}</Text>
             <View style={styles.instructionTextWrap}>
               <Text style={styles.instructionTitle}>The Water Glass Test</Text>
               <Text style={styles.instructionBody}>
@@ -216,7 +213,7 @@ export default function PorosityTestScreen() {
           {/* Not sure? link */}
           <Pressable onPress={handleSwitchToQuiz} style={styles.switchLink}>
             <Text style={styles.switchLinkText}>
-              Haven't done the test? Let me figure it out.
+              Haven&apos;t done the test? Let me figure it out.
             </Text>
           </Pressable>
         </>
@@ -279,7 +276,6 @@ export default function PorosityTestScreen() {
 
       {mode === 'quiz' && quizComplete && (
         <>
-          {/* Back to water test link */}
           <Pressable onPress={handleSwitchToWater} style={styles.switchLink}>
             <Text style={styles.switchLinkText}>
               {'←'} Try the water test instead
@@ -308,15 +304,13 @@ const styles = StyleSheet.create({
   instruction: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: colors.dark.surfaceLight,
+    backgroundColor: colors.surfaceTinted,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: spacing.md,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     gap: spacing.md,
-  },
-  instructionIcon: {
-    fontSize: 28,
-    marginTop: 2,
   },
   instructionTextWrap: {
     flex: 1,
@@ -324,35 +318,36 @@ const styles = StyleSheet.create({
   instructionTitle: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.base,
-    color: colors.dark.text,
+    color: colors.ink,
     marginBottom: 4,
   },
   instructionBody: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
-    color: colors.dark.textMuted,
+    color: colors.muted,
     lineHeight: fontSize.sm * 1.6,
   },
   options: {
     gap: spacing.xs,
   },
   detailCard: {
-    backgroundColor: colors.dark.surfaceLight,
+    backgroundColor: colors.surfaceTinted,
     borderRadius: radius.md,
     borderLeftWidth: 3,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: spacing.md,
     marginTop: spacing.lg,
   },
   detailText: {
     fontFamily: fonts.body,
     fontSize: fontSize.base,
-    color: colors.dark.text,
+    color: colors.ink,
     lineHeight: fontSize.base * 1.5,
   },
   marciaNote: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.xs,
-    color: auntyColors.marcia?.accent,
     marginTop: spacing.sm,
   },
   switchLink: {
@@ -362,7 +357,7 @@ const styles = StyleSheet.create({
   switchLinkText: {
     fontFamily: fonts.bodyMedium,
     fontSize: fontSize.sm,
-    color: colors.dark.textMuted,
+    color: colors.muted,
     textDecorationLine: 'underline',
   },
   quizProgress: {
@@ -380,15 +375,13 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.dark.surfaceLight,
+    backgroundColor: colors.border,
   },
-  quizDotActive: {
-    backgroundColor: colors.dark.text,
-  },
+  quizDotActive: {},
   quizQuestionText: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.base,
-    color: colors.dark.text,
+    color: colors.ink,
     textAlign: 'center',
     marginBottom: spacing.lg,
     lineHeight: fontSize.base * 1.5,
@@ -396,6 +389,6 @@ const styles = StyleSheet.create({
   progressText: {
     fontFamily: fonts.body,
     fontSize: fontSize.xs,
-    color: colors.dark.textMuted,
+    color: colors.muted,
   },
 });

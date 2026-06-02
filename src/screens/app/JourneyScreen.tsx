@@ -403,7 +403,7 @@ export default function JourneyScreen() {
               <AuntyAvatar auntyId={auntyId} size={36} showRing />
               <View style={{ flex: 1 }}>
                 <Text style={styles.checkinTitle}>Weekly Check-in</Text>
-                <Text style={styles.checkinSub}>How's your hair this week?</Text>
+                <Text style={styles.checkinSub}>How&apos;s your hair this week?</Text>
               </View>
               <View style={styles.checkinArrow}>
                 <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
@@ -450,7 +450,7 @@ export default function JourneyScreen() {
           <AuntyAvatar auntyId={auntyId} size={36} showRing />
           <View style={{ flex: 1 }}>
             <Text style={[styles.quoteAunty, { color: ac.accent }]}>Aunty {aunty.name}</Text>
-            <Text style={[styles.quote, { color: ac.text }]}>"{getAuntyQuoteForSession(auntyId)}"</Text>
+            <Text style={[styles.quote, { color: ac.text }]}>&ldquo;{getAuntyQuoteForSession(auntyId)}&rdquo;</Text>
           </View>
         </Animated.View>
       </ScrollView>

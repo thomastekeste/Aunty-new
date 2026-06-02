@@ -27,6 +27,7 @@ import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useSubscription } from '../../context/SubscriptionContext';
 import { deleteAccount } from '../../services/api';
 import {
   colors,
@@ -39,7 +40,11 @@ import {
   letterSpacing,
 } from '../../constants/theme';
 import { AUNTIES, type AuntyId } from '../../constants/aunties';
-import { PaywallModal } from '../../components/PaywallModal';
+import {
+  DISCLAIMER_FULL,
+  AFFILIATE_DISCLOSURE,
+  RECOMMENDATION_METHOD,
+} from '../../constants/legal';
 
 // ─── Helpers ────────────────────────────────────────────────────
 
@@ -122,6 +127,28 @@ export default function SettingsScreen() {
   const { state: onboardingState, reset: resetOnboarding } = useOnboarding();
   const { signOut } = useAuth();
   const { mode: themeMode, isDark, setMode: setThemeMode } = useTheme();
+  const { restorePurchases } = useSubscription();
+
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  const handleRestorePurchases = useCallback(async () => {
+    if (isRestoring) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsRestoring(true);
+    try {
+      const restored = await restorePurchases();
+      Alert.alert(
+        restored ? 'Purchases Restored' : 'Nothing to Restore',
+        restored
+          ? 'Your subscription has been restored.'
+          : "We couldn't find an active subscription on this Apple ID. If you believe this is an error, contact support@auntycurl.com.",
+      );
+    } catch {
+      Alert.alert('Restore Failed', 'Something went wrong. Please try again or contact support@auntycurl.com.');
+    } finally {
+      setIsRestoring(false);
+    }
+  }, [isRestoring, restorePurchases]);
 
   const { name, hairProfile, chosenAuntyId } = onboardingState.data;
   const auntyId: AuntyId = chosenAuntyId || 'denise';
@@ -129,7 +156,6 @@ export default function SettingsScreen() {
   const profileSummary = getHairProfileSummary(hairProfile);
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [showPaywall, setShowPaywall] = useState(false);
 
   // Load preferences from storage
   useEffect(() => {
@@ -300,14 +326,17 @@ export default function SettingsScreen() {
         <Animated.View entering={FadeInDown.delay(300).duration(400)}>
           <SectionHeader title="Subscription" />
           <View style={[styles.card, shadows.sm]}>
-            <ListRow label="Current Plan" value="Free" />
+            <ListRow
+              label="Manage Subscription"
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                Linking.openURL('https://apps.apple.com/account/subscriptions');
+              }}
+            />
             <View style={styles.divider} />
             <ListRow
-              label="Upgrade to Premium"
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                setShowPaywall(true);
-              }}
+              label={isRestoring ? 'Restoring…' : 'Restore Purchases'}
+              onPress={handleRestorePurchases}
             />
           </View>
         </Animated.View>
@@ -338,8 +367,34 @@ export default function SettingsScreen() {
           </View>
         </Animated.View>
 
+        {/* ─── About Section ───────────────────────────── */}
+        <Animated.View entering={FadeInDown.delay(450).duration(400)}>
+          <SectionHeader title="About" />
+          <View style={[styles.card, shadows.sm]}>
+            <ListRow
+              label="How we choose your products"
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                Alert.alert(
+                  'How the Council chooses',
+                  RECOMMENDATION_METHOD.map((s) => `${s.title}\n${s.body}`).join('\n\n') +
+                    `\n\n${AFFILIATE_DISCLOSURE}`,
+                );
+              }}
+            />
+            <View style={styles.divider} />
+            <ListRow
+              label="Disclaimer"
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                Alert.alert('Disclaimer', DISCLAIMER_FULL);
+              }}
+            />
+          </View>
+        </Animated.View>
+
         {/* ─── Account Section ─────────────────────────── */}
-        <Animated.View entering={FadeInDown.delay(500).duration(400)}>
+        <Animated.View entering={FadeInDown.delay(550).duration(400)}>
           <SectionHeader title="Account" />
           <View style={[styles.card, shadows.sm]}>
             <ListRow
@@ -358,10 +413,26 @@ export default function SettingsScreen() {
           </View>
         </Animated.View>
 
+        {/* ─── Developer (dev builds only) ─────────────── */}
+        {__DEV__ && (
+          <Animated.View entering={FadeInDown.delay(600).duration(400)}>
+            <SectionHeader title="Developer" />
+            <View style={[styles.card, shadows.sm]}>
+              <ListRow
+                label="Preview send-off"
+                value="The Co-Signed Letter"
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  (navigation as any).navigate('SendOffPreview');
+                }}
+              />
+            </View>
+          </Animated.View>
+        )}
+
         {/* ─── Version ─────────────────────────────────── */}
         <Text style={styles.version}>Aunty Curl Council v1.0.0</Text>
       </ScrollView>
-      <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
     </View>
   );
 }

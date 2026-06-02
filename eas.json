@@ -17,7 +17,8 @@
         "EXPO_PUBLIC_API_URL": "https://aunty-curl-api-production.up.railway.app",
         "EXPO_PUBLIC_SUPABASE_URL": "https://bazqbwyqxxlctdbwkhwn.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhenFid3lxeHhsY3RkYndraHduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MjE5NDMsImV4cCI6MjA5MDM5Nzk0M30.As1xBRj7445FoYoD4lf_K-4HPkT9iuJ849r9M51f7tg",
-        "EXPO_PUBLIC_REVENUECAT_API_KEY": "appl_test_yrphoAjDJZIVlLnfxntZjumIQFa"
+        "EXPO_PUBLIC_REVENUECAT_API_KEY": "appl_test_yrphoAjDJZIVlLnfxntZjumIQFa",
+        "EXPO_PUBLIC_SENTRY_DSN": ""
       }
     },
     "production": {
@@ -27,7 +28,8 @@
         "EXPO_PUBLIC_API_URL": "https://aunty-curl-api-production.up.railway.app",
         "EXPO_PUBLIC_SUPABASE_URL": "https://bazqbwyqxxlctdbwkhwn.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhenFid3lxeHhsY3RkYndraHduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MjE5NDMsImV4cCI6MjA5MDM5Nzk0M30.As1xBRj7445FoYoD4lf_K-4HPkT9iuJ849r9M51f7tg",
-        "EXPO_PUBLIC_REVENUECAT_API_KEY": "appl_test_yrphoAjDJZIVlLnfxntZjumIQFa"
+        "EXPO_PUBLIC_REVENUECAT_API_KEY": "REPLACE_WITH_PRODUCTION_appl_KEY",
+        "EXPO_PUBLIC_SENTRY_DSN": ""
       }
     }
   },

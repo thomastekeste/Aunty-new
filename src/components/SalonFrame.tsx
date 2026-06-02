@@ -1,16 +1,15 @@
 /**
- * SalonFrame — Sophisticated editorial consultation surface.
+ * SalonFrame — Warm editorial consultation surface.
  *
- * Magazine masthead treatment: no halos, no bead progress, no avatar header.
+ * Light canvas redesign: cream background, compact header,
+ * segmented progress bar, minimal aunty attribution.
  *
- * Layout, top → bottom:
- *   1. Masthead row: "BACK ◂" left · hairline divider · dot progress right
- *   2. Gold hairline rule across full width (0.5px)
- *   3. Overline label: "CONSULTATION" in tracked caps, faint (no number)
- *   4. Oversized editorial headline (serif, ~36–38pt, −1 tracking)
- *   5. Italic byline: "— with Aunty Senayt · wants to see"
- *   6. Scrollable body (children)
- *   7. Gold hairline above CTA footer (no caption)
+ * Layout, top to bottom:
+ *   1. Compact header: back chevron + segmented progress + step label
+ *   2. Aunty attribution: accent tick + "Aunty Name"
+ *   3. Question headline (24pt, tight)
+ *   4. Scrollable body (children)
+ *   5. Footer with CTA button
  */
 
 import React from 'react';
@@ -58,9 +57,6 @@ interface Props {
   keyboardAware?: boolean;
 }
 
-const GOLD_RULE = 'rgba(212, 160, 74, 0.32)';
-const CREAM_RULE = 'rgba(254, 248, 236, 0.08)';
-
 export function SalonFrame({
   auntyId,
   question,
@@ -90,27 +86,25 @@ export function SalonFrame({
 
   const content = (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Masthead: BACK  ◂  ——————————  02 / 07 */}
-      <View style={styles.masthead}>
+      {/* Compact header: back + segmented progress + step */}
+      <View style={styles.header}>
         {showBack ? (
           <Pressable
             onPress={handleBack}
-            style={({ pressed }) => [styles.backSlot, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Text style={styles.backChevron}>{'\u2039'}</Text>
-            <Text style={styles.backLabel}>BACK</Text>
+            <Text style={styles.backChevron}>{'‹'}</Text>
           </Pressable>
         ) : (
-          <View style={styles.backSlot} />
+          <View style={styles.backBtn} />
         )}
 
-        <View style={styles.mastheadRule} />
-
+        {/* Segmented progress bar */}
         <View
-          style={styles.dotRow}
+          style={styles.progressRow}
           accessibilityRole="progressbar"
           accessibilityLabel={`Step ${step} of ${totalSteps}`}
           accessibilityValue={{ min: 0, max: totalSteps, now: step }}
@@ -120,58 +114,46 @@ export function SalonFrame({
             const isCurrent = idx === step;
             const isPast = idx < step;
             return (
-              <View
-                key={i}
-                style={[
-                  styles.dot,
-                  isCurrent && [styles.dotCurrent, { backgroundColor: ac.accent }],
-                  isPast && styles.dotPast,
-                  !isCurrent && !isPast && styles.dotFuture,
-                ]}
-              />
+              <View key={i} style={styles.segmentWrap}>
+                <View
+                  style={[
+                    styles.segment,
+                    isPast && { backgroundColor: ac.accent },
+                    isCurrent && { backgroundColor: ac.accent, opacity: 0.5 },
+                  ]}
+                />
+              </View>
             );
           })}
         </View>
+
+        <Text style={styles.stepLabel}>
+          {step}/{totalSteps}
+        </Text>
       </View>
 
-      {/* Gold hairline under masthead — magazine rule */}
-      <View style={styles.goldRule} />
+      {/* Aunty attribution */}
+      <Animated.View entering={FadeIn.duration(300)} style={styles.attribution}>
+        <View style={[styles.attrTick, { backgroundColor: ac.accent }]} />
+        <Text style={styles.attrText}>
+          Aunty <Text style={[styles.attrName, { color: ac.accent }]}>{aunty.name}</Text>
+        </Text>
+      </Animated.View>
 
-      {/* Overline chapter label */}
+      {/* Question headline */}
       <Animated.Text
-        entering={FadeIn.duration(320)}
-        style={styles.overline}
-        accessibilityLabel={`${chapter}, step ${step} of ${totalSteps}`}
-      >
-        {chapter.toUpperCase()}
-      </Animated.Text>
-
-      {/* Editorial headline */}
-      <Animated.Text
-        entering={FadeInDown.delay(90).duration(420)}
+        entering={FadeInDown.delay(60).duration(380)}
         style={styles.question}
         accessibilityRole="header"
       >
         {question}
       </Animated.Text>
 
-      {/* Byline — italic attribution like a magazine author line */}
-      <Animated.View entering={FadeIn.delay(220).duration(360)} style={styles.bylineRow}>
-        <View style={[styles.bylineTick, { backgroundColor: ac.accent }]} />
-        <Text style={styles.byline} numberOfLines={1}>
-          with{' '}
-          <Text style={[styles.bylineName, { color: ac.accent }]}>
-            Aunty {aunty.name}
-          </Text>
-          <Text style={styles.bylineVerb}>{'  ·  '}{speakerVerb}</Text>
-        </Text>
-      </Animated.View>
-
       {/* Body */}
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 180 },
+          { paddingBottom: insets.bottom + 130 },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -179,15 +161,14 @@ export function SalonFrame({
         {children}
       </ScrollView>
 
-      {/* Footer — gold hairline + CTA + step caption */}
+      {/* Footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.xs }]}>
         <LinearGradient
-          colors={['rgba(26, 15, 8, 0)', 'rgba(26, 15, 8, 0.9)', colors.dark.bg]}
+          colors={['rgba(254, 248, 236, 0)', 'rgba(254, 248, 236, 0.92)', colors.canvas]}
           style={styles.footerFade}
           pointerEvents="none"
         />
         <View style={styles.footerInner}>
-          <View style={styles.footerGoldRule} />
           <CeremonialButton
             label={ctaLabel}
             onPress={onCtaPress}
@@ -215,129 +196,97 @@ export function SalonFrame({
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.dark.bg },
-  container: { flex: 1, backgroundColor: colors.dark.bg },
+  flex: { flex: 1, backgroundColor: colors.canvas },
+  container: { flex: 1, backgroundColor: colors.canvas },
 
-  // ── Masthead ─────────────────────────────────────────────────
-  masthead: {
+  // -- Header --
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingTop: spacing.xs,
-    paddingBottom: spacing.xs - 2,
+    paddingBottom: spacing.sm,
     gap: spacing.sm,
   },
-  backSlot: {
-    flexDirection: 'row',
+  backBtn: {
+    width: 36,
+    height: 36,
     alignItems: 'center',
-    gap: 4,
-    minWidth: 68,
+    justifyContent: 'center',
   },
-  pressed: { opacity: 0.55 },
+  pressed: { opacity: 0.5 },
   backChevron: {
     fontFamily: fonts.body,
-    fontSize: fontSize.lg,
-    lineHeight: fontSize.lg,
-    color: colors.dark.text,
-    marginTop: -1,
+    fontSize: fontSize.xl,
+    lineHeight: fontSize.xl,
+    color: colors.ink,
   },
-  backLabel: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.xs,
-    letterSpacing: 2.2,
-    color: colors.dark.textMuted,
-  },
-  mastheadRule: {
+  progressRow: {
     flex: 1,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: CREAM_RULE,
+    flexDirection: 'row',
+    gap: 4,
+    alignItems: 'center',
   },
-  dotRow: {
+  segmentWrap: {
+    flex: 1,
+    height: 3,
+  },
+  segment: {
+    flex: 1,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: colors.border,
+  },
+  stepLabel: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    minWidth: 28,
+    textAlign: 'right',
+  },
+
+  // -- Attribution --
+  attribution: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 7,
-  },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-  },
-  dotCurrent: {
-    width: 22,
-    height: 7,
-    borderRadius: 4,
-  },
-  dotPast: {
-    backgroundColor: 'rgba(254, 248, 236, 0.42)',
-  },
-  dotFuture: {
-    backgroundColor: 'rgba(254, 248, 236, 0.14)',
-  },
-
-  // Full-width gold rule under masthead
-  goldRule: {
-    height: StyleSheet.hairlineWidth * 2,
-    backgroundColor: GOLD_RULE,
-    marginHorizontal: spacing.lg,
-  },
-
-  // ── Overline / Headline / Byline ─────────────────────────────
-  overline: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.xs,
-    letterSpacing: 2.6,
-    color: 'rgba(254, 248, 236, 0.5)',
+    gap: spacing.xs + 2,
     paddingHorizontal: spacing.lg,
-    marginTop: spacing.md,
+    marginTop: spacing.xs,
     marginBottom: spacing.xs,
   },
-  question: {
-    fontFamily: fonts.displayMedium,
-    fontSize: fontSize.xxl,
-    lineHeight: fontSize.xxl * 1.08,
-    letterSpacing: -0.9,
-    color: colors.dark.text,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xs + 2,
+  attrTick: {
+    width: 12,
+    height: 2,
+    borderRadius: 1,
   },
-  bylineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
+  attrText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.muted,
+  },
+  attrName: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+  },
+
+  // -- Question --
+  question: {
+    fontFamily: fonts.display,
+    fontSize: fontSize.xl,
+    lineHeight: fontSize.xl * 1.15,
+    letterSpacing: -0.5,
+    color: colors.ink,
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
-  bylineTick: {
-    width: 14,
-    height: StyleSheet.hairlineWidth * 2,
-    borderRadius: 1,
-  },
-  byline: {
-    fontFamily: fonts.serifItalic,
-    fontSize: fontSize.sm,
-    color: 'rgba(254, 248, 236, 0.58)',
-    letterSpacing: 0.1,
-    flexShrink: 1,
-  },
-  bylineName: {
-    fontFamily: fonts.serifSemiBold,
-    fontSize: fontSize.sm,
-    letterSpacing: -0.1,
-  },
-  bylineVerb: {
-    fontFamily: fonts.serifItalic,
-    fontSize: fontSize.sm,
-    color: 'rgba(254, 248, 236, 0.48)',
-  },
 
-  // ── Body ──────────────────────────────────────────────────────
+  // -- Body --
   scrollContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xs,
   },
 
-  // ── Footer ────────────────────────────────────────────────────
+  // -- Footer --
   footer: {
     position: 'absolute',
     bottom: 0,
@@ -346,19 +295,14 @@ const styles = StyleSheet.create({
   },
   footerFade: {
     position: 'absolute',
-    top: -80,
+    top: -60,
     left: 0,
     right: 0,
-    height: 80,
+    height: 60,
   },
   footerInner: {
-    backgroundColor: colors.dark.bg,
+    backgroundColor: colors.canvas,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm + 2,
-  },
-  footerGoldRule: {
-    height: StyleSheet.hairlineWidth * 2,
-    backgroundColor: GOLD_RULE,
-    marginBottom: spacing.sm + 2,
+    paddingTop: spacing.sm,
   },
 });

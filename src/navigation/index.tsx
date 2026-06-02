@@ -25,10 +25,12 @@ import SignInScreen from '../screens/auth/SignInScreen';
 // Onboarding screens
 import { WelcomeScreen } from '../screens/onboarding/WelcomeScreen';
 import NameEntryScreen from '../screens/onboarding/NameEntryScreen';
+import LocationScreen from '../screens/onboarding/LocationScreen';
 import CurlTypeScreen from '../screens/onboarding/CurlTypeScreen';
 import PorosityTestScreen from '../screens/onboarding/PorosityTestScreen';
 import PrimaryGoalScreen from '../screens/onboarding/PrimaryGoalScreen';
 import HairHabitsScreen from '../screens/onboarding/HairHabitsScreen';
+import CurrentProductsScreen from '../screens/onboarding/CurrentProductsScreen';
 import StrugglesScreen from '../screens/onboarding/StrugglesScreen';
 import BudgetQuestionScreen from '../screens/onboarding/BudgetQuestionScreen';
 import PhotoCaptureScreen from '../screens/onboarding/PhotoCaptureScreen';
@@ -53,6 +55,7 @@ import CheckInScreen from '../screens/app/CheckinScreen';
 import HairProfileScreen from '../screens/app/HairProfileScreen';
 import EditProfileScreen from '../screens/app/EditProfileScreen';
 import ChangeAuntyScreen from '../screens/app/ChangeAuntyScreen';
+import SendOffPreviewScreen from '../screens/app/SendOffPreviewScreen';
 
 import type {
   RootStackParamList,
@@ -97,48 +100,54 @@ function OnboardingNavigator() {
         animation: 'slide_from_right',
         animationDuration: 320,
         gestureEnabled: true,
-        contentStyle: { backgroundColor: colors.dark.bg },
+        contentStyle: { backgroundColor: colors.canvas },
       }}
     >
       <OnboardingStack.Screen name="Welcome" component={WelcomeScreen} />
       <OnboardingStack.Screen name="NameEntry" component={NameEntryScreen} />
+      <OnboardingStack.Screen name="Location" component={LocationScreen} />
       <OnboardingStack.Screen name="CurlType" component={CurlTypeScreen} />
       <OnboardingStack.Screen
         name="Validation1"
         component={ValidationOneScreen}
-        options={{ animation: 'fade', animationDuration: 380 }}
+        options={{ animation: 'fade', animationDuration: 400, gestureEnabled: false, contentStyle: { backgroundColor: colors.canvas } }}
       />
       <OnboardingStack.Screen name="PorosityTest" component={PorosityTestScreen} />
       <OnboardingStack.Screen name="PrimaryGoal" component={PrimaryGoalScreen} />
       <OnboardingStack.Screen
         name="Validation2"
         component={ValidationTwoScreen}
-        options={{ animation: 'fade', animationDuration: 380 }}
+        options={{ animation: 'fade', animationDuration: 400, gestureEnabled: false, contentStyle: { backgroundColor: colors.canvas } }}
       />
       <OnboardingStack.Screen name="HairHabits" component={HairHabitsScreen} />
+      <OnboardingStack.Screen name="CurrentProducts" component={CurrentProductsScreen} />
       <OnboardingStack.Screen name="Struggles" component={StrugglesScreen} />
       <OnboardingStack.Screen
         name="Validation3"
         component={ValidationThreeScreen}
-        options={{ animation: 'fade', animationDuration: 380 }}
+        options={{ animation: 'fade', animationDuration: 400, gestureEnabled: false, contentStyle: { backgroundColor: colors.canvas } }}
       />
       <OnboardingStack.Screen name="BudgetQuestion" component={BudgetQuestionScreen} />
-      <OnboardingStack.Screen name="PhotoCapture" component={PhotoCaptureScreen} />
+      <OnboardingStack.Screen
+        name="PhotoCapture"
+        component={PhotoCaptureScreen}
+        options={{ contentStyle: { backgroundColor: colors.canvas } }}
+      />
       <OnboardingStack.Screen
         name="CouncilConvening"
         component={CouncilConveningScreen}
-        options={{ animation: 'fade', animationDuration: 420 }}
+        options={{ animation: 'fade', animationDuration: 420, contentStyle: { backgroundColor: colors.canvas } }}
       />
       <OnboardingStack.Screen
         name="CouncilVerdict"
         component={CouncilVerdictScreen}
-        options={{ animation: 'fade', animationDuration: 420 }}
+        options={{ animation: 'fade', animationDuration: 420, contentStyle: { backgroundColor: colors.canvas } }}
       />
       <OnboardingStack.Screen name="ProductReveal" component={ProductRevealScreen} />
       <OnboardingStack.Screen
         name="SendOff"
         component={SendOffScreen}
-        options={{ animation: 'fade', animationDuration: 420 }}
+        options={{ animation: 'fade', animationDuration: 420, contentStyle: { backgroundColor: colors.canvas } }}
       />
     </OnboardingStack.Navigator>
   );
@@ -190,6 +199,13 @@ function AppNavigator() {
         <AppStack.Screen name="EditProfile" component={EditProfileScreen} />
         <AppStack.Screen name="ChangeAunty" component={ChangeAuntyScreen} />
         <AppStack.Screen name="Journey" component={WrappedJourney} />
+        {__DEV__ && (
+          <AppStack.Screen
+            name="SendOffPreview"
+            component={SendOffPreviewScreen}
+            options={{ animation: 'fade', contentStyle: { backgroundColor: colors.canvas } }}
+          />
+        )}
       </AppStack.Group>
     </AppStack.Navigator>
   );

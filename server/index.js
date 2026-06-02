@@ -108,7 +108,7 @@ app.get('/health', (_req, res) => {
 app.post('/api/onboarding/intake', aiLimiter, dailyCap, authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { name, hairProfile } = req.body;
+    const { name, hairProfile, photoAnalysis = null } = req.body;
 
     if (!hairProfile) {
       return res.status(400).json({ error: 'hairProfile is required' });
@@ -121,10 +121,10 @@ app.post('/api/onboarding/intake', aiLimiter, dailyCap, authMiddleware, async (r
     await db.saveHairProfile(userId, hairProfile);
 
     // Generate council response
-    const councilResponse = await ai.generateCouncilResponse(hairProfile, name);
+    const councilResponse = await ai.generateCouncilResponse(hairProfile, name, photoAnalysis);
 
     // Generate personalized routine
-    const routine = await ai.generateRoutine(hairProfile, councilResponse);
+    const routine = await ai.generateRoutine(hairProfile, councilResponse, photoAnalysis);
 
     // Save routine + council response
     await db.saveRoutine(userId, routine, councilResponse);
@@ -209,7 +209,7 @@ app.post('/api/council/generate', aiLimiter, dailyCap, authMiddleware, async (re
     }
 
     const user = await db.getUser(req.user.id);
-    const councilResponse = await ai.generateCouncilResponse(hairProfile, user?.name);
+    const councilResponse = await ai.generateCouncilResponse(hairProfile, user?.name, req.body.photoAnalysis || null);
 
     res.json(councilResponse);
   } catch (err) {
@@ -289,7 +289,7 @@ app.post('/api/routine/generate', aiLimiter, dailyCap, authMiddleware, async (re
       return res.status(400).json({ error: 'hairProfile and councilResponse are required' });
     }
 
-    const routine = await ai.generateRoutine(hairProfile, councilResponse);
+    const routine = await ai.generateRoutine(hairProfile, councilResponse, req.body.photoAnalysis || null);
 
     // Save routine (non-blocking — don't fail if DB is unavailable)
     try { await db.saveRoutine(req.user.id, routine, councilResponse); } catch (dbErr) {

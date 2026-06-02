@@ -29,6 +29,7 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   signUp: (email: string, password: string, name: string) => Promise<{ error?: string }>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
+  resetPassword: (email: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
   /** Dev-only: instantly sets the dev user without any credentials. No-op in production. */
@@ -207,6 +208,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const resetPassword = useCallback(
+    async (email: string): Promise<{ error?: string }> => {
+      if (!supabase) return {};
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: 'https://auntycurl.com/reset-password',
+      });
+      if (error) return { error: error.message };
+      return {};
+    },
+    [],
+  );
+
   const signOut = useCallback(async () => {
     if (supabase) await supabase.auth.signOut();
     setUser(null);
@@ -239,6 +252,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated: !!user, // In dev mode, user is always set
     signUp,
     signIn,
+    resetPassword,
     signOut,
     updateProfile,
     devBypassAuth,
