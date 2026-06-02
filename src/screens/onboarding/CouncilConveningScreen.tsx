@@ -31,7 +31,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { CeremonialButton } from '../../components/CeremonialButton';
 import { AUNTIES, COUNCIL_ORDER } from '../../constants/aunties';
 import type { AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
@@ -383,7 +382,6 @@ export default function CouncilConveningScreen() {
 
   const [activeIdx, setActiveIdx] = useState(0);
   const [scrollDone, setScrollDone] = useState(0);
-  const [hasError, setHasError] = useState(false);
   const [completed, setCompleted] = useState(false);
 
   const apiDone = useRef(false);
@@ -453,23 +451,16 @@ export default function CouncilConveningScreen() {
       apiDone.current = true;
       tryNavigate();
     } catch (error) {
-      console.warn('[CouncilConvening] API failed, using mock:', error);
+      // Graceful fallback — onboarding must never dead-end if the backend is
+      // unreachable (no network, server down, cold start). The user gets a
+      // sensible starter plan and can continue; richer AI content loads later
+      // in-app once the API is reachable.
+      console.warn('[CouncilConvening] API failed, using fallback plan:', error);
       setCouncilResponse(generateMockCouncilResponse(name || 'Love', hairProfile));
       setRoutine(generateMockRoutine());
       apiDone.current = true;
       tryNavigate();
     }
-  };
-
-  const handleRetry = () => {
-    setHasError(false);
-    apiDone.current = false;
-    minTimePassed.current = false;
-    fetchCouncilData();
-    setTimeout(() => {
-      minTimePassed.current = true;
-      tryNavigate();
-    }, MIN_DISPLAY_TIME);
   };
 
   useEffect(() => {
@@ -544,21 +535,6 @@ export default function CouncilConveningScreen() {
         {scrollItems.map((item, i) => (
           <ScrollItem key={item} label={item} done={i < scrollDone} index={i} />
         ))}
-
-        {hasError && (
-          <Animated.View entering={FadeIn.duration(300)} style={styles.retryRow}>
-            <Text style={styles.errorText}>Something went wrong.</Text>
-            <View style={{ width: 140 }}>
-              <CeremonialButton
-                label="Retry"
-                onPress={handleRetry}
-                size="sm"
-                variant="soft"
-                fullWidth
-              />
-            </View>
-          </Animated.View>
-        )}
       </View>
     </View>
   );
@@ -735,14 +711,4 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
   },
 
-  retryRow: {
-    alignItems: 'center',
-    marginTop: spacing.md,
-    gap: spacing.sm,
-  },
-  errorText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.error,
-  },
 });
