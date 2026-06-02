@@ -5,6 +5,20 @@
  * everywhere they appear (product reveal, products screen, settings).
  */
 
+/**
+ * Public legal page URLs. Privacy + Terms are served by our API (so they're
+ * always live alongside the backend). The password-reset link is emailed by
+ * Supabase and opened on any device, so it must point at the public prod host.
+ */
+const LEGAL_API_BASE =
+  process.env.EXPO_PUBLIC_API_URL || 'https://aunty-curl-api-production.up.railway.app';
+
+export const LEGAL_URLS = {
+  privacy: `${LEGAL_API_BASE}/privacy`,
+  terms: `${LEGAL_API_BASE}/terms`,
+  resetPassword: 'https://aunty-curl-api-production.up.railway.app/reset-password',
+};
+
 /** Short one-liner for footers / under product lists. */
 export const DISCLAIMER_SHORT =
   'For educational purposes only — not medical advice. Individual results vary.';

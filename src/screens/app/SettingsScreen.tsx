@@ -44,6 +44,7 @@ import {
   DISCLAIMER_FULL,
   AFFILIATE_DISCLOSURE,
   RECOMMENDATION_METHOD,
+  LEGAL_URLS,
 } from '../../constants/legal';
 
 // ─── Helpers ────────────────────────────────────────────────────
@@ -357,12 +358,12 @@ export default function SettingsScreen() {
             <View style={styles.divider} />
             <ListRow
               label="Privacy Policy"
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); Linking.openURL('https://auntycurl.com/privacy'); }}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); Linking.openURL(LEGAL_URLS.privacy); }}
             />
             <View style={styles.divider} />
             <ListRow
               label="Terms of Service"
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); Linking.openURL('https://auntycurl.com/terms'); }}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); Linking.openURL(LEGAL_URLS.terms); }}
             />
           </View>
         </Animated.View>

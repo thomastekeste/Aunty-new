@@ -14,6 +14,7 @@ import React, {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
+import { LEGAL_URLS } from '../constants/legal';
 import type { User } from '../types';
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 
@@ -212,7 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (email: string): Promise<{ error?: string }> => {
       if (!supabase) return {};
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: 'https://auntycurl.com/reset-password',
+        redirectTo: LEGAL_URLS.resetPassword,
       });
       if (error) return { error: error.message };
       return {};

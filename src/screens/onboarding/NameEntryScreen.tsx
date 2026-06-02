@@ -41,12 +41,13 @@ export default function NameEntryScreen() {
   const [gender, setGender] = useState<string | null>(state.data.gender || null);
   const inputRef = useRef<TextInput>(null);
 
-  const isValid = localName.trim().length > 0;
+  const hasName = localName.trim().length > 0;
+  const canContinue = hasName && !!age && !!gender;
 
   const handleContinue = () => {
-    if (!isValid) return;
+    if (!canContinue) return;
     setName(localName.trim());
-    if (age || gender) setDemographics({ ageRange: age || undefined, gender: gender || undefined });
+    setDemographics({ ageRange: age || undefined, gender: gender || undefined });
     navigation.navigate('Location');
   };
 
@@ -58,7 +59,7 @@ export default function NameEntryScreen() {
       step={1}
       totalSteps={7}
       ctaLabel="That's me"
-      ctaDisabled={!isValid}
+      ctaDisabled={!canContinue}
       onCtaPress={handleContinue}
       keyboardAware
     >
@@ -80,11 +81,11 @@ export default function NameEntryScreen() {
           accessibilityLabel="Enter your name"
         />
         <View style={styles.underline}>
-          <View style={[styles.underlineFill, isValid && styles.underlineActive]} />
+          <View style={[styles.underlineFill, hasName && styles.underlineActive]} />
         </View>
       </Animated.View>
 
-      {isValid && (
+      {hasName && (
         <Animated.View entering={FadeInDown.duration(300)} style={styles.section}>
           <Text style={styles.label}>AGE RANGE</Text>
           <View style={styles.pills}>
@@ -112,7 +113,7 @@ export default function NameEntryScreen() {
         </Animated.View>
       )}
 
-      {isValid && (
+      {hasName && (
         <Animated.View entering={FadeInDown.delay(100).duration(300)} style={styles.section}>
           <Text style={styles.label}>I IDENTIFY AS</Text>
           <View style={styles.pills}>

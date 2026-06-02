@@ -32,6 +32,7 @@ import {
   letterSpacing,
 } from '../constants/theme';
 import { PaywallFeatureCarousel } from './PaywallFeatureCarousel';
+import { LEGAL_URLS } from '../constants/legal';
 
 const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get('window');
 
@@ -222,11 +223,11 @@ export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore }: 
 
             {/* Terms + Privacy links (Apple Guideline 3.1.2) */}
             <View style={styles.legalLinks}>
-              <Pressable onPress={() => Linking.openURL('https://auntycurl.com/terms')} hitSlop={8}>
+              <Pressable onPress={() => Linking.openURL(LEGAL_URLS.terms)} hitSlop={8}>
                 <Text style={styles.legalLink}>Terms of Use</Text>
               </Pressable>
               <Text style={styles.legalDot}>·</Text>
-              <Pressable onPress={() => Linking.openURL('https://auntycurl.com/privacy')} hitSlop={8}>
+              <Pressable onPress={() => Linking.openURL(LEGAL_URLS.privacy)} hitSlop={8}>
                 <Text style={styles.legalLink}>Privacy Policy</Text>
               </Pressable>
             </View>

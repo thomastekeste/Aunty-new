@@ -10,6 +10,7 @@ import { sanitizeBody } from './src/middleware/sanitize.js';
 import * as db from './src/services/supabase.js';
 import * as ai from './src/services/anthropic.js';
 import { sendPushNotification } from './src/services/notifications.js';
+import { registerLegalRoutes } from './src/legal.js';
 
 const app = express();
 app.set('trust proxy', 1); // Railway runs behind a reverse proxy
@@ -102,6 +103,9 @@ app.get('/health', (_req, res) => {
     dbAvailable: !!db.supabase,
   });
 });
+
+// ─── Public legal pages (/privacy, /terms, /reset-password) ─────
+registerLegalRoutes(app);
 
 // ─── Onboarding Intake ──────────────────────────────────────────
 
