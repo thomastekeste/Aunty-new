@@ -100,7 +100,7 @@ const privacyHtml = page(
   <p>When you submit a photo or your quiz answers for analysis, they are sent to our AI provider, <strong>Anthropic</strong>, solely to generate your results. Per Anthropic's API terms, this data is <strong>not used to train their models</strong>. Photos you save are stored in our secure storage (Supabase) and are linked to your account. You can delete them at any time by deleting your account.</p>
 
   <h2>How we share information</h2>
-  <p>We do not sell your personal information. We share data only with service providers that help us run the app, under contract and only as needed:</p>
+  <p>We currently share data only with service providers that help us run the app, under contract and only as needed:</p>
   <ul>
     <li><strong>Supabase</strong> — authentication, database, and photo storage.</li>
     <li><strong>Anthropic</strong> — AI analysis of your answers/photos (not used for training).</li>
@@ -109,6 +109,7 @@ const privacyHtml = page(
     <li><strong>A weather data provider</strong> — to convert coarse location into local humidity.</li>
     <li><strong>Railway</strong> — backend hosting.</li>
   </ul>
+  <p>We may in the future share or license aggregated, de-identified data (data that cannot reasonably identify you) with analytics partners, researchers, or other third parties for product improvement, research, or commercial purposes. We may also partner with advertising or data platforms, which may involve sharing certain personal information. If we begin doing so in a way that constitutes a "sale" or "sharing" of personal information under applicable law (such as CCPA), we will update this policy, provide notice in the app, and offer you an opt-out mechanism before such sharing begins.</p>
 
   <h2>Affiliate links</h2>
   <p>Some product links in the app may be affiliate links. If you buy through them, we may earn a small commission at no extra cost to you. This never changes which products we recommend to you.</p>
