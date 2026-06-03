@@ -117,24 +117,53 @@ const privacyHtml = page(
   <h2>Data retention</h2>
   <p>We keep your information for as long as your account is active. When you delete your account, we delete your profile, routines, check-ins, and photos. Backups and legally required records may persist for a limited time.</p>
 
-  <h2>Your choices &amp; rights</h2>
+  <h2>Your choices &amp; rights (all users)</h2>
   <ul>
     <li><strong>Delete your account &amp; data</strong> directly in the app: Settings → Account → Delete Account.</li>
-    <li>Control camera, photo, location, and notification permissions in your device settings.</li>
-    <li>Depending on where you live (e.g. EEA/UK or California), you may have rights to access, correct, or delete your data, or to object to certain processing. Contact us to exercise them.</li>
+    <li>Control camera, photo, location, and notification permissions in your device settings at any time.</li>
+    <li>Opt out of marketing emails via the unsubscribe link in any such email.</li>
   </ul>
 
+  <h2>EU &amp; UK users — GDPR rights</h2>
+  <p>If you are in the European Economic Area (EEA) or United Kingdom, we process your personal data on the following legal bases: <strong>contract performance</strong> (to provide the app), <strong>legitimate interests</strong> (security, fraud prevention, improving the service), and <strong>consent</strong> (location access, push notifications, optional analytics). You have the right to:</p>
+  <ul>
+    <li><strong>Access</strong> — request a copy of the personal data we hold about you.</li>
+    <li><strong>Rectification</strong> — ask us to correct inaccurate or incomplete data.</li>
+    <li><strong>Erasure ("right to be forgotten")</strong> — request deletion of your data, subject to legal obligations.</li>
+    <li><strong>Restriction</strong> — ask us to restrict processing in certain circumstances.</li>
+    <li><strong>Portability</strong> — receive your data in a structured, machine-readable format.</li>
+    <li><strong>Objection</strong> — object to processing based on legitimate interests or for direct marketing.</li>
+    <li><strong>Withdraw consent</strong> — where processing is based on consent, withdraw it at any time without affecting prior lawful processing.</li>
+    <li><strong>Lodge a complaint</strong> — with your local data protection authority (e.g. ICO in the UK, or your EU Member State's supervisory authority).</li>
+  </ul>
+  <p>To exercise any of these rights, contact us at <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>. We will respond within 30 days.</p>
+
+  <h2>California users — CCPA / CPRA rights</h2>
+  <p>If you are a California resident, you have the following rights under the California Consumer Privacy Act (CCPA) as amended by the CPRA:</p>
+  <ul>
+    <li><strong>Right to know</strong> — request disclosure of the categories and specific pieces of personal information we have collected about you, and how it is used and shared.</li>
+    <li><strong>Right to delete</strong> — request deletion of personal information we have collected, subject to certain exceptions.</li>
+    <li><strong>Right to correct</strong> — request correction of inaccurate personal information.</li>
+    <li><strong>Right to opt out of sale or sharing</strong> — we do not currently sell or share your personal information. If we begin doing so, we will provide a "Do Not Sell or Share My Personal Information" link before that practice starts.</li>
+    <li><strong>Right to limit use of sensitive personal information</strong> — you may direct us to limit our use of sensitive personal information (such as biometric or health-related data) to what is necessary to perform the services.</li>
+    <li><strong>Right to non-discrimination</strong> — we will not discriminate against you for exercising your CCPA rights.</li>
+  </ul>
+  <p>To submit a CCPA request, contact us at <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>. We will verify your identity before processing the request and respond within 45 days (extendable by a further 45 days with notice).</p>
+
+  <h2>Other international users</h2>
+  <p>Users in other jurisdictions (including Canada, Australia, Brazil, and others) may have rights under their local privacy laws. We are committed to honoring reasonable data requests regardless of jurisdiction. Contact us and we will do our best to assist.</p>
+
   <h2>Children</h2>
-  <p>${BRAND} is not directed to children under 13, and we do not knowingly collect their data.</p>
+  <p>${BRAND} is not directed to children under 13 (or under 16 in the EEA/UK), and we do not knowingly collect their data. If you believe a child has provided us personal information, contact us and we will delete it.</p>
 
   <h2>Security &amp; international transfers</h2>
-  <p>We use industry-standard measures to protect your data. Our providers may process data in the United States and other countries; we rely on appropriate safeguards for such transfers.</p>
+  <p>We use industry-standard security measures (encryption in transit and at rest, access controls) to protect your data. Our service providers are based in the United States. If you are located outside the US, your data will be transferred to and processed in the US. For transfers from the EEA or UK, we rely on appropriate safeguards such as Standard Contractual Clauses (SCCs) approved by the European Commission, or equivalent transfer mechanisms. By using the app, you acknowledge this transfer.</p>
 
   <h2>Changes</h2>
-  <p>We may update this policy. Material changes will be reflected by the "Effective" date above and, where appropriate, noted in the app.</p>
+  <p>We may update this policy. Material changes will be reflected by the "Effective" date above and, where required by law, we will notify you via the app or email before changes take effect.</p>
 
-  <h2>Contact</h2>
-  <p>Questions or requests: <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.</p>
+  <h2>Contact &amp; Data Controller</h2>
+  <p>${LEGAL_ENTITY} is the data controller for personal data collected through ${BRAND}. For questions, requests, or complaints: <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.</p>
   `,
 );
 
