@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import * as Notifications from 'expo-notifications';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { useOnboarding } from '../../context/OnboardingContext';
@@ -158,10 +159,16 @@ export default function SettingsScreen() {
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
-  // Load preferences from storage
+  // Load preferences — also sync with actual system permission
   useEffect(() => {
     (async () => {
       try {
+        const perm = await Notifications.getPermissionsAsync() as unknown as { granted: boolean };
+        if (!perm.granted) {
+          setNotificationsEnabled(false);
+          await AsyncStorage.setItem('notifications_enabled', 'false');
+          return;
+        }
         const notifPref = await AsyncStorage.getItem('notifications_enabled');
         if (notifPref !== null) setNotificationsEnabled(notifPref === 'true');
       } catch (e) {
@@ -172,6 +179,29 @@ export default function SettingsScreen() {
 
   const handleToggleNotifications = useCallback(async (value: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    if (value) {
+      const existing = await Notifications.getPermissionsAsync() as unknown as { granted: boolean };
+      let finalGranted = existing.granted;
+
+      if (!finalGranted) {
+        const requested = await Notifications.requestPermissionsAsync() as unknown as { granted: boolean };
+        finalGranted = requested.granted;
+      }
+
+      if (!finalGranted) {
+        Alert.alert(
+          'Notifications Blocked',
+          'To receive hair care reminders, enable notifications in your iPhone Settings.',
+          [
+            { text: 'Not Now', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openURL('app-settings:') },
+          ]
+        );
+        return;
+      }
+    }
+
     setNotificationsEnabled(value);
     try {
       await AsyncStorage.setItem('notifications_enabled', String(value));

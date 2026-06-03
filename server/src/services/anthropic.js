@@ -17,6 +17,33 @@ if (config.anthropicApiKey) {
 
 const MODEL = 'claude-haiku-4-5-20251001';
 
+// ─── Response cache (in-memory, keyed by hair profile hash) ──────
+// Caches council + routine responses so repeated onboardings with
+// identical profiles don't burn API credits.
+const _cache = new Map();
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+function cacheKey(prefix, obj) {
+  const sig = JSON.stringify(obj, Object.keys(obj).sort());
+  return `${prefix}:${Buffer.from(sig).toString('base64').slice(0, 40)}`;
+}
+
+function cacheGet(key) {
+  const entry = _cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { _cache.delete(key); return null; }
+  return entry.value;
+}
+
+function cacheSet(key, value) {
+  // Evict oldest entries if cache grows large
+  if (_cache.size > 500) {
+    const oldest = [..._cache.entries()].sort((a, b) => a[1].expiresAt - b[1].expiresAt)[0];
+    if (oldest) _cache.delete(oldest[0]);
+  }
+  _cache.set(key, { value, expiresAt: Date.now() + CACHE_TTL });
+}
+
 const AUNTIES = {
   ngozi: {
     id: 'ngozi', name: 'Ngozi', region: 'Nigerian', dialect: 'Nigerian Pidgin',
@@ -222,6 +249,17 @@ function photoAnalysisBlock(photoAnalysis) {
 }
 
 export async function generateCouncilResponse(hairProfile, userName, photoAnalysis = null) {
+  // Cache key ignores userName — council advice is based on hair profile only
+  const cacheProfile = {
+    curlType: hairProfile.curlType,
+    porosity: hairProfile.porosity,
+    primaryGoal: hairProfile.primaryGoal,
+    density: hairProfile.density,
+    scalpConcerns: hairProfile.scalpConcerns,
+  };
+  const key = cacheKey('council', cacheProfile);
+  const cached = cacheGet(key);
+  if (cached) { console.log('[anthropic] council cache hit'); return cached; }
   const auntyDescriptions = COUNCIL_ORDER.map((id) => {
     const a = AUNTIES[id];
     return `
@@ -291,12 +329,25 @@ Generate a JSON response with this exact structure:
   "keyFindings": ["Finding 1", "Finding 2", "Finding 3", "Finding 4"]
 }`;
 
-  return callClaudeJSON(systemPrompt, userPrompt, 2048);
+  const result = await callClaudeJSON(systemPrompt, userPrompt, 2048);
+  cacheSet(key, result);
+  return result;
 }
 
 // ─── Routine Generation ─────────────────────────────────────────
 
 export async function generateRoutine(hairProfile, councilResponse, photoAnalysis = null) {
+  const cacheProfile = {
+    curlType: hairProfile.curlType,
+    porosity: hairProfile.porosity,
+    primaryGoal: hairProfile.primaryGoal,
+    washFrequency: hairProfile.washFrequency,
+    heatUse: hairProfile.heatUse,
+    timeAvailable: hairProfile.timeAvailable,
+  };
+  const key = cacheKey('routine', cacheProfile);
+  const cached = cacheGet(key);
+  if (cached) { console.log('[anthropic] routine cache hit'); return cached; }
   const hostAssignments = Object.entries(RITUAL_HOSTS)
     .map(([type, id]) => {
       const a = AUNTIES[id];
@@ -364,7 +415,9 @@ RULES:
 - Rest days should still have simple steps (e.g., sleep with bonnet, minimal manipulation).
 - Typically include 1 wash day, 1-2 style days, 1-2 refresh days, 1-2 rest days, and optionally a scalp or protein day depending on needs.`;
 
-  return callClaudeJSON(systemPrompt, userPrompt, 3072);
+  const result = await callClaudeJSON(systemPrompt, userPrompt, 2048);
+  cacheSet(key, result);
+  return result;
 }
 
 // ─── Photo Analysis ─────────────────────────────────────────────

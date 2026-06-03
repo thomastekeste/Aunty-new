@@ -17,9 +17,11 @@ import {
   Dimensions,
   Alert,
   Linking,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import Purchases from 'react-native-purchases';
 import { useSubscription } from '../context/SubscriptionContext';
 import {
   colors,
@@ -109,6 +111,13 @@ export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore }: 
       onSubscribe?.('monthly');
     }
   }, [monthlyPkg, purchasePackage, onSubscribe, onClose]);
+
+  const handlePromoCode = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS === 'ios') {
+      Purchases.presentCodeRedemptionSheet();
+    }
+  }, []);
 
   const handleRestore = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -209,10 +218,16 @@ export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore }: 
             {/* Guarantee */}
             <Text style={styles.guarantee}>7-day free trial. Cancel before it ends and pay nothing.</Text>
 
-            {/* Restore */}
-            <Pressable onPress={handleRestore} style={styles.restore}>
-              <Text style={styles.restoreText}>Restore Purchases</Text>
-            </Pressable>
+            {/* Restore + Promo code */}
+            <View style={styles.restoreRow}>
+              <Pressable onPress={handleRestore} hitSlop={8}>
+                <Text style={styles.restoreText}>Restore Purchases</Text>
+              </Pressable>
+              <Text style={styles.restoreDot}>·</Text>
+              <Pressable onPress={handlePromoCode} hitSlop={8}>
+                <Text style={styles.restoreText}>Have a promo code?</Text>
+              </Pressable>
+            </View>
 
             {/* Auto-renew disclosure — always shown (Apple Guideline 3.1.2) */}
             <Text style={styles.legalText}>
@@ -287,6 +302,7 @@ const styles = StyleSheet.create({
   legalLink: { fontFamily: fonts.body, fontSize: 11, color: colors.dark.textMuted, textDecorationLine: 'underline' },
   legalDot: { fontFamily: fonts.body, fontSize: 11, color: colors.dark.textMuted },
 
-  restore: { alignItems: 'center', paddingVertical: spacing.sm },
+  restoreRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.sm, gap: spacing.sm },
+  restoreDot: { color: colors.dark.textMuted, fontSize: fontSize.sm },
   restoreText: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.dark.textMuted, textDecorationLine: 'underline' },
 });
