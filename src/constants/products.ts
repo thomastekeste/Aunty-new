@@ -1886,9 +1886,8 @@ export const PRODUCTS: Product[] = [
     recommendedBy: 'carmen',
     price: '$19.99',
     size: 'One Size',
-    // NOTE: replace with your CJ deep-link once generated (see affiliate.ts networkWrappers).
-    affiliateUrl: 'https://www.amazon.com/s?k=Gisafai+Automatic+Hair+Braider+Electric+Twister',
-    imageUrl: 'https://m.media-amazon.com/images/I/61fL48yNE6L._SL500_.jpg',
+    affiliateUrl: 'https://cjdropshipping.com/product/automatic-hair-braider-hair-twister-usb-electric-braiding-machine-diy-magic-roller-styling-tool-styler-bun-maker-p-44A35EBA-6CD2-4BC2-AD9E-CFB2A7AF4563.html',
+    imageUrl: 'https://d8j0ntlcm91z4.cloudfront.net/user_3DVa58ffg5iPiuiJDGldru5jgGo/hf_20260602_205242_1084bb8a-2311-413b-bb96-e0989b91bbe1.png',
     curlTypes: ['2c', '3a', '3b', '3c', '4a', '4b', '4c'],
     porosity: ['low', 'normal', 'high'],
     goals: ['definition', 'simplify-routine', 'damage-repair'],
