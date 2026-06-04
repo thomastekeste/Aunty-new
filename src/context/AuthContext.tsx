@@ -13,6 +13,7 @@ import React, {
   useCallback,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { LEGAL_URLS } from '../constants/legal';
 import type { User } from '../types';
@@ -30,6 +31,8 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   signUp: (email: string, password: string, name: string) => Promise<{ error?: string }>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
+  /** Native Sign in with Apple. Returns { canceled: true } if the user dismissed the sheet. */
+  signInWithApple: () => Promise<{ error?: string; canceled?: boolean }>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
@@ -209,6 +212,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const signInWithApple = useCallback(
+    async (): Promise<{ error?: string; canceled?: boolean }> => {
+      if (!supabase) {
+        // Dev mode (no Supabase) — drop straight into the dev user.
+        setUser(DEV_USER);
+        return {};
+      }
+      try {
+        const credential = await AppleAuthentication.signInAsync({
+          requestedScopes: [
+            AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+            AppleAuthentication.AppleAuthenticationScope.EMAIL,
+          ],
+        });
+        if (!credential.identityToken) {
+          return { error: 'Apple sign-in didn’t return a token. Please try again.' };
+        }
+        const { data, error } = await supabase.auth.signInWithIdToken({
+          provider: 'apple',
+          token: credential.identityToken,
+        });
+        if (error) return { error: error.message };
+
+        // Apple only sends the full name on the FIRST authorization — capture it.
+        const name = [credential.fullName?.givenName, credential.fullName?.familyName]
+          .filter(Boolean)
+          .join(' ')
+          .trim();
+
+        if (data.user) {
+          if (name && !data.user.user_metadata?.name) {
+            try {
+              await supabase.auth.updateUser({ data: { name } });
+            } catch {
+              // Non-fatal — name can still be set during onboarding.
+            }
+          }
+          const mapped = mapSupabaseUser(data.user);
+          if (name && !mapped.name) mapped.name = name;
+          setUser(mapped);
+          cacheUser(mapped);
+        }
+        if (data.session) setSession(data.session);
+        return {};
+      } catch (e: any) {
+        // User tapped "Cancel" on the Apple sheet — not an error.
+        if (e?.code === 'ERR_REQUEST_CANCELED') return { canceled: true };
+        return { error: e?.message || 'Apple sign-in failed. Please try again.' };
+      }
+    },
+    [],
+  );
+
   const resetPassword = useCallback(
     async (email: string): Promise<{ error?: string }> => {
       if (!supabase) return {};
@@ -253,6 +309,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated: !!user, // In dev mode, user is always set
     signUp,
     signIn,
+    signInWithApple,
     resetPassword,
     signOut,
     updateProfile,

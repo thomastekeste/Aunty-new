@@ -6,7 +6,7 @@
  * Routes to onboarding on success.
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -42,7 +43,7 @@ type Nav = NativeStackNavigationProp<any, 'SignUp'>;
 export default function SignUpScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
-  const { signUp, devBypassAuth } = useAuth();
+  const { signUp, signInWithApple, devBypassAuth } = useAuth();
   const { complete: completeOnboarding } = useOnboarding();
 
   const [name, setName] = useState('');
@@ -50,6 +51,33 @@ export default function SignUpScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+
+  // Sign in with Apple is iOS-only and only works in a real build (not Expo Go).
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    AppleAuthentication.isAvailableAsync()
+      .then(setAppleAvailable)
+      .catch(() => setAppleAvailable(false));
+  }, []);
+
+  const handleApple = async () => {
+    if (loading) return;
+    setError('');
+    setLoading(true);
+    const result = await signInWithApple();
+    if (result.canceled) {
+      setLoading(false);
+      return;
+    }
+    if (result.error) {
+      setError(result.error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    setLoading(false);
+  };
 
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
@@ -181,6 +209,24 @@ export default function SignUpScreen() {
             />
           </Animated.View>
 
+          {/* Sign up with Apple (iOS, real builds only) */}
+          {appleAvailable ? (
+            <Animated.View entering={FadeIn.delay(620).duration(400)} style={styles.appleArea}>
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.dividerLine} />
+              </View>
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                cornerRadius={999}
+                style={styles.appleButton}
+                onPress={handleApple}
+              />
+            </Animated.View>
+          ) : null}
+
           {/* Sign In Link */}
           <Animated.View entering={FadeIn.delay(700).duration(400)}>
             <Pressable
@@ -307,6 +353,30 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.error,
     marginTop: spacing.xs,
+  },
+  appleArea: {
+    marginBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.dark.border,
+  },
+  dividerText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.dark.textMuted,
+    letterSpacing: letterSpacing.widest,
+  },
+  appleButton: {
+    width: '100%',
+    height: 52,
   },
   ctaArea: {
     marginBottom: spacing.lg,

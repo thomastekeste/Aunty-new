@@ -16,6 +16,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.auntycurl.app",
       "buildNumber": "1",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Aunty Curl uses your camera to analyze your hair texture and track progress.",
         "NSPhotoLibraryUsageDescription": "Aunty Curl accesses your photos to analyze your hair and track your journey.",
@@ -39,7 +40,8 @@
           "locationWhenInUsePermission": "Aunty Curl uses your approximate location to show humidity-aware hair tips on your home screen."
         }
       ],
-      "@sentry/react-native"
+      "@sentry/react-native",
+      "expo-apple-authentication"
     ],
     "extra": {
       "eas": {
