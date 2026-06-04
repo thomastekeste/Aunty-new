@@ -32,7 +32,7 @@ export interface AffiliateConfig {
 // ─── CONFIGURE ME ───────────────────────────────────────────────
 // TODO: fill these in with your real affiliate credentials.
 export const AFFILIATE_CONFIG: AffiliateConfig = {
-  amazonTag: '', // e.g. 'auntycurl-20'
+  amazonTag: 'auntycurl-20', // Amazon Associates store ID
   utm: { source: 'auntycurl', medium: 'app', campaign: 'lineup' },
   networkWrappers: {
     // 'sheamoisture.com': 'https://shareasale.com/r.cfm?b=BANNER&u=USER&m=MERCH&urllink={URL}',

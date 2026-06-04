@@ -32,9 +32,13 @@ export const DISCLAIMER_FULL =
   'professional. Always patch-test new products and read their ingredient labels. ' +
   'Individual results vary.';
 
-/** Affiliate transparency (FTC) — shown wherever we link to products. */
+/**
+ * Affiliate transparency — shown wherever we link to products.
+ * Names "Amazon Associate" to satisfy the Amazon Associates Operating
+ * Agreement, and covers other links for the FTC.
+ */
 export const AFFILIATE_DISCLOSURE =
-  'Some product links may earn Aunty Curl a small commission, at no extra cost to you.';
+  'As an Amazon Associate, Aunty Curl earns from qualifying purchases. Some other product links may also earn us a small commission, at no extra cost to you.';
 
 /** "How the Council chooses your products" — methodology, in plain language. */
 export interface MethodStep {
