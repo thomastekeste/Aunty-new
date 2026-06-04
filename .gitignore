@@ -41,3 +41,6 @@ yarn-error.*
 /android
 server/.env
 .env
+
+# dev task prompts
+CLAUDE_CODE*.md

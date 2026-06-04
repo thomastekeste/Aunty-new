@@ -80,10 +80,45 @@ export default function ProductRevealScreen() {
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <ScrollView contentContainerStyle={[styles.prePaywall, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
           <Animated.View entering={FadeIn.delay(200).duration(500)}>
-            <Text style={styles.title}>{aunty.name} Built Your{'\n'}{routine.length}-Piece Routine</Text>
+            <Text style={styles.title}>Your Council Plan{'\n'}Is Ready</Text>
             <Text style={styles.subtitle}>
-              One pick per step, matched to your {profile.curlType || ''} texture. No silicones. No sulfates. Just what works.
+              {aunty.name} prepared a lot more than products. Here&rsquo;s everything waiting inside:
             </Text>
+          </Animated.View>
+
+          {/* Value stack — the FULL offer, personalized, shown BEFORE the
+              paywall so users know they're buying a system, not a list */}
+          <Animated.View entering={FadeInDown.delay(300)} style={styles.valueStack}>
+            {[
+              {
+                title: `Your ${routine.length}-piece product prescription`,
+                desc: `One pick per step for your ${profile.curlType || 'curl'} ${profile.porosity ? `${profile.porosity}-porosity ` : ''}hair — swap any pick. ~$${Math.round(total)} total.`,
+              },
+              {
+                title: 'Your weekly ritual',
+                desc: 'Wash, style, refresh & rest days — step-by-step, built from your answers.',
+              },
+              {
+                title: 'Your exact wash schedule',
+                desc: 'That number we blurred earlier? Unlocked — and tracked with you, wash day by wash day.',
+              },
+              {
+                title: `Aunty ${aunty.name}, on call`,
+                desc: 'Chat anytime. She knows your porosity, your struggles, your goals.',
+              },
+              {
+                title: 'Weekly check-ins & progress',
+                desc: 'Build a streak and watch your hair change month over month.',
+              },
+            ].map((item) => (
+              <View key={item.title} style={styles.valueRow}>
+                <View style={[styles.valueDot, { backgroundColor: ac.accent }]} />
+                <View style={styles.valueText}>
+                  <Text style={styles.valueTitle}>{item.title}</Text>
+                  <Text style={styles.valueDesc}>{item.desc}</Text>
+                </View>
+              </View>
+            ))}
           </Animated.View>
 
           {/* Routine preview */}
@@ -104,7 +139,7 @@ export default function ProductRevealScreen() {
 
           <Animated.View entering={FadeInDown.delay(550)} style={styles.ctaSection}>
             <Button
-              label="See My Routine"
+              label="Unlock My Full Plan"
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowPaywall(true); }}
               variant="primary"
               size="lg"
@@ -206,6 +241,13 @@ const styles = StyleSheet.create({
   overline: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, letterSpacing: letterSpacing.widest, color: colors.primary },
   title: { fontFamily: fonts.display, fontSize: fontSize.xxxl, color: colors.ink, letterSpacing: letterSpacing.tight, lineHeight: fontSize.xxxl * 1.15, marginTop: spacing.xs },
   subtitle: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.muted, marginTop: spacing.sm, lineHeight: fontSize.md * 1.5 },
+
+  valueStack: { gap: spacing.md, marginVertical: spacing.md },
+  valueRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
+  valueDot: { width: 6, height: 6, borderRadius: 3, marginTop: 7 },
+  valueText: { flex: 1, gap: 2 },
+  valueTitle: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.md, color: colors.ink },
+  valueDesc: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.muted, lineHeight: 19 },
 
   categoryPreview: { gap: spacing.sm },
   previewTitle: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.sm, color: colors.muted, letterSpacing: letterSpacing.wide, marginBottom: spacing.xs },

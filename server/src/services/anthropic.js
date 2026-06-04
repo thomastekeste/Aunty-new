@@ -119,6 +119,14 @@ const AUNTIES = {
 
 const COUNCIL_ORDER = ['ngozi', 'marcia', 'denise', 'fatou', 'carmen', 'amara', 'salma'];
 
+// Cross-platform id aliases. The web store uses "senayt" for the same aunty
+// this backend + the mobile app call "amara". preferred_aunty_id is shared via
+// the same Supabase row, so normalize foreign ids before looking up a persona.
+const AUNTY_ID_ALIASES = { senayt: 'amara' };
+function resolveAuntyId(id) {
+  return (id && AUNTY_ID_ALIASES[id]) || id;
+}
+
 const RITUAL_HOSTS = {
   wash: 'ngozi',
   style: 'carmen',
@@ -167,10 +175,25 @@ async function callClaudeJSON(systemPrompt, userPrompt, maxTokens = 2048) {
 
 // ─── 1-on-1 Chat Response ──────────────────────────────────────
 
-export async function generateChatResponse(message, hairProfile, auntyId, conversationHistory, userName) {
+// Build a short "what the aunty remembers" block from the user's recent
+// check-ins so she can reference their real journey instead of starting cold.
+function checkinMemoryBlock(recentCheckins, name) {
+  if (!Array.isArray(recentCheckins) || recentCheckins.length === 0) return '';
+  const lines = recentCheckins.slice(0, 3).map((c) => {
+    const mood = sanitizeForPrompt(c.mood || 'unknown', 20);
+    const note = c.notes ? ` — "${sanitizeForPrompt(c.notes, 160)}"` : '';
+    const wk = c.week_number ? `Week ${c.week_number}` : 'Recently';
+    return `- ${wk}: felt ${mood}${note}`;
+  });
+  return `\n\n## What you remember from ${name}'s recent check-ins (most recent first)
+You're the aunty who remembers what she told you last time. Let this inform you naturally — don't recite it back, don't list it. If she was struggling last week and sounds better now, notice it. If she keeps raising the same issue, gently call it out.
+${lines.join('\n')}`;
+}
+
+export async function generateChatResponse(message, hairProfile, auntyId, conversationHistory, userName, recentCheckins = []) {
   if (!client) throw new Error('Anthropic not configured');
 
-  const aunty = AUNTIES[auntyId] || AUNTIES.denise;
+  const aunty = AUNTIES[resolveAuntyId(auntyId)] || AUNTIES.denise;
   const safe = sanitizeProfileForPrompt(hairProfile);
   const safeName = sanitizeForPrompt(userName, 50);
   const safeMessage = sanitizeForPrompt(message, 500);
@@ -215,7 +238,7 @@ Here's how ${aunty.name} actually texts:
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: 256,
-    system: systemPrompt,
+    system: systemPrompt + checkinMemoryBlock(recentCheckins, safeName),
     messages,
   });
 
@@ -480,7 +503,7 @@ Return a JSON object with:
 // ─── Check-in Response ──────────────────────────────────────────
 
 export async function generateCheckinResponse(checkinData, hairProfile, hostingAuntyId) {
-  const aunty = AUNTIES[hostingAuntyId] || AUNTIES.denise;
+  const aunty = AUNTIES[resolveAuntyId(hostingAuntyId)] || AUNTIES.denise;
 
   const systemPrompt = `You are ${aunty.name}, "${aunty.title}" from the Aunty Curl Council.
 

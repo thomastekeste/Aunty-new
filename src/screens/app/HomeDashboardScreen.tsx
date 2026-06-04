@@ -1,21 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Circle as SvgCircle } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  cancelAnimation,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { useFocusEffect } from '@react-navigation/native';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { PressableScale } from '../../components/PressableScale';
@@ -31,40 +21,63 @@ import {
 } from '../../constants/theme';
 import { AUNTIES, type AuntyId, getAuntyQuoteForSession, getAuntyTipForToday } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { useLocalHumidity, getHumidityOneLiner } from '../../hooks/useLocalHumidity';
-import {
-  getRitualLog,
-  computeStreak,
-  computeWeekStats,
-  getTodayStatus,
-  type RitualLogEntry,
-} from '../../services/ritualLog';
-import type { RitualDayType } from '../../types';
+import { useLocalHumidity } from '../../hooks/useLocalHumidity';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { CurlType, Porosity } from '../../types';
 
-// ─── Static Data ──────────────────────────────────────────────────
+// ─── Hair-health analytics, derived from real check-in history ───────
+// Self-reported mood maps to a 0–100 wellness index. Honest: it reflects what
+// the user actually logged, and the trend is their real check-in-over-check-in
+// change. Persisted to the backend on submit (see CheckinScreen).
+type CheckinEntry = { mood?: string; timestamp?: string };
 
-const DAILY_RITUAL: Record<number, { type: RitualDayType; label: string; purpose: string; time: string }> = {
-  0: { type: 'rest', label: 'Rest Day', purpose: 'Let your hair breathe. Minimal touch.', time: '5 min' },
-  1: { type: 'wash', label: 'Wash Day', purpose: 'Deep cleanse and moisture reset.', time: '45 min' },
-  2: { type: 'scalp', label: 'Scalp Day', purpose: 'Nourish the roots. Oil and massage.', time: '15 min' },
-  3: { type: 'protect', label: 'Protect Day', purpose: 'Low-manipulation styling.', time: '30 min' },
-  4: { type: 'refresh', label: 'Refresh Day', purpose: 'Mid-week touch-up.', time: '10 min' },
-  5: { type: 'style', label: 'Style Day', purpose: 'Define and celebrate your curls.', time: '25 min' },
-  6: { type: 'protein', label: 'Strength Day', purpose: 'Protein treatment for resilience.', time: '20 min' },
+const MOOD_SCORE: Record<string, number> = {
+  great: 92,
+  good: 78,
+  okay: 63,
+  struggling: 45,
+};
+const MOOD_COLOR: Record<string, string> = {
+  great: colors.jewel.emerald,
+  good: colors.jewel.amber,
+  okay: colors.jewel.indigo,
+  struggling: colors.jewel.rose,
 };
 
-const TYPE_GRADIENTS: Record<RitualDayType, readonly [string, string]> = {
-  wash: ['#D4A04A', '#B8862E'],
-  style: ['#C2456E', '#9E3058'],
-  refresh: ['#7B3F6B', '#5C2A4E'],
-  rest: ['#2A7B7B', '#1A5C5C'],
-  scalp: ['#1A7A4A', '#0A5C30'],
-  protein: ['#B85C2A', '#8A3A10'],
-  protect: ['#3D5A99', '#2A4070'],
+type Analytics = {
+  count: number;
+  score: number | null;
+  trend: number | null; // pts vs. previous check-in (null if only one)
+  lastMood: string | null;
 };
 
-const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+function deriveAnalytics(history: CheckinEntry[]): Analytics {
+  if (!Array.isArray(history) || history.length === 0) {
+    return { count: 0, score: null, trend: null, lastMood: null };
+  }
+  const toScore = (h?: CheckinEntry) => MOOD_SCORE[h?.mood ?? ''] ?? 60;
+  const latest = history[history.length - 1];
+  const prev = history.length >= 2 ? history[history.length - 2] : null;
+  const score = Math.round(toScore(latest));
+  const trend = prev ? score - Math.round(toScore(prev)) : null;
+  return { count: history.length, score, trend, lastMood: latest?.mood ?? null };
+}
 
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Wash cycle is still illustrative — it needs wash-day logging (separate from
+// check-ins) to be real. Gated behind real history so new users never see it.
+const WASH_CYCLE = {
+  cycleLength: 7,
+  dayInCycle: 5,
+  lastWash: { when: '5 days ago', what: 'Wash + Deep Condition' },
+  today: { phase: 'Moisture Check' },
+  nextWash: { when: 'In 2 days' },
+};
+
+// ─── Helpers ─────────────────────────────────────────────────────────
 function getGreeting(): string {
   const h = new Date().getHours();
   if (h < 12) return 'Good morning';
@@ -72,43 +85,58 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
-// ─── Icon Components ──────────────────────────────────────────────
+function formatCurlType(c?: CurlType): string {
+  return c ? c.toUpperCase() : '4C';
+}
 
-function RitualTypeIcon({ type, size = 20, color = '#FFFFFF' }: { type: RitualDayType; size?: number; color?: string }) {
-  const c = color;
-  const paths: Record<RitualDayType, React.ReactNode> = {
-    wash: <Path d="M12 2C12 2 5 9 5 14C5 17.866 8.134 21 12 21C15.866 21 19 17.866 19 14C19 9 12 2 12 2Z" stroke={c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />,
-    style: <Path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke={c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />,
-    refresh: (<><Path d="M1 4V10H7" stroke={c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /><Path d="M23 20V14H17" stroke={c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /><Path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14L18.36 18.36A9 9 0 013.51 15" stroke={c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></>),
-    rest: <Path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79Z" stroke={c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />,
-    scalp: <Path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" stroke={c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />,
-    protein: <Path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke={c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />,
-    protect: (<><Path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" stroke={c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /><Path d="M9 12L11 14L15 10" stroke={c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></>),
+function formatPorosity(p?: Porosity): string {
+  const map: Record<Porosity, string> = {
+    low: 'Low Porosity',
+    normal: 'Medium Porosity',
+    high: 'High Porosity',
   };
-  return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">{paths[type]}</Svg>;
+  return p ? map[p] : 'Low Porosity';
 }
 
-function FlameIcon({ color = '#D4A04A', size = 18 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M12 2C12 2 4 8.5 4 14.5C4 18.642 7.358 22 11.5 22H12.5C16.642 22 20 18.642 20 14.5C20 8.5 12 2 12 2Z"
-        fill={color}
-        stroke={color}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M12 18C13.657 18 15 16.657 15 15C15 12 12 10 12 10C12 10 9 12 9 15C9 16.657 10.343 18 12 18Z"
-        fill="#FEF8EC"
-        stroke="#FEF8EC"
-        strokeWidth={1}
-      />
-    </Svg>
-  );
+type HumidityBand = 'dry' | 'comfortable' | 'humid';
+
+/**
+ * A hair-profile-aware reading: combines today's humidity with THIS user's
+ * porosity to explain what it means for them specifically.
+ */
+function getHairProfileLine(
+  porosity: Porosity | undefined,
+  percent: number | null,
+  band: HumidityBand,
+): string {
+  const p = porosity ?? 'low';
+
+  // No live reading — still say something specific to their porosity.
+  if (percent == null) {
+    if (p === 'low') return 'Low-porosity hair holds moisture once it’s in. Warm your products to help them absorb, then seal.';
+    if (p === 'high') return 'High-porosity hair drinks fast and loses fast. Layer moisture, then seal hard to lock it in.';
+    return 'Balanced porosity — keep a steady moisture-and-seal rhythm and your hair stays happy.';
+  }
+
+  const pct = `${percent}% humidity`;
+
+  if (p === 'low') {
+    if (band === 'dry') return `${pct} — low-porosity hair struggles to open the cuticle today. Steam first, then seal.`;
+    if (band === 'humid') return `${pct} — low-porosity hair won’t drink the extra moisture. Keep layers light so product doesn’t just sit on top.`;
+    return `${pct} — comfortable air. Low-porosity hair loves warmth: a quick steam helps it absorb.`;
+  }
+  if (p === 'high') {
+    if (band === 'dry') return `${pct} — high-porosity hair loses water fast in dry air. Cream first, then seal hard with oil or butter.`;
+    if (band === 'humid') return `${pct} — high-porosity cuticles soak up the damp and swell. Use an anti-humectant seal to keep frizz down.`;
+    return `${pct} — easy air for high-porosity hair. Still seal after moisture so it doesn’t escape.`;
+  }
+  // normal
+  if (band === 'dry') return `${pct} — drier than ideal. Add a humectant layer before you seal.`;
+  if (band === 'humid') return `${pct} — moisture-rich air. Light seal; skip heavy humectants if hair swells.`;
+  return `${pct} — balanced air. Your usual routine should behave today.`;
 }
 
+// ─── Icons ───────────────────────────────────────────────────────────
 function GearIcon({ color = colors.muted, size = 20 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -132,234 +160,86 @@ function ChevronRightIcon({ color = colors.muted, size = 16 }: { color?: string;
   );
 }
 
-function CheckCircleIcon({ color = colors.success, size = 22 }: { color?: string; size?: number }) {
+function HumidityIcon({ color = colors.muted, size = 15 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <SvgCircle cx={12} cy={12} r={10} fill={color} />
-      <Path d="M8 12L11 15L16 9" stroke="#FFFFFF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+      <Path
+        d="M12 2C12 2 5 9 5 14C5 17.866 8.134 21 12 21C15.866 21 19 17.866 19 14C19 9 12 2 12 2Z"
+        stroke={color}
+        strokeWidth={2}
+        fill={color}
+        fillOpacity={0.18}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </Svg>
   );
 }
 
-function GridIcon({ type, size = 22, color }: { type: 'checkin' | 'journey' | 'products' | 'chat'; size?: number; color: string }) {
+function GridIcon({ type, size = 22, color }: { type: 'log' | 'trends' | 'products'; size?: number; color: string }) {
   const paths: Record<string, React.ReactNode> = {
-    checkin: <Path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z M8.5 12L11 14.5L15.5 9.5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />,
-    journey: <Path d="M22 12H18L15 21L9 3L6 12H2" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />,
-    products: (<><SvgCircle cx={9} cy={21} r={1} stroke={color} strokeWidth={2} /><SvgCircle cx={20} cy={21} r={1} stroke={color} strokeWidth={2} /><Path d="M1 1H5L7.68 14.39A2 2 0 009.68 16H19.4A2 2 0 0021.32 14.39L23 6H6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></>),
-    chat: <Path d="M21 12C21 16.418 16.97 20 12 20C10.805 20 9.662 19.8 8.608 19.434L3 21L4.49 16.375C3.55 15.091 3 13.596 3 12C3 7.582 7.03 4 12 4C16.97 4 21 7.582 21 12Z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />,
+    log: (
+      <>
+        <Path d="M12 20h9" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    ),
+    trends: (
+      <>
+        <Path d="M3 17L9 11L13 15L21 7" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M15 7H21V13" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    ),
+    products: (
+      <>
+        <Path d="M9 2L7.5 6H16.5L15 2" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M6.5 6H17.5L18.5 20A2 2 0 0116.5 22H7.5A2 2 0 015.5 20L6.5 6Z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    ),
   };
   return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">{paths[type]}</Svg>;
 }
 
-function HumidityIcon({ color = colors.muted, size = 16 }: { color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 2C12 2 5 9 5 14C5 17.866 8.134 21 12 21C15.866 21 19 17.866 19 14C19 9 12 2 12 2Z" stroke={color} strokeWidth={2} fill={color} fillOpacity={0.15} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-// ─── Progress Ring Component ──────────────────────────────────────
-
-const RING_SIZE = 160;
-const RING_STROKE = 10;
+// ─── Hair Health Score Ring ──────────────────────────────────────────
+const RING_SIZE = 152;
+const RING_STROKE = 12;
 const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+const RING_CIRC = 2 * Math.PI * RING_RADIUS;
 
-function ProgressRing({ done, total }: { done: number; total: number }) {
-  const progress = total > 0 ? done / total : 0;
-  const offset = RING_CIRCUMFERENCE * (1 - progress);
-
+function ScoreRing({ score }: { score: number | null }) {
+  const progress = score == null ? 0 : Math.max(0, Math.min(1, score / 100));
+  const offset = RING_CIRC * (1 - progress);
   return (
-    <View style={ringStyles.container}>
+    <View style={scoreStyles.ring}>
       <Svg width={RING_SIZE} height={RING_SIZE}>
-        {/* Background track */}
-        <SvgCircle
-          cx={RING_SIZE / 2}
-          cy={RING_SIZE / 2}
-          r={RING_RADIUS}
-          stroke={colors.border}
-          strokeWidth={RING_STROKE}
-          fill="none"
-        />
-        {/* Progress arc */}
-        <SvgCircle
-          cx={RING_SIZE / 2}
-          cy={RING_SIZE / 2}
-          r={RING_RADIUS}
-          stroke={colors.primary}
-          strokeWidth={RING_STROKE}
-          strokeLinecap="round"
-          fill="none"
-          strokeDasharray={`${RING_CIRCUMFERENCE}`}
-          strokeDashoffset={offset}
-          rotation={-90}
-          origin={`${RING_SIZE / 2}, ${RING_SIZE / 2}`}
-        />
+        <SvgCircle cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_RADIUS} stroke={colors.border} strokeWidth={RING_STROKE} fill="none" />
+        {score != null && (
+          <SvgCircle
+            cx={RING_SIZE / 2}
+            cy={RING_SIZE / 2}
+            r={RING_RADIUS}
+            stroke={colors.primary}
+            strokeWidth={RING_STROKE}
+            strokeLinecap="round"
+            fill="none"
+            strokeDasharray={`${RING_CIRC}`}
+            strokeDashoffset={offset}
+            rotation={-90}
+            origin={`${RING_SIZE / 2}, ${RING_SIZE / 2}`}
+          />
+        )}
       </Svg>
-      {/* Center content */}
-      <View style={ringStyles.centerContent}>
-        <Text style={ringStyles.bigNumber}>{done}</Text>
-        <Text style={ringStyles.ofTotal}>/{total} days</Text>
+      <View style={scoreStyles.ringCenter}>
+        <Text style={score == null ? scoreStyles.scoreNumberEmpty : scoreStyles.scoreNumber}>
+          {score == null ? '—' : score}
+        </Text>
+        <Text style={scoreStyles.scoreLabel}>Hair Health</Text>
       </View>
     </View>
   );
 }
 
-const ringStyles = StyleSheet.create({
-  container: {
-    width: RING_SIZE,
-    height: RING_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  centerContent: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bigNumber: {
-    fontFamily: fonts.display,
-    fontSize: 44,
-    color: colors.ink,
-    lineHeight: 48,
-    letterSpacing: -1,
-  },
-  ofTotal: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: fontSize.sm,
-    color: colors.muted,
-    marginTop: -2,
-  },
-});
-
-// ─── Day Dots Row ─────────────────────────────────────────────────
-
-function DayDots({ completedDays, todayIndex }: { completedDays: boolean[]; todayIndex: number }) {
-  return (
-    <View style={dotStyles.row}>
-      {DAY_LABELS.map((label, i) => {
-        const isCompleted = completedDays[i];
-        const isToday = i === todayIndex;
-        return (
-          <View key={`${label}-${i}`} style={dotStyles.dayCol}>
-            <View
-              style={[
-                dotStyles.dot,
-                isCompleted && dotStyles.dotCompleted,
-                isToday && !isCompleted && dotStyles.dotToday,
-                !isCompleted && !isToday && dotStyles.dotUpcoming,
-              ]}
-            />
-            <Text
-              style={[
-                dotStyles.label,
-                isToday && dotStyles.labelToday,
-                isCompleted && dotStyles.labelCompleted,
-              ]}
-            >
-              {label}
-            </Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
-const DOT_SIZE = 10;
-
-const dotStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.md,
-    marginTop: spacing.sm,
-  },
-  dayCol: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  dot: {
-    width: DOT_SIZE,
-    height: DOT_SIZE,
-    borderRadius: DOT_SIZE / 2,
-  },
-  dotCompleted: {
-    backgroundColor: colors.primary,
-  },
-  dotToday: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  dotUpcoming: {
-    backgroundColor: colors.border,
-  },
-  label: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 10,
-    color: colors.muted,
-    letterSpacing: 0.3,
-  },
-  labelToday: {
-    color: colors.primary,
-  },
-  labelCompleted: {
-    color: colors.inkLight,
-  },
-});
-
-// ─── Skeleton ─────────────────────────────────────────────────────
-
-function SkeletonBlock({ width, height, style }: { width: number | string; height: number; style?: any }) {
-  const opacity = useSharedValue(0.3);
-  useEffect(() => {
-    opacity.value = withRepeat(withTiming(0.7, { duration: 800 }), -1, true);
-    return () => cancelAnimation(opacity);
-  }, [opacity]);
-  const anim = useAnimatedStyle(() => ({ opacity: opacity.value }));
-  return (
-    <Animated.View
-      style={[
-        { width, height, backgroundColor: colors.skeleton, borderRadius: radius.md },
-        anim,
-        style,
-      ]}
-    />
-  );
-}
-
-function HomeScreenSkeleton({ paddingTop }: { paddingTop: number }) {
-  return (
-    <View style={[styles.container, { paddingTop }]}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <SkeletonBlock width={44} height={44} style={{ borderRadius: 22 }} />
-          <View style={{ gap: 6 }}>
-            <SkeletonBlock width={130} height={16} />
-            <SkeletonBlock width={80} height={12} />
-          </View>
-        </View>
-        <SkeletonBlock width={40} height={40} style={{ borderRadius: 20 }} />
-      </View>
-      <View style={{ alignItems: 'center', marginTop: spacing.lg }}>
-        <SkeletonBlock width={160} height={160} style={{ borderRadius: 80 }} />
-      </View>
-      <View style={{ paddingHorizontal: spacing.lg, gap: spacing.md, marginTop: spacing.lg }}>
-        <SkeletonBlock width="100%" height={150} style={{ borderRadius: radius.xl }} />
-        <SkeletonBlock width="100%" height={64} style={{ borderRadius: radius.lg }} />
-        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          <SkeletonBlock width="48%" height={80} style={{ borderRadius: radius.lg }} />
-          <SkeletonBlock width="48%" height={80} style={{ borderRadius: radius.lg }} />
-        </View>
-      </View>
-    </View>
-  );
-}
-
-// ─── Main Screen ──────────────────────────────────────────────────
-
+// ─── Main Screen ─────────────────────────────────────────────────────
 export default function HomeDashboardScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
@@ -369,83 +249,46 @@ export default function HomeDashboardScreen() {
   const ac = auntyColors[auntyId] ?? auntyColors.denise;
   const name = ob.data.name || 'Queen';
 
-  const dayOfWeek = new Date().getDay();
-  const today = DAILY_RITUAL[dayOfWeek];
-  const todayGradient = TYPE_GRADIENTS[today.type];
+  const curlType = formatCurlType(ob.data.hairProfile?.curlType);
+  const porosityLabel = formatPorosity(ob.data.hairProfile?.porosity);
 
-  const [weekNumber, setWeekNumber] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-  const [ritualLog, setRitualLog] = useState<Record<string, RitualLogEntry>>({});
-  const { percent: outdoorHumidity, band: humidityBand, ready: humidityReady } = useLocalHumidity();
-  const humidityLine = getHumidityOneLiner(outdoorHumidity, humidityBand);
-
-  // Load initial data
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [dateStr, log] = await Promise.all([
-          AsyncStorage.getItem('onboarding_completed_at'),
-          getRitualLog(),
-        ]);
-        if (cancelled) return;
-        if (dateStr) {
-          const diff = Date.now() - new Date(dateStr).getTime();
-          setWeekNumber(Math.max(1, Math.ceil(diff / (7 * 24 * 60 * 60 * 1000))));
-        }
-        setRitualLog(log);
-      } catch (err) {
-        if (__DEV__) console.warn('[Home] load failed', err);
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  // Refresh ritual log when tab is focused
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-      getRitualLog().then((log) => {
-        if (!cancelled) setRitualLog(log);
-      });
-      return () => { cancelled = true; };
-    }, [])
+  const { percent: humidity, band: humidityBand, ready: humidityReady } = useLocalHumidity();
+  const profileLine = useMemo(
+    () => getHairProfileLine(ob.data.hairProfile?.porosity, humidity, humidityBand),
+    [ob.data.hairProfile?.porosity, humidity, humidityBand],
   );
 
-  // Computed stats
-  const streak = useMemo(() => computeStreak(ritualLog), [ritualLog]);
-  const weekStats = useMemo(() => computeWeekStats(ritualLog), [ritualLog]);
-  const todayStatus = useMemo(() => getTodayStatus(ritualLog), [ritualLog]);
-  const isTodayDone = todayStatus === 'completed' || todayStatus === 'skipped';
-
-  // Day completion array for dots (Sun=0 through Sat=6)
-  const completedDays = useMemo(() => {
-    const now = new Date();
-    const currentDay = now.getDay(); // 0=Sun
-    return DAY_LABELS.map((_, i) => {
-      if (i > currentDay) return false; // future
-      // Build the date key for this day of the current week
-      const d = new Date(now);
-      d.setDate(now.getDate() - currentDay + i);
-      d.setHours(0, 0, 0, 0);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const entry = ritualLog[key];
-      return entry ? (entry.completed || entry.skipped === true) : false;
-    });
-  }, [ritualLog]);
-
-  // Rotating whisper content (alternates between quote and tip each session)
-  const whisperText = useMemo(() => {
-    const session = Math.floor(Date.now() / (1000 * 60 * 60 * 2)); // changes every 2 hours
-    if (session % 2 === 0) return getAuntyQuoteForSession(auntyId);
-    return getAuntyTipForToday(auntyId);
+  // Rotating aunty wisdom (alternates quote / tip every ~2 hours)
+  const noteText = useMemo(() => {
+    const session = Math.floor(Date.now() / (1000 * 60 * 60 * 2));
+    return session % 2 === 0 ? getAuntyQuoteForSession(auntyId) : getAuntyTipForToday(auntyId);
   }, [auntyId]);
 
-  if (isLoading) {
-    return <HomeScreenSkeleton paddingTop={insets.top} />;
-  }
+  // Real analytics from the user's check-in history. A brand-new user (no
+  // check-ins) sees an honest baseline state instead of fabricated numbers.
+  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem('checkin_history')
+      .then((raw) => {
+        const history: CheckinEntry[] = raw ? JSON.parse(raw) : [];
+        if (!cancelled) setAnalytics(deriveAnalytics(history));
+      })
+      .catch(() => {
+        if (!cancelled) setAnalytics(deriveAnalytics([]));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const showAnalytics = (analytics?.count ?? 0) > 0;
+
+  const washProgress = Math.max(0, Math.min(1, WASH_CYCLE.dayInCycle / WASH_CYCLE.cycleLength));
+
+  const go = (route: string, params?: object) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.navigate(route as never, params as never);
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -453,7 +296,7 @@ export default function HomeDashboardScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ─── 1. Compact Header ─────────────────────── */}
+        {/* ─── 1. Header ───────────────────────────────── */}
         <Animated.View entering={FadeIn.duration(380)} style={styles.header}>
           <PressableScale
             onPress={() => navigation.navigate('ChangeAunty')}
@@ -468,187 +311,197 @@ export default function HomeDashboardScreen() {
               <Text style={styles.greetingText} numberOfLines={1}>
                 {getGreeting()}, {name}
               </Text>
-              <Text style={[styles.signOffText, { color: ac.accent }]} numberOfLines={1}>
-                {aunty.signOff}
+              <Text style={styles.headerSub} numberOfLines={1}>
+                Your hair, today
               </Text>
             </View>
           </PressableScale>
-          <View style={styles.headerRight}>
-            {streak.current > 0 && (
-              <View style={styles.streakBadge}>
-                <FlameIcon size={16} />
-                <Text style={styles.streakCount}>{streak.current}</Text>
-              </View>
-            )}
-            <Pressable
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                navigation.navigate('Settings');
-              }}
-              style={styles.settingsBtn}
-              accessibilityLabel="Settings"
-              accessibilityRole="button"
-            >
-              <GearIcon />
-            </Pressable>
-          </View>
-        </Animated.View>
-
-        {/* ─── 2. Weekly Progress Ring ────────────────── */}
-        <Animated.View entering={FadeInDown.delay(40).duration(380)}>
-          <PressableScale
-            onPress={() => navigation.navigate('Journey')}
+          <Pressable
+            onPress={() => go('Settings')}
+            style={styles.settingsBtn}
+            accessibilityLabel="Settings"
             accessibilityRole="button"
-            accessibilityLabel={`Week ${weekNumber} progress: ${weekStats.done} of ${weekStats.total} days completed`}
-            scaleTo={0.97}
-            haptic="light"
           >
-            <View style={styles.ringSection}>
-              <ProgressRing done={weekStats.done} total={7} />
-              <View style={styles.ringMeta}>
-                <View style={styles.streakRow}>
-                  <FlameIcon size={14} color={streak.current > 0 ? colors.primary : colors.muted} />
-                  <Text style={[styles.streakLabel, streak.current > 0 && { color: colors.ink }]}>
-                    {streak.current > 0 ? `${streak.current} day streak` : 'Start your streak'}
-                  </Text>
-                </View>
-                <Text style={styles.weekLabel}>Week {weekNumber}</Text>
-              </View>
-              <DayDots completedDays={completedDays} todayIndex={dayOfWeek} />
-            </View>
-          </PressableScale>
+            <GearIcon />
+          </Pressable>
         </Animated.View>
 
-        {/* ─── 3. Today's Ritual Hero ─────────────────── */}
-        <Animated.View entering={FadeInDown.delay(80).duration(360)} style={styles.sectionPad}>
+        {/* ─── 2. Hair Profile Card (the wow) ──────────── */}
+        <Animated.View entering={FadeInDown.delay(40).duration(380)} style={styles.sectionPad}>
           <PressableScale
-            onPress={() => {
-              if (!isTodayDone) navigation.navigate('RitualSteps');
-            }}
+            onPress={() => go('HairProfile')}
+            scaleTo={0.985}
+            haptic="light"
             accessibilityRole="button"
-            accessibilityLabel={isTodayDone ? `${today.label} completed` : `Start today's ${today.label}, ${today.time}`}
-            scaleTo={isTodayDone ? 1 : 0.985}
-            haptic={isTodayDone ? 'none' : 'medium'}
+            accessibilityLabel={`Your hair profile: ${curlType}, ${porosityLabel}. ${profileLine}`}
           >
             <LinearGradient
-              colors={isTodayDone ? ['#1A7A4A', '#0A5C30'] : [...todayGradient]}
+              colors={['#FFFFFF', '#FBF3E4']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.heroCard}
+              style={styles.profileCard}
             >
-              <View style={styles.heroTopRow}>
-                <View style={styles.heroOverlineRow}>
-                  <RitualTypeIcon type={today.type} size={16} />
-                  <Text style={styles.heroOverline}>
-                    {isTodayDone ? 'COMPLETED' : 'TODAY'}
-                  </Text>
-                </View>
-                <View style={styles.heroTimePill}>
-                  <Text style={styles.heroTimeText}>{today.time}</Text>
-                </View>
+              <View style={styles.profileTopRow}>
+                <Text style={styles.profileOverline}>YOUR HAIR PROFILE</Text>
+                <ChevronRightIcon color={colors.jewel.indigo} size={15} />
               </View>
 
-              <Text style={styles.heroTitle}>{today.label}</Text>
-              <Text style={styles.heroPurpose}>{today.purpose}</Text>
+              <View style={styles.profileBadge}>
+                <Text style={styles.profileBadgeType}>{curlType}</Text>
+                <View style={styles.profileBadgeDivider} />
+                <Text style={styles.profileBadgePorosity}>{porosityLabel}</Text>
+              </View>
 
-              {humidityLine && !isTodayDone ? (
-                <Text style={styles.heroHumidity}>{humidityLine}</Text>
-              ) : null}
-
-              {isTodayDone ? (
-                <View style={styles.heroDoneBadge}>
-                  <CheckCircleIcon color="#FFFFFF" size={18} />
-                  <Text style={styles.heroDoneText}>
-                    {todayStatus === 'completed' ? 'Done for today!' : 'Skipped today'}
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.heroCta}>
-                  <Text style={styles.heroCtaText}>Start Ritual</Text>
-                  <ChevronRightIcon color="#FFFFFF" size={17} />
-                </View>
-              )}
+              <View style={styles.profileHumidityRow}>
+                <HumidityIcon color={colors.jewel.indigo} size={15} />
+                <Text style={styles.profileLine}>
+                  {humidityReady || humidity != null ? profileLine : 'Reading your local humidity…'}
+                </Text>
+              </View>
             </LinearGradient>
           </PressableScale>
         </Animated.View>
 
-        {/* ─── 4. Aunty Whisper Card ─────────────────── */}
-        <Animated.View entering={FadeInDown.delay(120).duration(360)} style={styles.sectionPad}>
+        {/* ─── 3. Aunty Note ───────────────────────────── */}
+        <Animated.View entering={FadeInDown.delay(90).duration(360)} style={styles.sectionPad}>
           <PressableScale
-            onPress={() => navigation.navigate('Chat')}
+            onPress={() => go('Chat')}
             scaleTo={0.985}
             haptic="light"
             accessibilityRole="button"
-            accessibilityLabel={`Wisdom from Aunty ${aunty.name}. Tap to chat.`}
+            accessibilityLabel={`Note from Aunty ${aunty.name}. Tap to chat.`}
           >
-            <View style={[styles.whisperCard, { borderLeftColor: ac.accent }]}>
-              <AuntyAvatar auntyId={auntyId} size={32} showRing={false} />
-              <View style={styles.whisperContent}>
-                <Text style={styles.whisperText} numberOfLines={2}>
-                  &ldquo;{whisperText}&rdquo;
+            <View style={[styles.noteCard, { borderLeftColor: ac.accent }]}>
+              <AuntyAvatar auntyId={auntyId} size={36} showRing={false} />
+              <View style={styles.noteContent}>
+                <Text style={styles.noteText} numberOfLines={2}>
+                  &ldquo;{noteText}&rdquo;
                 </Text>
-                <Text style={[styles.whisperName, { color: ac.accent }]}>
-                  — Aunty {aunty.name}
-                </Text>
+                <Text style={[styles.noteName, { color: ac.accent }]}>— Aunty {aunty.name}</Text>
               </View>
               <ChevronRightIcon color={colors.muted} size={14} />
             </View>
           </PressableScale>
         </Animated.View>
 
-        {/* ─── 5. Quick Actions Grid (2×2) ────────────── */}
-        <Animated.View entering={FadeInDown.delay(160).duration(360)} style={styles.sectionPad}>
+        {/* ─── 4. Hair Health Score ────────────────────── */}
+        <Animated.View entering={FadeInDown.delay(140).duration(360)} style={styles.sectionPad}>
+          <PressableScale
+            onPress={() => go(showAnalytics ? 'Journey' : 'CheckIn')}
+            scaleTo={0.99}
+            haptic="light"
+            accessibilityRole="button"
+            accessibilityLabel={
+              showAnalytics && analytics?.score != null
+                ? `Hair health score ${analytics.score} out of 100${
+                    analytics.trend != null
+                      ? `, ${analytics.trend >= 0 ? 'up' : 'down'} ${Math.abs(analytics.trend)} points from your last check-in`
+                      : ''
+                  }`
+                : 'Hair health score not available yet. Log a check-in to begin tracking.'
+            }
+          >
+            <View style={styles.healthCard}>
+              <ScoreRing score={showAnalytics ? analytics?.score ?? null : null} />
+
+              {showAnalytics && analytics ? (
+                <>
+                  <View style={styles.trendRow}>
+                    {analytics.trend == null ? (
+                      <Text style={styles.baselineText}>Baseline set — check in weekly to see your trend</Text>
+                    ) : analytics.trend > 0 ? (
+                      <Text style={styles.trendText}>↑ {analytics.trend} pts from last check-in</Text>
+                    ) : analytics.trend < 0 ? (
+                      <Text style={[styles.trendText, { color: colors.accent }]}>
+                        ↓ {Math.abs(analytics.trend)} pts from last check-in
+                      </Text>
+                    ) : (
+                      <Text style={styles.baselineText}>Holding steady from last check-in</Text>
+                    )}
+                  </View>
+
+                  <View style={styles.pillRow}>
+                    <View style={[styles.pill, styles.pillNeutral]}>
+                      <Text style={[styles.pillLabel, { color: colors.inkLight }]}>
+                        {analytics.count} check-in{analytics.count === 1 ? '' : 's'}
+                      </Text>
+                    </View>
+                    {analytics.lastMood ? (
+                      <View
+                        style={[
+                          styles.pill,
+                          {
+                            backgroundColor: `${MOOD_COLOR[analytics.lastMood] ?? colors.muted}14`,
+                            borderColor: `${MOOD_COLOR[analytics.lastMood] ?? colors.muted}33`,
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.pillLabel, { color: colors.inkLight }]}>Last felt</Text>
+                        <Text style={[styles.pillArrow, { color: MOOD_COLOR[analytics.lastMood] ?? colors.muted }]}>
+                          {capitalize(analytics.lastMood)}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </>
+              ) : (
+                <View style={styles.trendRow}>
+                  <Text style={styles.baselineText}>Log your first check-in to start your score</Text>
+                </View>
+              )}
+            </View>
+          </PressableScale>
+        </Animated.View>
+
+        {/* ─── 5. Action Grid (2×2) ────────────────────── */}
+        <Animated.View entering={FadeInDown.delay(190).duration(360)} style={styles.sectionPad}>
           <View style={styles.grid}>
-            {/* Check-In */}
             <PressableScale
-              onPress={() => navigation.navigate('CheckIn')}
+              onPress={() => go('CheckIn')}
               style={styles.gridTile}
               scaleTo={0.975}
               haptic="light"
               accessibilityRole="button"
-              accessibilityLabel="Weekly check-in"
+              accessibilityLabel="Log today's hair check-in"
             >
-              <GridIcon type="checkin" color={ac.accent} />
-              <Text style={styles.gridLabel}>Check-In</Text>
-              <Text style={styles.gridSub}>How&apos;s this week?</Text>
+              <GridIcon type="log" color={colors.primaryDeep} />
+              <Text style={styles.gridLabel}>Log</Text>
+              <Text style={styles.gridSub}>Today&apos;s check-in</Text>
             </PressableScale>
 
-            {/* Journey */}
             <PressableScale
-              onPress={() => navigation.navigate('Journey')}
+              onPress={() => go('Journey')}
               style={styles.gridTile}
               scaleTo={0.975}
               haptic="light"
               accessibilityRole="button"
-              accessibilityLabel={`Journey, Week ${weekNumber}`}
+              accessibilityLabel="Trends over time"
             >
-              <GridIcon type="journey" color={colors.jewel.emerald} />
-              <Text style={styles.gridLabel}>Journey</Text>
-              <Text style={styles.gridSub}>Week {weekNumber}</Text>
+              <GridIcon type="trends" color={colors.jewel.indigo} />
+              <Text style={styles.gridLabel}>Trends</Text>
+              <Text style={styles.gridSub}>Over time</Text>
             </PressableScale>
 
-            {/* Products */}
             <PressableScale
-              onPress={() => navigation.navigate('Tabs', { screen: 'Products' })}
+              onPress={() => go('Tabs', { screen: 'Products' })}
               style={styles.gridTile}
               scaleTo={0.975}
               haptic="light"
               accessibilityRole="button"
-              accessibilityLabel="Your product picks"
+              accessibilityLabel="Your product shelf"
             >
               <GridIcon type="products" color={colors.jewel.plum} />
               <Text style={styles.gridLabel}>Products</Text>
-              <Text style={styles.gridSub}>Your picks</Text>
+              <Text style={styles.gridSub}>Your shelf</Text>
             </PressableScale>
 
-            {/* Ask Aunty */}
             <PressableScale
-              onPress={() => navigation.navigate('Tabs', { screen: 'Chat' })}
+              onPress={() => go('Tabs', { screen: 'Chat' })}
               style={styles.gridTile}
               scaleTo={0.975}
               haptic="light"
               accessibilityRole="button"
-              accessibilityLabel={`Chat with Aunty ${aunty.name}`}
+              accessibilityLabel={`Ask Aunty ${aunty.name}`}
             >
               <AuntyAvatar auntyId={auntyId} size={22} showRing={false} />
               <Text style={styles.gridLabel}>Ask {aunty.name}</Text>
@@ -657,25 +510,115 @@ export default function HomeDashboardScreen() {
           </View>
         </Animated.View>
 
-        {/* ─── 6. Hair Weather Strip (conditional) ───── */}
-        {humidityReady && outdoorHumidity !== null && (
-          <Animated.View entering={FadeIn.delay(200).duration(400)} style={styles.sectionPad}>
-            <View style={styles.weatherStrip}>
-              <HumidityIcon color={colors.muted} size={16} />
-              <Text style={styles.weatherText}>
-                {humidityBand === 'humid' ? '💧' : humidityBand === 'dry' ? '☀️' : '✓'}{' '}
-                Humidity {outdoorHumidity}% — {humidityBand}
-              </Text>
+        {/* ─── 6. Wash Day Timeline ────────────────────── */}
+        <Animated.View entering={FadeInDown.delay(240).duration(360)} style={styles.sectionPad}>
+          <PressableScale
+            onPress={() => go(showAnalytics ? 'Journey' : 'CheckIn')}
+            scaleTo={0.99}
+            haptic="light"
+            accessibilityRole="button"
+            accessibilityLabel={
+              showAnalytics
+                ? `Wash cycle: day ${WASH_CYCLE.dayInCycle} of ${WASH_CYCLE.cycleLength}, ${WASH_CYCLE.today.phase}. Next wash ${WASH_CYCLE.nextWash.when.toLowerCase()}.`
+                : 'No wash logged yet. Tap to log your wash and start your cycle.'
+            }
+          >
+            <View style={styles.washCard}>
+              <View style={styles.washHeader}>
+                <Text style={styles.washOverline}>WASH CYCLE</Text>
+                {showAnalytics && (
+                  <View style={styles.washDayPill}>
+                    <Text style={styles.washDayPillText}>
+                      Day {WASH_CYCLE.dayInCycle} of {WASH_CYCLE.cycleLength}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {showAnalytics ? (
+                <>
+                  {/* Timeline track */}
+                  <View style={styles.track}>
+                    <View style={styles.trackBg} />
+                    <View style={[styles.trackFill, { width: `${washProgress * 100}%` }]} />
+                    <View style={[styles.trackNode, styles.trackNodeStart]} />
+                    <View style={[styles.trackNodeToday, { left: `${washProgress * 100}%` }]} />
+                    <View style={[styles.trackNode, styles.trackNodeEnd]} />
+                  </View>
+
+                  {/* Labels */}
+                  <View style={styles.washLabels}>
+                    <View style={styles.washCol}>
+                      <Text style={styles.washColTitle}>Last wash</Text>
+                      <Text style={styles.washColValue}>{WASH_CYCLE.lastWash.when}</Text>
+                      <Text style={styles.washColMeta}>{WASH_CYCLE.lastWash.what}</Text>
+                    </View>
+                    <View style={[styles.washCol, styles.washColCenter]}>
+                      <Text style={[styles.washColTitle, styles.washColTitleActive]}>Today</Text>
+                      <Text style={[styles.washColValue, styles.washColValueActive]}>{WASH_CYCLE.today.phase}</Text>
+                    </View>
+                    <View style={[styles.washCol, styles.washColRight]}>
+                      <Text style={styles.washColTitle}>Next wash</Text>
+                      <Text style={styles.washColValue}>{WASH_CYCLE.nextWash.when}</Text>
+                    </View>
+                  </View>
+                </>
+              ) : (
+                <>
+                  {/* Empty track */}
+                  <View style={styles.track}>
+                    <View style={styles.trackBg} />
+                    <View style={[styles.trackNode, styles.trackNodeStart, styles.trackNodeEmpty]} />
+                    <View style={[styles.trackNode, styles.trackNodeEnd]} />
+                  </View>
+                  <Text style={styles.washEmptyText}>
+                    No wash logged yet. Tap Log after your next wash and your cycle appears here.
+                  </Text>
+                </>
+              )}
             </View>
-          </Animated.View>
-        )}
+          </PressableScale>
+        </Animated.View>
       </ScrollView>
     </View>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────
+// ─── Score ring styles ───────────────────────────────────────────────
+const scoreStyles = StyleSheet.create({
+  ring: {
+    width: RING_SIZE,
+    height: RING_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ringCenter: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scoreNumber: {
+    fontFamily: fonts.display,
+    fontSize: 46,
+    color: colors.ink,
+    lineHeight: 50,
+    letterSpacing: -1,
+  },
+  scoreNumberEmpty: {
+    fontFamily: fonts.display,
+    fontSize: 40,
+    color: colors.muted,
+    lineHeight: 46,
+  },
+  scoreLabel: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.muted,
+    marginTop: 0,
+  },
+});
 
+// ─── Styles ──────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -710,30 +653,11 @@ const styles = StyleSheet.create({
     color: colors.ink,
     letterSpacing: -0.2,
   },
-  signOffText: {
-    fontFamily: fonts.serifItalic,
+  headerSub: {
+    fontFamily: fonts.body,
     fontSize: fontSize.sm,
+    color: colors.muted,
     marginTop: 2,
-    letterSpacing: 0.1,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  streakBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: colors.primaryMuted,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: 4,
-  },
-  streakCount: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.sm,
-    color: colors.primary,
   },
   settingsBtn: {
     width: 40,
@@ -746,121 +670,70 @@ const styles = StyleSheet.create({
     borderColor: colors.borderLight,
   },
 
-  // ── Progress Ring Section ──
-  ringSection: {
-    alignItems: 'center',
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  ringMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginTop: spacing.xs,
-  },
-  streakRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  streakLabel: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: fontSize.sm,
-    color: colors.muted,
-  },
-  weekLabel: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.xs,
-    color: colors.primary,
-    letterSpacing: letterSpacing.wider,
-    textTransform: 'uppercase',
-  },
-
-  // ── Hero Card ──
-  heroCard: {
-    borderRadius: radius.xl,
+  // ── Hair Profile Card ──
+  profileCard: {
+    borderRadius: radius.xxl,
     padding: spacing.lg,
-    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 160, 74, 0.35)',
     ...shadows.md,
   },
-  heroTopRow: {
+  profileTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: spacing.md,
   },
-  heroOverlineRow: {
+  profileOverline: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    letterSpacing: letterSpacing.widest,
+    color: colors.jewel.indigo,
+  },
+  profileBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-  },
-  heroOverline: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.xs,
-    letterSpacing: letterSpacing.wider,
-    color: 'rgba(255, 255, 255, 0.82)',
-  },
-  heroTimePill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignSelf: 'flex-start',
+    backgroundColor: colors.jewel.indigo,
     borderRadius: radius.full,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: 3,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    gap: spacing.sm + 2,
+    ...shadows.sm,
   },
-  heroTimeText: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.xs,
-    color: '#FFFFFF',
-  },
-  heroTitle: {
+  profileBadgeType: {
     fontFamily: fonts.display,
-    fontSize: fontSize.xxl,
+    fontSize: fontSize.xl,
     color: '#FFFFFF',
     letterSpacing: -0.4,
-    marginTop: spacing.xs,
   },
-  heroPurpose: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
-    color: 'rgba(255, 255, 255, 0.92)',
-    lineHeight: fontSize.md * 1.45,
+  profileBadgeDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
-  heroHumidity: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.xs,
-    color: 'rgba(255, 255, 255, 0.75)',
-    lineHeight: fontSize.xs * 1.5,
-    marginTop: 2,
-  },
-  heroCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-    alignSelf: 'stretch',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.22)',
-    borderRadius: radius.full,
-    paddingVertical: spacing.sm + 2,
-  },
-  heroCtaText: {
+  profileBadgePorosity: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.md,
     color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
-  heroDoneBadge: {
+  profileHumidityRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.sm,
-    marginTop: spacing.sm,
-    alignSelf: 'center',
+    marginTop: spacing.md,
   },
-  heroDoneText: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.md,
-    color: 'rgba(255, 255, 255, 0.95)',
+  profileLine: {
+    flex: 1,
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: fontSize.sm * 1.5,
   },
 
-  // ── Aunty Whisper ──
-  whisperCard: {
+  // ── Aunty Note ──
+  noteCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -872,23 +745,76 @@ const styles = StyleSheet.create({
     borderColor: colors.borderLight,
     ...shadows.sm,
   },
-  whisperContent: {
+  noteContent: {
     flex: 1,
   },
-  whisperText: {
+  noteText: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
     color: colors.inkLight,
     fontStyle: 'italic',
     lineHeight: fontSize.sm * 1.45,
   },
-  whisperName: {
+  noteName: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.xs,
-    marginTop: 2,
+    marginTop: 3,
   },
 
-  // ── Quick Actions Grid ──
+  // ── Hair Health Score ──
+  healthCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    ...shadows.sm,
+  },
+  trendRow: {
+    marginTop: spacing.sm,
+  },
+  trendText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.success,
+  },
+  baselineText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.muted,
+  },
+  pillRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+  },
+  pillNeutral: {
+    backgroundColor: colors.surfaceTinted,
+    borderColor: colors.borderLight,
+  },
+  pillLabel: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.sm,
+  },
+  pillArrow: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSize.md,
+  },
+
+  // ── Action Grid ──
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -917,22 +843,127 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
 
-  // ── Weather Strip ──
-  weatherStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.surfaceTinted,
-    borderRadius: radius.lg,
+  // ── Wash Day Timeline ──
+  washCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.borderLight,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
+    padding: spacing.lg,
+    ...shadows.sm,
   },
-  weatherText: {
-    fontFamily: fonts.bodyMedium,
+  washHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+  },
+  washOverline: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    letterSpacing: letterSpacing.widest,
+    color: colors.muted,
+  },
+  washDayPill: {
+    backgroundColor: colors.primaryMuted,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 4,
+  },
+  washDayPillText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.primaryDeep,
+  },
+  track: {
+    height: 14,
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  trackBg: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.border,
+  },
+  trackFill: {
+    position: 'absolute',
+    left: 0,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+  },
+  trackNode: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  trackNodeStart: {
+    left: 0,
+    backgroundColor: colors.primary,
+  },
+  trackNodeEnd: {
+    right: 0,
+    backgroundColor: colors.border,
+  },
+  trackNodeEmpty: {
+    backgroundColor: colors.border,
+  },
+  trackNodeToday: {
+    position: 'absolute',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginLeft: -8,
+    backgroundColor: colors.primary,
+    borderWidth: 3,
+    borderColor: colors.surface,
+    ...shadows.gold,
+  },
+  washLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  washCol: {
+    flex: 1,
+  },
+  washColCenter: {
+    alignItems: 'center',
+  },
+  washColRight: {
+    alignItems: 'flex-end',
+  },
+  washColTitle: {
+    fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.xs,
     color: colors.muted,
-    flex: 1,
+    letterSpacing: 0.3,
+  },
+  washColTitleActive: {
+    color: colors.primaryDeep,
+  },
+  washColValue: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    marginTop: 3,
+  },
+  washColValueActive: {
+    color: colors.ink,
+  },
+  washColMeta: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.muted,
+    marginTop: 1,
+  },
+  washEmptyText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.muted,
+    lineHeight: fontSize.sm * 1.5,
   },
 });

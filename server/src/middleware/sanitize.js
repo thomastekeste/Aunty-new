@@ -50,7 +50,7 @@ const ENUMS = {
   mood: ['great', 'good', 'okay', 'struggling'],
   productScope: ['basics', 'routine', 'full', 'everything'],
   productBudget: ['under-30', '30-60', '60-100', '100-plus'],
-  auntyId: ['ngozi', 'marcia', 'denise', 'fatou', 'carmen', 'amara', 'salma'],
+  auntyId: ['ngozi', 'marcia', 'denise', 'fatou', 'carmen', 'amara', 'senayt', 'salma'],
 };
 
 function validateEnum(val, field) {

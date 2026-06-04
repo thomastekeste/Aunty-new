@@ -17,15 +17,17 @@
 
 ## The 7 Aunties
 
-| Name | Region | Specialty | Vibe |
-|------|--------|-----------|------|
-| **Ngozi** | Nigerian | Scalp health, growth | Nurturing, no-nonsense |
-| **Pat** | Jamaican | Moisture, edge care | Fun, energetic |
-| **Carol** | African American | Protective styles, thickness | Strong, protective |
-| **Lorraine** | Senegalese | Natural oils, texture | Calm, traditional |
-| **Doreen** | Afro-Latina | Curl definition, shine | Warm, playful |
-| **Selam** | Ethiopian-Eritrean | Cultural traditions, strength | Wise, grounded |
-| **Salma** | Moroccan | Moisture rituals, oils | Luxe, sensual |
+| Name | ID | Region | Specialty | Vibe |
+|------|----|--------|-----------|------|
+| **Ngozi** | `ngozi` | Nigerian | Scalp health, growth | Nurturing, no-nonsense |
+| **Marcia** | `marcia` | Jamaican | Moisture, edge care | Fun, energetic |
+| **Denise** | `denise` | African American | Protective styles, thickness | Strong, protective |
+| **Fatou** | `fatou` | Senegalese | Natural oils, texture | Calm, traditional |
+| **Carmen** | `carmen` | Afro-Latina | Curl definition, shine | Warm, playful |
+| **Senayt** | `amara` | Ethiopian-Eritrean | Strength, protein, traditions | Wise, grounded |
+| **Salma** | `salma` | Moroccan | Moisture rituals, oils | Luxe, sensual |
+
+> **Note on IDs:** the canonical persona ID for Senayt is `amara` in the mobile app and backend; the web store historically uses `senayt`. Both resolve to the same aunty via an alias (`senayt` ⇄ `amara`), so a saved preferred aunty works across platforms.
 
 Each aunty is illustrated as a distinct character with her own face, style, and personality.
 
@@ -124,16 +126,16 @@ Each recommendation is tailored to:
 ### 📱 Platform Support
 - **iOS** — native app via Expo
 - **Android** — native app via Expo
-- **Web** — optional, for landing page / waitlist
+- **Web** — full marketplace at auntycurlcouncil.com (Next.js, separate repo: aunty-web)
 
 ---
 
 ## Tech Stack
 
 - **Frontend:** React Native + Expo 55 (TypeScript)
-- **Backend:** Express.js + Node.js
+- **Backend:** Express.js + Node.js (hosted on Railway)
 - **Database:** Supabase (PostgreSQL + Auth)
-- **AI:** Google Gemini 1.5 Pro (for council convening & chat)
+- **AI:** Claude Haiku (Anthropic) — council convening, ritual generation, aunty chat
 - **Subscriptions:** RevenueCat
 - **Animations:** React Native Reanimated
 - **SVG:** React Native SVG (for aunty portraits)
@@ -175,17 +177,15 @@ Each recommendation is tailored to:
 
 ---
 
-## Next Steps for Web Landing Page
+## Web (aunty-web repo)
 
-Use this file to write:
-- **Hero section** — "Meet your aunty" + loop of aunty portraits
-- **Problem/solution** — "Generic advice doesn't work for your hair"
-- **Features** — Quiz, ritual, chat, check-ins, products, learn
-- **The aunties** — 7-card grid or carousel, introduce each one
-- **Testimonials** — (beta users)
-- **CTA** — "Join the waitlist" / "Download on iOS/Android"
-- **Footer** — Social links, privacy, terms, etc.
+The web is a full Next.js marketplace at auntycurlcouncil.com. It is a separate repo and not just a landing page. It includes:
+- **Marketplace** — own products + CJ affiliate products, Stripe checkout
+- **Aunty chat** — same 7 characters, powered by Claude (Anthropic AI SDK), rate-limited via Upstash
+- **Account management** — Supabase auth, customer portal
+- **Waitlist mode** — `NEXT_PUBLIC_LAUNCH_MODE` env flag toggles between waitlist and live
+- **Pages** — /, /products, /app, /science, /checkout, /account, /login, /privacy, /terms, /refund
 
 ---
 
-*Last updated: 2026-04-12*
+*Last updated: 2026-06-03*

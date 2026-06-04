@@ -109,7 +109,7 @@ registerLegalRoutes(app);
 
 // ─── Onboarding Intake ──────────────────────────────────────────
 
-app.post('/api/onboarding/intake', aiLimiter, dailyCap, authMiddleware, async (req, res) => {
+app.post('/api/onboarding/intake', aiLimiter, authMiddleware, dailyCap, async (req, res) => {
   try {
     const userId = req.user.id;
     const { name, hairProfile, photoAnalysis = null } = req.body;
@@ -148,7 +148,7 @@ app.post('/api/onboarding/intake', aiLimiter, dailyCap, authMiddleware, async (r
 
 // ─── Photo Analysis ─────────────────────────────────────────────
 
-app.post('/api/photos/analyze', aiLimiter, dailyCap, authMiddleware, upload.single('photo'), async (req, res) => {
+app.post('/api/photos/analyze', aiLimiter, authMiddleware, dailyCap, upload.single('photo'), async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -171,9 +171,10 @@ app.post('/api/photos/analyze', aiLimiter, dailyCap, authMiddleware, upload.sing
       }
       const buf = Buffer.from(req.body.imageBase64, 'base64');
       const isJpeg = buf[0] === 0xFF && buf[1] === 0xD8;
-      const isPng = buf[0] === 0x89 && buf[1] === 0x50;
-      if (!isJpeg && !isPng) {
-        return res.status(400).json({ error: 'Invalid image data' });
+      const isPng = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47;
+      const isWebp = buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46;
+      if (!isJpeg && !isPng && !isWebp) {
+        return res.status(400).json({ error: 'Invalid image data. Use JPEG, PNG, or WebP.' });
       }
       imageBase64 = req.body.imageBase64;
     } else {
@@ -204,7 +205,7 @@ app.post('/api/photos/analyze', aiLimiter, dailyCap, authMiddleware, upload.sing
 
 // ─── Council Generation ─────────────────────────────────────────
 
-app.post('/api/council/generate', aiLimiter, dailyCap, authMiddleware, async (req, res) => {
+app.post('/api/council/generate', aiLimiter, authMiddleware, dailyCap, async (req, res) => {
   try {
     const { hairProfile } = req.body;
 
@@ -238,7 +239,7 @@ async function optionalAuth(req, res, next) {
   next();
 }
 
-app.post('/api/chat/message', aiLimiter, dailyCap, optionalAuth, async (req, res) => {
+app.post('/api/chat/message', aiLimiter, optionalAuth, dailyCap, async (req, res) => {
   try {
     const { message, auntyId, conversationHistory, hairProfile: bodyProfile, userName: bodyName } = req.body;
 
@@ -253,15 +254,18 @@ app.post('/api/chat/message', aiLimiter, dailyCap, optionalAuth, async (req, res
     // Try DB lookup if authenticated, fall back to body data
     let userName = bodyName || 'Queen';
     let hairProfile = bodyProfile || {};
+    let recentCheckins = [];
 
     if (req.user) {
       try {
-        const [user, dbProfile] = await Promise.all([
+        const [user, dbProfile, checkins] = await Promise.all([
           db.getUser(req.user.id),
           db.getHairProfile(req.user.id),
+          db.getCheckins(req.user.id),
         ]);
         if (user?.name) userName = user.name;
         if (dbProfile) hairProfile = dbProfile;
+        if (Array.isArray(checkins)) recentCheckins = checkins.slice(0, 3);
       } catch (dbErr) {
         console.warn('DB lookup failed, using body data:', dbErr.message);
       }
@@ -273,6 +277,7 @@ app.post('/api/chat/message', aiLimiter, dailyCap, optionalAuth, async (req, res
       auntyId || 'denise',
       conversationHistory || [],
       userName,
+      recentCheckins,
     );
 
     console.log(`Chat response (${auntyId || 'denise'})`);
@@ -285,7 +290,7 @@ app.post('/api/chat/message', aiLimiter, dailyCap, optionalAuth, async (req, res
 
 // ─── Routine Generation ─────────────────────────────────────────
 
-app.post('/api/routine/generate', aiLimiter, dailyCap, authMiddleware, async (req, res) => {
+app.post('/api/routine/generate', aiLimiter, authMiddleware, dailyCap, async (req, res) => {
   try {
     const { hairProfile, councilResponse } = req.body;
 
@@ -309,7 +314,7 @@ app.post('/api/routine/generate', aiLimiter, dailyCap, authMiddleware, async (re
 
 // ─── Check-in Submission ────────────────────────────────────────
 
-app.post('/api/checkin/submit', aiLimiter, dailyCap, authMiddleware, async (req, res) => {
+app.post('/api/checkin/submit', aiLimiter, authMiddleware, dailyCap, async (req, res) => {
   try {
     const userId = req.user.id;
     const { weekNumber, hostingAuntyId, mood, notes, photoUri } = req.body;
@@ -388,7 +393,19 @@ app.post('/api/user/delete', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Delete all user data from each table
+    // Delete the auth user FIRST. public.users references auth.users with
+    // `on delete cascade`, which transitively removes hair_profiles, routines,
+    // checkins and photos. Doing this first means we can never end up with the
+    // data deleted but the auth account still able to log in (an orphan).
+    // If this fails, abort with 500 so the client can retry — nothing is lost.
+    const { error: authErr } = await db.supabase.auth.admin.deleteUser(userId);
+    if (authErr) {
+      console.error('Auth user deletion failed:', authErr.message);
+      return res.status(500).json({ error: 'Failed to delete account' });
+    }
+
+    // Defensive table cleanup in case the cascade isn't configured on the
+    // live DB. Best-effort — the auth user (and its cascade) is already gone.
     const tables = ['checkins', 'photos', 'routines', 'hair_profiles', 'users'];
     for (const table of tables) {
       const col = table === 'users' ? 'id' : 'user_id';
@@ -399,7 +416,7 @@ app.post('/api/user/delete', authMiddleware, async (req, res) => {
       if (error) console.warn(`Failed to delete from ${table}:`, error.message);
     }
 
-    // Delete storage files
+    // Delete storage files (not covered by the DB cascade)
     try {
       const { data: files } = await db.supabase.storage
         .from('hair-photos')
@@ -410,13 +427,6 @@ app.post('/api/user/delete', authMiddleware, async (req, res) => {
       }
     } catch (storageErr) {
       console.warn('Storage cleanup failed:', storageErr.message);
-    }
-
-    // Delete auth user (requires service role key)
-    try {
-      await db.supabase.auth.admin.deleteUser(userId);
-    } catch (authErr) {
-      console.warn('Auth user deletion failed:', authErr.message);
     }
 
     res.json({ success: true });

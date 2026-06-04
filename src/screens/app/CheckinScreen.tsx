@@ -26,7 +26,7 @@ import { useNavigation } from '@react-navigation/native';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { PhotoAnalysisCard } from '../../components/PhotoAnalysisCard';
-import { analyzePhoto } from '../../services/api';
+import { analyzePhoto, submitCheckin } from '../../services/api';
 import type { PhotoAnalysis, ProductScope, BrandTier } from '../../types';
 import { Button } from '../../components/Button';
 import {
@@ -278,10 +278,27 @@ export default function CheckInScreen() {
       history.push(checkin);
       await AsyncStorage.setItem('checkin_history', JSON.stringify(history));
     } catch {
-      // Best effort
+      // Best effort — local cache (offline-safe, powers the dashboard)
     }
 
-    setAuntyResponse(getAuntyResponse(aunty, selectedMood));
+    // Persist to the backend (Supabase) and get the real, AI-generated aunty
+    // response. Falls back to a local canned line if offline or not signed in,
+    // so the check-in never fails — it just degrades gracefully.
+    let serverResponse: string | null = null;
+    try {
+      const res = await submitCheckin({
+        weekNumber,
+        hostingAuntyId: auntyId,
+        mood: selectedMood,
+        notes: notes.trim(),
+        photoUri: photoUri ?? undefined,
+      });
+      serverResponse = res?.auntyResponse ?? null;
+    } catch {
+      // Offline or unauthenticated — local save already succeeded
+    }
+
+    setAuntyResponse(serverResponse || getAuntyResponse(aunty, selectedMood));
     setStreak((s) => s + 1);
     setSubmitted(true);
   }, [selectedMood, notes, photoUri, healthScore, productsUsed, weekNumber, auntyId, aunty]);

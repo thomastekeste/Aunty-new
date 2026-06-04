@@ -72,7 +72,7 @@ const INTROS: Record<AuntyId, string[]> = {
 export function WelcomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
-  const { setChosenAunty } = useOnboarding();
+  const { setChosenAunty, updateHairProfile, complete } = useOnboarding();
 
   const [phase, setPhase] = useState<0 | 1 | 2 | 3>(0);
   const [selectedId, setSelectedId] = useState<AuntyId | null>(null);
@@ -94,6 +94,14 @@ export function WelcomeScreen() {
   const handleSpeechComplete = useCallback(() => {
     setPhase(3);
   }, []);
+
+  // Dev-only: jump straight to the home dashboard, skipping the consultation.
+  // Seeds a sensible aunty + hair profile so the dashboard has real-looking data.
+  const handleDevSkip = useCallback(() => {
+    setChosenAunty((selectedId ?? 'denise') as AuntyId);
+    updateHairProfile({ curlType: '4c', porosity: 'low' });
+    complete();
+  }, [selectedId, setChosenAunty, updateHairProfile, complete]);
 
   const ac = selectedId ? auntyColors[selectedId] : null;
   const lines = selectedId ? INTROS[selectedId] : [];
@@ -232,6 +240,20 @@ export function WelcomeScreen() {
           </Animated.View>
         )}
       </View>
+
+      {/* Dev-only escape hatch — straight to the home dashboard */}
+      {__DEV__ && (
+        <PressableScale
+          onPress={handleDevSkip}
+          haptic="light"
+          scaleTo={0.94}
+          style={[styles.devSkip, { top: insets.top + spacing.sm }]}
+          accessibilityRole="button"
+          accessibilityLabel="Developer: skip consultation, go to home"
+        >
+          <Text style={styles.devSkipText}>Skip → Home</Text>
+        </PressableScale>
+      )}
     </View>
   );
 }
@@ -239,6 +261,23 @@ export function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas },
   content: { flex: 1 },
+
+  // Dev-only skip pill (top-right, above everything)
+  devSkip: {
+    position: 'absolute',
+    right: spacing.lg,
+    zIndex: 50,
+    backgroundColor: 'rgba(45, 27, 14, 0.85)',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm - 1,
+  },
+  devSkipText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.canvas,
+    letterSpacing: 0.4,
+  },
 
   halo: {
     position: 'absolute',
