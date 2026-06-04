@@ -231,12 +231,15 @@ export function RootNavigator() {
   return (
     <NavigationContainer>
       <RootStack.Navigator screenOptions={{ headerShown: false, animation: 'none' }}>
-        {!isAuthenticated ? (
-          <RootStack.Screen name="Auth" component={AuthNavigator} />
-        ) : !state.isComplete ? (
+        {!state.isComplete ? (
+          // Value-first: new users go straight into the consultation. Auth is
+          // collected at the very end (SendOff) before entering the app.
           <RootStack.Screen name="Onboarding" component={OnboardingNavigator} />
-        ) : (
+        ) : isAuthenticated ? (
           <RootStack.Screen name="App" component={AppNavigator} />
+        ) : (
+          // Completed onboarding but signed out → returning-user sign in.
+          <RootStack.Screen name="Auth" component={AuthNavigator} />
         )}
       </RootStack.Navigator>
     </NavigationContainer>

@@ -148,9 +148,9 @@ app.post('/api/onboarding/intake', aiLimiter, authMiddleware, dailyCap, async (r
 
 // ─── Photo Analysis ─────────────────────────────────────────────
 
-app.post('/api/photos/analyze', aiLimiter, authMiddleware, dailyCap, upload.single('photo'), async (req, res) => {
+app.post('/api/photos/analyze', aiLimiter, optionalAuth, dailyCap, upload.single('photo'), async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?.id || null; // onboarding runs pre-auth
 
     let imageBase64;
     if (req.file) {
@@ -181,20 +181,24 @@ app.post('/api/photos/analyze', aiLimiter, authMiddleware, dailyCap, upload.sing
       return res.status(400).json({ error: 'No image provided' });
     }
 
-    const hairProfile = await db.getHairProfile(userId);
+    const hairProfile = userId ? await db.getHairProfile(userId) : null;
     const analysis = await ai.analyzePhoto(imageBase64, hairProfile);
 
-    // Store in Supabase storage
-    const photoId = uuidv4();
-    const storagePath = `${userId}/${photoId}.jpg`;
-
-    if (req.file) {
-      await db.supabase.storage
-        .from('hair-photos')
-        .upload(storagePath, req.file.buffer, { contentType: 'image/jpeg' });
+    // Persist only for signed-in users. During value-first onboarding the user
+    // isn't authed yet — they just get the analysis back; it's re-saved via
+    // /api/onboarding/intake once they sign in at the end.
+    let photoId = null;
+    let storagePath = null;
+    if (userId) {
+      photoId = uuidv4();
+      storagePath = `${userId}/${photoId}.jpg`;
+      if (req.file) {
+        await db.supabase.storage
+          .from('hair-photos')
+          .upload(storagePath, req.file.buffer, { contentType: 'image/jpeg' });
+      }
+      await db.savePhoto(userId, req.body.type || 'analysis', storagePath, analysis);
     }
-
-    await db.savePhoto(userId, req.body.type || 'analysis', storagePath, analysis);
 
     res.json({ analysis, photoId, storagePath });
   } catch (err) {
@@ -205,7 +209,7 @@ app.post('/api/photos/analyze', aiLimiter, authMiddleware, dailyCap, upload.sing
 
 // ─── Council Generation ─────────────────────────────────────────
 
-app.post('/api/council/generate', aiLimiter, authMiddleware, dailyCap, async (req, res) => {
+app.post('/api/council/generate', aiLimiter, optionalAuth, dailyCap, async (req, res) => {
   try {
     const { hairProfile } = req.body;
 
@@ -213,8 +217,10 @@ app.post('/api/council/generate', aiLimiter, authMiddleware, dailyCap, async (re
       return res.status(400).json({ error: 'hairProfile is required' });
     }
 
-    const user = await db.getUser(req.user.id);
-    const councilResponse = await ai.generateCouncilResponse(hairProfile, user?.name, req.body.photoAnalysis || null);
+    // Pre-auth during onboarding: fall back to the name supplied in the body.
+    const user = req.user ? await db.getUser(req.user.id) : null;
+    const name = user?.name || req.body.name || null;
+    const councilResponse = await ai.generateCouncilResponse(hairProfile, name, req.body.photoAnalysis || null);
 
     res.json(councilResponse);
   } catch (err) {
@@ -290,7 +296,7 @@ app.post('/api/chat/message', aiLimiter, optionalAuth, dailyCap, async (req, res
 
 // ─── Routine Generation ─────────────────────────────────────────
 
-app.post('/api/routine/generate', aiLimiter, authMiddleware, dailyCap, async (req, res) => {
+app.post('/api/routine/generate', aiLimiter, optionalAuth, dailyCap, async (req, res) => {
   try {
     const { hairProfile, councilResponse } = req.body;
 
@@ -300,9 +306,11 @@ app.post('/api/routine/generate', aiLimiter, authMiddleware, dailyCap, async (re
 
     const routine = await ai.generateRoutine(hairProfile, councilResponse, req.body.photoAnalysis || null);
 
-    // Save routine (non-blocking — don't fail if DB is unavailable)
-    try { await db.saveRoutine(req.user.id, routine, councilResponse); } catch (dbErr) {
-      console.warn('Routine DB save skipped:', dbErr.message);
+    // Save only when signed in (pre-auth onboarding re-saves via intake).
+    if (req.user) {
+      try { await db.saveRoutine(req.user.id, routine, councilResponse); } catch (dbErr) {
+        console.warn('Routine DB save skipped:', dbErr.message);
+      }
     }
 
     res.json(routine);
