@@ -183,9 +183,9 @@ const termsHtml = page(
 
   <h2>Subscriptions &amp; billing</h2>
   <ul>
-    <li>${BRAND} offers auto-renewing subscriptions. Payment is charged to your Apple ID at confirmation of purchase.</li>
+    <li>${BRAND} offers auto-renewing subscriptions and a one-time lifetime purchase. Payment is charged to your Apple ID at confirmation of purchase.</li>
     <li>Subscriptions renew automatically unless canceled at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours prior to the end of the period.</li>
-    <li>Manage or cancel anytime in your Apple ID subscription settings. Any unused portion of a free trial is forfeited when you purchase a subscription.</li>
+    <li>Manage or cancel auto-renewing subscriptions anytime in your Apple ID subscription settings. The lifetime option is a one-time purchase that does not auto-renew.</li>
   </ul>
 
   <h2>Your content</h2>
