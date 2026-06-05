@@ -9,7 +9,7 @@
  * "Polaroid developing" finish. Set `shimmer={false}` to disable.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -75,8 +75,23 @@ export function SpeechBubble({
   const translate = useSharedValue(8);
   const shimmerX = useSharedValue(-1);
 
+  // Key off content, not array identity — parents often rebuild `lines` each render.
+  const linesKey = lines.join('\u0001');
+  const linesRef = useRef(lines);
+  linesRef.current = lines;
+
+  const onCompleteRef = useRef(onComplete);
+  const onLineLandedRef = useRef(onLineLanded);
+  onCompleteRef.current = onComplete;
+  onLineLandedRef.current = onLineLanded;
+
   useEffect(() => {
-    if (index >= lines.length) return;
+    setIndex(0);
+  }, [linesKey]);
+
+  useEffect(() => {
+    const arr = linesRef.current;
+    if (index >= arr.length) return;
 
     opacity.value = 0;
     translate.value = 8;
@@ -95,16 +110,16 @@ export function SpeechBubble({
       );
     }
 
-    onLineLanded?.(index);
+    onLineLandedRef.current?.(index);
 
-    const effectiveHold = holdMs ?? adaptiveHold(lines[index] ?? '');
+    const effectiveHold = holdMs ?? adaptiveHold(arr[index] ?? '');
     const advanceAt = fadeMs + effectiveHold;
-    const isLast = index === lines.length - 1;
+    const isLast = index === arr.length - 1;
 
     const t = setTimeout(() => {
       if (isLast) {
         opacity.value = withTiming(1, { duration: 0 });
-        onComplete?.();
+        onCompleteRef.current?.();
         return;
       }
       opacity.value = withTiming(0, { duration: fadeMs, easing: Easing.in(Easing.cubic) }, (done) => {
@@ -113,7 +128,7 @@ export function SpeechBubble({
     }, advanceAt);
 
     return () => clearTimeout(t);
-  }, [index, lines, fadeMs, holdMs, shimmer, loopShimmer]);
+  }, [index, linesKey, fadeMs, holdMs, shimmer, loopShimmer]);
 
   const lineAnimatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,

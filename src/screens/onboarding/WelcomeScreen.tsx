@@ -3,7 +3,7 @@
  *
  * Phase 0: Hero hook (single editorial line, fades in)
  * Phase 1: Aunty picker carousel
- * Phase 2: Chosen aunty speaks — phrase reveal (AuntySpeaks)
+ * Phase 2: Chosen aunty speaks — line-flip SpeechBubble
  * Phase 3: Ceremonial CTA
  *
  * Warm canvas palette — matches the rest of the consultation flow.
@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { AuntySpeaks } from '../../components/AuntySpeaks';
+import { SpeechBubble } from '../../components/SpeechBubble';
 import { CeremonialButton } from '../../components/CeremonialButton';
 import { PressableScale } from '../../components/PressableScale';
 import { AUNTIES, COUNCIL_ORDER } from '../../constants/aunties';
@@ -217,11 +217,10 @@ export function WelcomeScreen() {
               </Animated.Text>
 
               <View style={styles.bubbleWrap}>
-                <AuntySpeaks
+                <SpeechBubble
                   lines={lines}
                   holdMs={900}
                   quoteMarkColor={ac.accent}
-                  accentColor={ac.accent}
                   textStyle={dialogueText}
                   onComplete={handleSpeechComplete}
                 />
