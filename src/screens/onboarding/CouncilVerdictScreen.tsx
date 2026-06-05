@@ -6,7 +6,7 @@
  *   Beat 1  (250ms)    Overline + bead row converge from top.
  *   Beat 2  (650ms)    Aunty portrait blooms with halo pulse + rim light.
  *   Beat 3  (1000ms)   Name cross-fades in; italic verb follows.
- *   Beat 4  (1500ms)   First finding lands (SpeechBubble takes over).
+ *   Beat 4  (1500ms)   First finding lands (AuntySpeaks takes over).
  *   Beat 5  (complete) Gold hairline unfurls, CTA rises from bottom.
  */
 
@@ -30,7 +30,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { AuntyDialogue } from '../../components/AuntyDialogue';
+import { AuntySpeaks } from '../../components/AuntySpeaks';
 import { CeremonialButton } from '../../components/CeremonialButton';
 import { VerdictShareCard } from '../../components/VerdictShareCard';
 import { AUNTIES } from '../../constants/aunties';
@@ -60,6 +60,10 @@ export default function CouncilVerdictScreen() {
   const ac = auntyColors[auntyId];
 
   const findings = getVerdictFindingsFromProfile(state.data.hairProfile, state.data.name, auntyId);
+  const highlightWords = [
+    state.data.name,
+    state.data.hairProfile.curlType,
+  ].filter(Boolean) as string[];
   const [activeLine, setActiveLine] = useState(0);
   const [showButton, setShowButton] = useState(false);
   const [speechReady, setSpeechReady] = useState(false);
@@ -224,10 +228,12 @@ export default function CouncilVerdictScreen() {
       {/* Beat 4 — findings */}
       <View style={styles.center}>
         {speechReady ? (
-          <AuntyDialogue
+          <AuntySpeaks
             lines={findings}
             holdMs={1800}
             quoteMarkColor={ac.accent}
+            accentColor={ac.accent}
+            highlightWords={highlightWords}
             textStyle={dialogueText}
             onLineLanded={handleLineLanded}
             onComplete={handleComplete}

@@ -24,7 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { AuntyDialogue } from '../../components/AuntyDialogue';
+import { AuntySpeaks, type AuntySpeaksHandle } from '../../components/AuntySpeaks';
 import { TapToContinue } from '../../components/TapToContinue';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { getCurlRead } from '../../constants/validationCopy';
@@ -52,8 +52,11 @@ export default function ValidationOneScreen() {
 
   const [showSpeech, setShowSpeech] = useState(false);
   const [canTap, setCanTap] = useState(false);
+  const speaksRef = useRef<AuntySpeaksHandle>(null);
   const navigatingRef = useRef(false);
   const autoAdvanceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const highlightWords = [state.data.name, curlType].filter(Boolean) as string[];
 
   // ── Soft accent halo behind the avatar ──
   const haloOpacity = useSharedValue(0.1);
@@ -80,14 +83,13 @@ export default function ValidationOneScreen() {
     };
   }, []);
 
-  const handleLineLanded = useCallback(() => {
-    // Halo warms gently on each line landing
+  const handlePhraseLanded = useCallback(() => {
     haloOpacity.value = withSequence(
       withTiming(0.18, { duration: 240 }),
       withTiming(0.1, { duration: 480 }),
     );
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, []);
+  }, [haloOpacity]);
 
   const handleSpeechComplete = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -102,7 +104,14 @@ export default function ValidationOneScreen() {
   }, [navigation]);
 
   const handleTap = useCallback(() => {
-    if (!canTap || navigatingRef.current) return;
+    if (navigatingRef.current) return;
+    if (!canTap) {
+      if (speaksRef.current?.isSpeaking()) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        speaksRef.current.skip();
+      }
+      return;
+    }
     navigatingRef.current = true;
     if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -114,7 +123,6 @@ export default function ValidationOneScreen() {
       <Pressable
         style={[styles.pressable, { paddingTop: insets.top + spacing.xxl }]}
         onPress={handleTap}
-        disabled={!canTap}
       >
         {/* Avatar with soft accent halo */}
         <Animated.View entering={FadeInUp.delay(120).duration(600)} style={styles.avatarWrap}>
@@ -130,12 +138,15 @@ export default function ValidationOneScreen() {
         {/* Speech */}
         <View style={styles.lines}>
           {showSpeech && (
-            <AuntyDialogue
+            <AuntySpeaks
+              ref={speaksRef}
               lines={lines}
               holdMs={1400}
               quoteMarkColor={ac.accent}
+              accentColor={ac.accent}
+              highlightWords={highlightWords}
               textStyle={dialogueText}
-              onLineLanded={handleLineLanded}
+              onPhraseLanded={handlePhraseLanded}
               onComplete={handleSpeechComplete}
             />
           )}

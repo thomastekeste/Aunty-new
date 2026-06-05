@@ -22,7 +22,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { AuntyDialogue } from '../../components/AuntyDialogue';
+import { AuntySpeaks, type AuntySpeaksHandle } from '../../components/AuntySpeaks';
 import { TapToContinue } from '../../components/TapToContinue';
 import { useOnboarding } from '../../context/OnboardingContext';
 import {
@@ -73,8 +73,16 @@ export default function ValidationTwoScreen() {
 
   const [showSpeech, setShowSpeech] = useState(false);
   const [canTap, setCanTap] = useState(false);
+  const speaksRef = useRef<AuntySpeaksHandle>(null);
   const navigatingRef = useRef(false);
   const autoAdvanceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const highlightWords = [
+    state.data.name,
+    curlType,
+    porosity ? POROSITY_LABELS[porosity] : undefined,
+    primaryGoal ? GOAL_LABELS[primaryGoal] : undefined,
+  ].filter(Boolean) as string[];
 
   // ── Single accent hairline ──
   const lineWidth = useSharedValue(0);
@@ -108,7 +116,7 @@ export default function ValidationTwoScreen() {
     };
   }, [rows.length]);
 
-  const handleLineLanded = useCallback(() => {
+  const handlePhraseLanded = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
@@ -125,7 +133,14 @@ export default function ValidationTwoScreen() {
   }, [navigation]);
 
   const handleTap = useCallback(() => {
-    if (!canTap || navigatingRef.current) return;
+    if (navigatingRef.current) return;
+    if (!canTap) {
+      if (speaksRef.current?.isSpeaking()) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        speaksRef.current.skip();
+      }
+      return;
+    }
     navigatingRef.current = true;
     if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -137,7 +152,6 @@ export default function ValidationTwoScreen() {
       <Pressable
         style={[styles.pressable, { paddingTop: insets.top + spacing.xxl }]}
         onPress={handleTap}
-        disabled={!canTap}
       >
         {/* Avatar */}
         <Animated.View entering={FadeInUp.delay(120).duration(600)} style={styles.avatarWrap}>
@@ -169,12 +183,15 @@ export default function ValidationTwoScreen() {
         {/* Speech */}
         <View style={styles.lines}>
           {showSpeech && (
-            <AuntyDialogue
+            <AuntySpeaks
+              ref={speaksRef}
               lines={speechLines}
               holdMs={1400}
               quoteMarkColor={ac.accent}
+              accentColor={ac.accent}
+              highlightWords={highlightWords}
               textStyle={dialogueText}
-              onLineLanded={handleLineLanded}
+              onPhraseLanded={handlePhraseLanded}
               onComplete={handleSpeechComplete}
             />
           )}
