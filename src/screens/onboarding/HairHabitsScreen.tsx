@@ -15,7 +15,7 @@ import { EditorialCard } from '../../components/EditorialCard';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { useSubscription } from '../../context/SubscriptionContext';
 import { AUNTIES } from '../../constants/aunties';
-import { getStepCopy } from '../../constants/auntyVoice';
+import { getStepCopy, progress } from '../../constants/auntyVoice';
 import { assessWashHabit } from '../../utils/washFrequency';
 import type { OnboardingStackParamList, WashFrequency, HeatUse } from '../../types';
 import {
@@ -114,8 +114,7 @@ export default function HairHabitsScreen() {
       auntyId={auntyId}
       question={questions[subStep]}
       speakerVerb={subStep === 0 ? washCopy.verb : heatCopy.verb}
-      step={5}
-      totalSteps={7}
+      {...progress('habits')}
       ctaLabel={subStep === 0 ? 'Next' : 'Continue'}
       ctaDisabled={!canContinue}
       onCtaPress={handleContinue}

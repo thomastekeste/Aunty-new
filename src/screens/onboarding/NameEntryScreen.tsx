@@ -14,6 +14,7 @@ import { SalonFrame } from '../../components/SalonFrame';
 import { PressableScale } from '../../components/PressableScale';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
+import { progress } from '../../constants/auntyVoice';
 import type { OnboardingStackParamList } from '../../types';
 import {
   colors,
@@ -56,8 +57,7 @@ export default function NameEntryScreen() {
       auntyId={auntyId}
       question={aunty.greeting}
       speakerVerb="wants to know"
-      step={1}
-      totalSteps={7}
+      {...progress('name')}
       ctaLabel="That's me"
       ctaDisabled={!canContinue}
       onCtaPress={handleContinue}

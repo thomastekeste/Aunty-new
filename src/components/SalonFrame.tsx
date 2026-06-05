@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { AuntyAvatar } from './AuntyAvatar';
 import { CeremonialButton } from './CeremonialButton';
 import { AUNTIES } from '../constants/aunties';
 import type { AuntyId } from '../constants/aunties';
@@ -134,10 +135,8 @@ export function SalonFrame({
 
       {/* Aunty attribution */}
       <Animated.View entering={FadeIn.duration(300)} style={styles.attribution}>
-        <View style={[styles.attrTick, { backgroundColor: ac.accent }]} />
-        <Text style={styles.attrText}>
-          Aunty <Text style={[styles.attrName, { color: ac.accent }]}>{aunty.name}</Text>
-        </Text>
+        <AuntyAvatar auntyId={auntyId} size={32} showRing />
+        <Text style={[styles.attrName, { color: ac.accent }]}>{aunty.name}</Text>
       </Animated.View>
 
       {/* Question headline */}
@@ -249,24 +248,14 @@ const styles = StyleSheet.create({
   attribution: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs + 2,
+    gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     marginTop: spacing.xs,
-    marginBottom: spacing.xs,
-  },
-  attrTick: {
-    width: 12,
-    height: 2,
-    borderRadius: 1,
-  },
-  attrText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: fontSize.sm,
-    color: colors.muted,
+    marginBottom: spacing.sm,
   },
   attrName: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
   },
 
   // -- Question --

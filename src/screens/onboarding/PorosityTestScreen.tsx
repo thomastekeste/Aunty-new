@@ -10,11 +10,11 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ConsultationShell } from '../../components/ConsultationShell';
+import { SalonFrame } from '../../components/SalonFrame';
 import { OptionCard } from '../../components/OptionCard';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
-import { getStepCopy } from '../../constants/auntyVoice';
+import { getStepCopy, progress } from '../../constants/auntyVoice';
 import type { OnboardingStackParamList, Porosity } from '../../types';
 import {
   colors,
@@ -169,11 +169,11 @@ export default function PorosityTestScreen() {
   const quizComplete = quizAnswers.length === 5;
 
   return (
-    <ConsultationShell
+    <SalonFrame
       auntyId={auntyId}
       question={copy.question}
-      step={3}
-      totalSteps={7}
+      speakerVerb={copy.verb}
+      {...progress('porosity')}
       ctaLabel="Next"
       ctaDisabled={!selected}
       onCtaPress={handleContinue}
@@ -298,7 +298,7 @@ export default function PorosityTestScreen() {
           </Text>
         </Animated.View>
       )}
-    </ConsultationShell>
+    </SalonFrame>
   );
 }
 

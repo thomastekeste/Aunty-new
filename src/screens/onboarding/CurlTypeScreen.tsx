@@ -25,7 +25,7 @@ import { PressableScale } from '../../components/PressableScale';
 import { CurlPatternIcon } from '../../components/CurlPatternIcon';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
-import { getStepCopy } from '../../constants/auntyVoice';
+import { getStepCopy, progress } from '../../constants/auntyVoice';
 import type { OnboardingStackParamList, CurlType } from '../../types';
 import {
   colors,
@@ -179,8 +179,7 @@ export default function CurlTypeScreen() {
       auntyId={auntyId}
       question={copy.question}
       speakerVerb={copy.verb}
-      step={2}
-      totalSteps={7}
+      {...progress('curlType')}
       ctaLabel="That's my curl"
       ctaDisabled={!selected}
       onCtaPress={handleContinue}

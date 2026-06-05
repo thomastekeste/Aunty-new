@@ -33,6 +33,7 @@ import {
   radius,
 } from '../../constants/theme';
 import { onboardingMotion } from '../../constants/onboardingMotion';
+import { progress } from '../../constants/auntyVoice';
 import { computeBudgetTiers } from '../../utils/recommendation';
 import type { BrandTier, OnboardingStackParamList, ProductScope } from '../../types';
 
@@ -79,6 +80,9 @@ export default function BudgetQuestionScreen() {
   const [brandTier, setBrandTier] = useState<BrandTier | null>(null);
   const [budgetTotal, setBudgetTotal] = useState<number | null>(null);
   const [step, setStep] = useState<1 | 2 | 3>(1); // 1=scope, 2=brand, 3=budget
+
+  // Consultation-wide progress (Budget is the final numbered step).
+  const { step: barStep, totalSteps: barTotal } = progress('budget');
 
   // Real routine totals for the chosen scope + brand tier.
   const budgetTiers = useMemo(() => {
@@ -133,23 +137,26 @@ export default function BudgetQuestionScreen() {
         <View
           style={styles.progressRow}
           accessibilityRole="progressbar"
-          accessibilityLabel="Step 7 of 7"
-          accessibilityValue={{ min: 0, max: 7, now: 7 }}
+          accessibilityLabel={`Step ${barStep} of ${barTotal}`}
+          accessibilityValue={{ min: 0, max: barTotal, now: barStep }}
         >
-          {Array.from({ length: 7 }).map((_, i) => (
-            <View key={i} style={styles.segmentWrap}>
-              <View
-                style={[
-                  styles.segment,
-                  i < 6 && { backgroundColor: ac.accent },
-                  i === 6 && { backgroundColor: ac.accent, opacity: 0.5 },
-                ]}
-              />
-            </View>
-          ))}
+          {Array.from({ length: barTotal }).map((_, i) => {
+            const idx = i + 1;
+            return (
+              <View key={i} style={styles.segmentWrap}>
+                <View
+                  style={[
+                    styles.segment,
+                    idx < barStep && { backgroundColor: ac.accent },
+                    idx === barStep && { backgroundColor: ac.accent, opacity: 0.5 },
+                  ]}
+                />
+              </View>
+            );
+          })}
         </View>
 
-        <Text style={styles.stepLabel}>7/7</Text>
+        <Text style={styles.stepLabel}>{barStep}/{barTotal}</Text>
       </View>
 
       <Animated.View entering={FadeIn.delay(200)} style={styles.auntyHeader}>

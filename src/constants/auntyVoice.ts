@@ -58,6 +58,31 @@ export interface StepCopy {
   verb: string;
 }
 
+// ─── Progress bar source of truth ──────────────────────────────────
+// The ordered consultation steps that show the segmented progress bar.
+// Interludes (validations) and the optional photo step are intentionally
+// excluded — they aren't "questions" and don't carry a step number.
+export const PROGRESS_STEPS = [
+  'name',
+  'location',
+  'curlType',
+  'porosity',
+  'goal',
+  'habits',
+  'products',
+  'struggles',
+  'budget',
+] as const;
+
+export type ProgressStep = (typeof PROGRESS_STEPS)[number];
+
+export const TOTAL_STEPS = PROGRESS_STEPS.length;
+
+/** Returns `{ step, totalSteps }` for a consultation screen's progress bar. */
+export function progress(step: ProgressStep): { step: number; totalSteps: number } {
+  return { step: PROGRESS_STEPS.indexOf(step) + 1, totalSteps: TOTAL_STEPS };
+}
+
 export function getStepCopy(step: ConsultStep, auntyId: AuntyId, name?: string): StepCopy {
   const you = inlineYou(auntyId, name); // lowercase-friendly inline address
   const Open = addressUser(auntyId, name); // sentence-opener address

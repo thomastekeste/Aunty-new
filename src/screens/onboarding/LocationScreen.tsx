@@ -1,5 +1,5 @@
 /**
- * LocationScreen — Salma hosts location + water type.
+ * LocationScreen — your chosen aunty asks about location + water type.
  *
  * "Your water shapes your hair more than you know."
  * The user enters their city and we estimate their tap-water hardness from a
@@ -16,7 +16,7 @@ import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { SalonFrame } from '../../components/SalonFrame';
 import { PressableScale } from '../../components/PressableScale';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { getStepCopy } from '../../constants/auntyVoice';
+import { getStepCopy, progress } from '../../constants/auntyVoice';
 import { lookupWaterHardness, HARDNESS_COPY, type WaterHardness } from '../../utils/waterHardness';
 import type { OnboardingStackParamList } from '../../types';
 import {
@@ -29,9 +29,6 @@ import {
 } from '../../constants/theme';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'Location'>;
-
-// This screen is hosted by Salma regardless of the user's chosen aunty.
-const HOST_AUNTY = 'salma' as const;
 
 const HARDNESS_COLOR: Record<WaterHardness, string> = {
   soft: colors.jewel.emerald,
@@ -48,6 +45,7 @@ const MANUAL_OPTIONS: { value: WaterHardness; label: string }[] = [
 export default function LocationScreen() {
   const navigation = useNavigation<Nav>();
   const { state, setCity, updateHairProfile } = useOnboarding();
+  const auntyId = state.data.chosenAuntyId || 'denise';
 
   const [city, setLocalCity] = useState(state.data.city || '');
   const [override, setOverride] = useState<WaterHardness | undefined>(
@@ -59,7 +57,7 @@ export default function LocationScreen() {
   // What we'll actually show / save: a manual choice wins, else the estimate.
   const effective: WaterHardness | undefined = override ?? detected?.hardness;
 
-  const copy = getStepCopy('location', HOST_AUNTY, state.data.name);
+  const copy = getStepCopy('location', auntyId, state.data.name);
 
   const handleContinue = () => {
     const trimmed = city.trim();
@@ -70,11 +68,10 @@ export default function LocationScreen() {
 
   return (
     <SalonFrame
-      auntyId={HOST_AUNTY}
+      auntyId={auntyId}
       question={copy.question}
       speakerVerb={copy.verb}
-      step={1}
-      totalSteps={7}
+      {...progress('location')}
       ctaLabel="Continue"
       ctaDisabled={!effective}
       onCtaPress={handleContinue}

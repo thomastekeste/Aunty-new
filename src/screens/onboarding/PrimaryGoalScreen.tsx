@@ -16,7 +16,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SalonFrame } from '../../components/SalonFrame';
 import { EditorialCard } from '../../components/EditorialCard';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { getStepCopy } from '../../constants/auntyVoice';
+import { getStepCopy, progress } from '../../constants/auntyVoice';
 import type { OnboardingStackParamList, PrimaryGoal } from '../../types';
 import { spacing } from '../../constants/theme';
 
@@ -90,8 +90,7 @@ export default function PrimaryGoalScreen() {
       auntyId={auntyId}
       question={copy.question}
       speakerVerb={copy.verb}
-      step={4}
-      totalSteps={7}
+      {...progress('goal')}
       ctaLabel={ctaLabel}
       ctaDisabled={picks.length === 0}
       onCtaPress={handleContinue}

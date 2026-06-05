@@ -14,7 +14,7 @@ import { SalonFrame } from '../../components/SalonFrame';
 import { EditorialCard } from '../../components/EditorialCard';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
-import { getStepCopy } from '../../constants/auntyVoice';
+import { getStepCopy, progress } from '../../constants/auntyVoice';
 import type { OnboardingStackParamList } from '../../types';
 import {
   colors,
@@ -77,8 +77,7 @@ export default function StrugglesScreen() {
       auntyId={auntyId}
       question={copy.question}
       speakerVerb={copy.verb}
-      step={6}
-      totalSteps={7}
+      {...progress('struggles')}
       ctaLabel={selected.size > 0 ? `Continue · ${selected.size}` : 'Pick at least one'}
       ctaDisabled={selected.size === 0}
       onCtaPress={handleContinue}

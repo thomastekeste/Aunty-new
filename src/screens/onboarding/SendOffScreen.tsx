@@ -23,6 +23,33 @@ import { API_URL } from '../../services/api';
 import { supabase } from '../../services/supabase';
 import { colors, fonts, fontSize, spacing, radius } from '../../constants/theme';
 
+const INTAKE_MAX_ATTEMPTS = 3;
+
+// Persist the consultation server-side with a few retries. Non-blocking: the
+// user enters the app immediately while this runs in the background. Local
+// state already persists via AsyncStorage, so this only syncs the server copy.
+async function postIntakeWithRetry(body: unknown, token?: string): Promise<void> {
+  for (let attempt = 1; attempt <= INTAKE_MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(`${API_URL}/api/onboarding/intake`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) return;
+    } catch {
+      // network error — fall through to retry
+    }
+    if (attempt < INTAKE_MAX_ATTEMPTS) {
+      // Exponential backoff: 1s, 2s.
+      await new Promise((r) => setTimeout(r, 1000 * attempt));
+    }
+  }
+}
+
 export default function SendOffScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
@@ -59,14 +86,8 @@ export default function SendOffScreen() {
     try { await AsyncStorage.setItem('onboarding_completed_at', new Date().toISOString()); } catch {}
     try {
       const { data: { session } } = await supabase!.auth.getSession();
-      fetch(`${API_URL}/api/onboarding/intake`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-        },
-        body: JSON.stringify(state.data),
-      }).catch(() => {});
+      // Fire-and-forget with retries — don't block entering the app.
+      void postIntakeWithRetry(state.data, session?.access_token);
     } catch {}
     complete();
   }, [complete, state.data]);

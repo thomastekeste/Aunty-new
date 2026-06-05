@@ -144,7 +144,13 @@ export default function ProductRevealScreen() {
               variant="primary"
               size="lg"
             />
-            <Pressable onPress={() => navigation.navigate('SendOff')} style={styles.skipBtn} hitSlop={12}>
+            <Pressable
+              onPress={() => navigation.navigate('SendOff')}
+              style={styles.skipBtn}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Maybe later — continue without unlocking"
+            >
               <Text style={styles.skipTextMuted}>Maybe later</Text>
             </Pressable>
           </Animated.View>
@@ -261,7 +267,12 @@ const styles = StyleSheet.create({
 
   ctaSection: { gap: spacing.md, marginTop: spacing.md },
   skipBtn: { paddingVertical: spacing.md, alignItems: 'center' },
-  skipTextMuted: { fontFamily: fonts.body, fontSize: fontSize.xs, color: 'rgba(0,0,0,0.25)' },
+  skipTextMuted: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.muted,
+    textDecorationLine: 'underline',
+  },
 
   // Post-paywall
   header: { paddingHorizontal: spacing.lg, marginBottom: spacing.md },

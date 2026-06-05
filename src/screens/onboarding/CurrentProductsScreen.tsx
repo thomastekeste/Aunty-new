@@ -1,5 +1,5 @@
 /**
- * CurrentProductsScreen — Carmen hosts "what are you using now?"
+ * CurrentProductsScreen — your chosen aunty asks "what are you using now?"
  *
  * "Show me what you've been working with."
  * Multi-select of product categories the user currently uses. Optional — the
@@ -14,14 +14,11 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SalonFrame } from '../../components/SalonFrame';
 import { EditorialCard } from '../../components/EditorialCard';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { getStepCopy } from '../../constants/auntyVoice';
+import { getStepCopy, progress } from '../../constants/auntyVoice';
 import type { OnboardingStackParamList } from '../../types';
 import { spacing } from '../../constants/theme';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'CurrentProducts'>;
-
-// This screen is hosted by Carmen regardless of the user's chosen aunty.
-const HOST_AUNTY = 'carmen' as const;
 
 const NOTHING = 'Nothing / Starting fresh';
 
@@ -41,12 +38,13 @@ const PRODUCT_OPTIONS: string[] = [
 export default function CurrentProductsScreen() {
   const navigation = useNavigation<Nav>();
   const { state, updateHairProfile } = useOnboarding();
+  const auntyId = state.data.chosenAuntyId || 'denise';
 
   const [selected, setSelected] = useState<string[]>(
     state.data.hairProfile.currentProductCategories ?? [],
   );
 
-  const copy = getStepCopy('products', HOST_AUNTY, state.data.name);
+  const copy = getStepCopy('products', auntyId, state.data.name);
 
   const toggle = (option: string) => {
     setSelected((prev) => {
@@ -67,11 +65,10 @@ export default function CurrentProductsScreen() {
 
   return (
     <SalonFrame
-      auntyId={HOST_AUNTY}
+      auntyId={auntyId}
       question={copy.question}
       speakerVerb={copy.verb}
-      step={5}
-      totalSteps={7}
+      {...progress('products')}
       ctaLabel="Continue"
       ctaDisabled={selected.length === 0}
       onCtaPress={handleContinue}
@@ -89,7 +86,7 @@ export default function CurrentProductsScreen() {
             icon=""
             selected={selected.includes(option)}
             onPress={() => toggle(option)}
-            auntyId={HOST_AUNTY}
+            auntyId={auntyId}
             index={index}
             compact
           />
