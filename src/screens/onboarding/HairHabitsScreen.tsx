@@ -15,6 +15,7 @@ import { EditorialCard } from '../../components/EditorialCard';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { useSubscription } from '../../context/SubscriptionContext';
 import { AUNTIES } from '../../constants/aunties';
+import { getStepCopy } from '../../constants/auntyVoice';
 import { assessWashHabit } from '../../utils/washFrequency';
 import type { OnboardingStackParamList, WashFrequency, HeatUse } from '../../types';
 import {
@@ -84,10 +85,9 @@ export default function HairHabitsScreen() {
       )
     : null;
 
-  const questions = [
-    'Tell me — how often do you wash your hair?',
-    `And heat tools? Be honest with Aunty ${aunty.name}, I will not judge.`,
-  ];
+  const washCopy = getStepCopy('habitsWash', auntyId, state.data.name);
+  const heatCopy = getStepCopy('habitsHeat', auntyId, state.data.name);
+  const questions = [washCopy.question, heatCopy.question];
 
   const canContinue = subStep === 0 ? !!wash : !!heat;
 
@@ -113,7 +113,7 @@ export default function HairHabitsScreen() {
     <SalonFrame
       auntyId={auntyId}
       question={questions[subStep]}
-      speakerVerb={subStep === 0 ? 'is asking' : 'wants the truth'}
+      speakerVerb={subStep === 0 ? washCopy.verb : heatCopy.verb}
       step={5}
       totalSteps={7}
       ctaLabel={subStep === 0 ? 'Next' : 'Continue'}

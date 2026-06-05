@@ -8,6 +8,7 @@
  */
 
 import type { AuntyId } from './aunties';
+import { addressUser } from './auntyVoice';
 import type { PrimaryGoal, Porosity } from '../types';
 
 // ─── V1: Curl Type Read ────────────────────────────────────────────
@@ -189,6 +190,37 @@ export const AUNTY_RESOLUTION_LINES: Record<AuntyId, string> = {
   amara: "Today we start rebuilding. Together.",
   salma: "Today, we find balance. I promise you.",
 };
+
+// ─── Personalized interlude helpers ────────────────────────────────
+// Weave the user's name + the aunty's endearment into the interlude beats
+// so each pause feels like she's talking to *them*, not reciting copy.
+
+/** V1 "The Read" — she reacts to your curl type, opening with your name. */
+export function getCurlRead(auntyId: AuntyId, curlType: string | undefined, name?: string): string[] {
+  const reads = AUNTY_CURL_READS[auntyId];
+  const prefix = curlType ? curlType.charAt(0) : '';
+  const read = (curlType && reads[prefix]) || reads.default;
+  return [`${addressUser(auntyId, name)}.`, read];
+}
+
+/** V2 "The Profile" — her read on your goal, then a personal closer. */
+export function getGoalRead(
+  auntyId: AuntyId,
+  primaryGoal: PrimaryGoal | undefined,
+  name?: string,
+): string[] {
+  const goalReads = AUNTY_GOAL_READS[auntyId];
+  const lineOne = (primaryGoal && goalReads[primaryGoal]) || goalReads.default;
+  const lineTwo = `${addressUser(auntyId, name)} — ${AUNTY_PROFILE_CLOSERS[auntyId]}`;
+  return [lineOne, lineTwo];
+}
+
+/** V3 "The Release" — empathy for your struggles, then resolution. */
+export function getStruggleRead(auntyId: AuntyId, count: number, name?: string): string[] {
+  const empathy = AUNTY_EMPATHY_LINES[auntyId](count);
+  const resolution = `${addressUser(auntyId, name)} — ${AUNTY_RESOLUTION_LINES[auntyId]}`;
+  return [empathy, resolution];
+}
 
 // ─── Display Label Mappings ────────────────────────────────────────
 

@@ -25,6 +25,7 @@ import { PressableScale } from '../../components/PressableScale';
 import { CurlPatternIcon } from '../../components/CurlPatternIcon';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
+import { getStepCopy } from '../../constants/auntyVoice';
 import type { OnboardingStackParamList, CurlType } from '../../types';
 import {
   colors,
@@ -158,6 +159,7 @@ export default function CurlTypeScreen() {
   const { state, updateHairProfile } = useOnboarding();
   const auntyId = state.data.chosenAuntyId || 'denise';
   const aunty = AUNTIES[auntyId];
+  const copy = getStepCopy('curlType', auntyId, state.data.name);
   const [selected, setSelected] = useState<CurlType | undefined>(
     state.data.hairProfile.curlType
   );
@@ -175,8 +177,8 @@ export default function CurlTypeScreen() {
   return (
     <SalonFrame
       auntyId={auntyId}
-      question="Which pattern is yours?"
-      speakerVerb="wants to see"
+      question={copy.question}
+      speakerVerb={copy.verb}
       step={2}
       totalSteps={7}
       ctaLabel="That's my curl"

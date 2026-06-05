@@ -14,6 +14,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SalonFrame } from '../../components/SalonFrame';
 import { EditorialCard } from '../../components/EditorialCard';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { getStepCopy } from '../../constants/auntyVoice';
 import type { OnboardingStackParamList } from '../../types';
 import { spacing } from '../../constants/theme';
 
@@ -45,6 +46,8 @@ export default function CurrentProductsScreen() {
     state.data.hairProfile.currentProductCategories ?? [],
   );
 
+  const copy = getStepCopy('products', HOST_AUNTY, state.data.name);
+
   const toggle = (option: string) => {
     setSelected((prev) => {
       if (option === NOTHING) {
@@ -65,8 +68,8 @@ export default function CurrentProductsScreen() {
   return (
     <SalonFrame
       auntyId={HOST_AUNTY}
-      question="Show me what you've been working with."
-      speakerVerb="wants to see"
+      question={copy.question}
+      speakerVerb={copy.verb}
       step={5}
       totalSteps={7}
       ctaLabel="Continue"

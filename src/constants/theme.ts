@@ -172,6 +172,20 @@ export const fontSize = {
   hero: 60,
 };
 
+// ─── Aunty dialogue (single shared voice style) ──────────────────
+// Every spoken line in the consultation — intro, interludes, verdict —
+// renders with THIS exact style so the aunty's voice looks identical on
+// every screen (same family, same boldness, same size). Do not override
+// fontFamily/fontSize per screen; pass color tweaks only if truly needed.
+export const dialogueText = {
+  fontFamily: fonts.display,
+  fontSize: fontSize.xxl,
+  lineHeight: fontSize.xxl * 1.3,
+  letterSpacing: -0.4,
+  textAlign: 'center' as const,
+  color: colors.ink,
+};
+
 export const fontWeight = {
   regular: '400' as const,
   medium: '500' as const,

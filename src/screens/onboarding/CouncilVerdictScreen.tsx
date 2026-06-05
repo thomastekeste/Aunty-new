@@ -30,7 +30,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { SpeechBubble } from '../../components/SpeechBubble';
+import { AuntyDialogue } from '../../components/AuntyDialogue';
 import { CeremonialButton } from '../../components/CeremonialButton';
 import { VerdictShareCard } from '../../components/VerdictShareCard';
 import { AUNTIES } from '../../constants/aunties';
@@ -46,6 +46,7 @@ import {
   fontSize,
   spacing,
   salon,
+  dialogueText,
 } from '../../constants/theme';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'CouncilVerdict'>;
@@ -58,7 +59,7 @@ export default function CouncilVerdictScreen() {
   const aunty = AUNTIES[auntyId];
   const ac = auntyColors[auntyId];
 
-  const findings = getVerdictFindingsFromProfile(state.data.hairProfile);
+  const findings = getVerdictFindingsFromProfile(state.data.hairProfile, state.data.name, auntyId);
   const [activeLine, setActiveLine] = useState(0);
   const [showButton, setShowButton] = useState(false);
   const [speechReady, setSpeechReady] = useState(false);
@@ -223,13 +224,11 @@ export default function CouncilVerdictScreen() {
       {/* Beat 4 — findings */}
       <View style={styles.center}>
         {speechReady ? (
-          <SpeechBubble
+          <AuntyDialogue
             lines={findings}
-            holdMs={2200}
-            fadeMs={420}
-            shimmer
+            holdMs={1800}
             quoteMarkColor={ac.accent}
-            textStyle={styles.line}
+            textStyle={dialogueText}
             onLineLanded={handleLineLanded}
             onComplete={handleComplete}
           />

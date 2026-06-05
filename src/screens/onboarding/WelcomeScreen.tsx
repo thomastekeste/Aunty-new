@@ -16,14 +16,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { SpeechBubble } from '../../components/SpeechBubble';
+import { AuntyDialogue } from '../../components/AuntyDialogue';
 import { CeremonialButton } from '../../components/CeremonialButton';
 import { PressableScale } from '../../components/PressableScale';
 import { AUNTIES, COUNCIL_ORDER } from '../../constants/aunties';
 import type { AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
 import {
-  colors, auntyColors, fonts, fontSize, spacing, radius,
+  colors, auntyColors, fonts, fontSize, spacing, radius, dialogueText,
 } from '../../constants/theme';
 import type { OnboardingStackParamList } from '../../types';
 
@@ -31,41 +31,43 @@ type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'Welcome'>;
 const CARD_W = 116;
 const CARD_GAP = 10;
 
+// Intro plays before we know your name — so each aunty opens with her own
+// term of endearment, the way a real aunty greets you at the door.
 const INTROS: Record<AuntyId, string[]> = {
   ngozi: [
     "I'm Ngozi.",
-    'I know textured hair — the science, the culture, the struggle.',
-    "Tell me about yours and I'll handle the rest.",
+    'Come close, my dear — let Aunty look at this hair properly.',
+    "Tell me everything. I'll handle the rest.",
   ],
   marcia: [
     "I'm Marcia.",
-    'I know textured hair — the roots, the patience, the journey.',
-    "Show me where you're at and we'll build from there.",
+    'Come, love — siddung, mek we talk about dis hair.',
+    "Show me where you're at and we build from di root.",
   ],
   denise: [
     "I'm Denise.",
-    "I know textured hair. I've been in this game longer than most.",
+    'Come here, baby. Let Aunty see what we working with.',
     "Tell me what's going on and I got you.",
   ],
   fatou: [
     "I'm Fatou.",
-    'I know textured hair — the technique, the precision, the care.',
-    "Walk me through yours and I'll design your plan.",
+    'Bonjour, chérie. Sit — let me look at your hair properly.',
+    'Walk me through it and I will design your plan.',
   ],
   carmen: [
     "I'm Carmen.",
-    'I know textured hair — the curls, the volume, the joy.',
-    "Tell me about yours and let's make them shine.",
+    "Ay, mi amor! Come — let's talk about these curls.",
+    'Tell me everything and we make them sing.',
   ],
   amara: [
     "I'm Senayt.",
-    'I know textured hair — the strength it takes, the patience it needs.',
-    "Show me yours and we'll build something solid.",
+    'Selam, yene. Come, sit with me.',
+    'Show me your hair and we build something strong, together.',
   ],
   salma: [
     "I'm Salma.",
-    'I know textured hair — the balance, the remedies, the whole picture.',
-    "Tell me about yours and I'll find your path.",
+    "As-salaam, habibti. Come, breathe — let's begin.",
+    "Tell me about your hair and I'll find your balance.",
   ],
 };
 
@@ -215,13 +217,11 @@ export function WelcomeScreen() {
               </Animated.Text>
 
               <View style={styles.bubbleWrap}>
-                <SpeechBubble
+                <AuntyDialogue
                   lines={lines}
-                  holdMs={1200}
-                  fadeMs={240}
-                  shimmer
+                  holdMs={900}
                   quoteMarkColor={ac.accent}
-                  textStyle={styles.bubbleText}
+                  textStyle={dialogueText}
                   onComplete={handleSpeechComplete}
                 />
               </View>

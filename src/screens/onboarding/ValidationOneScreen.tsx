@@ -24,10 +24,10 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { SpeechBubble } from '../../components/SpeechBubble';
+import { AuntyDialogue } from '../../components/AuntyDialogue';
 import { TapToContinue } from '../../components/TapToContinue';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { AUNTY_CURL_READS } from '../../constants/validationCopy';
+import { getCurlRead } from '../../constants/validationCopy';
 import type { AuntyId } from '../../constants/aunties';
 import {
   colors,
@@ -35,17 +35,11 @@ import {
   fonts,
   fontSize,
   spacing,
+  dialogueText,
 } from '../../constants/theme';
 import type { OnboardingStackParamList } from '../../types';
 
 type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'Validation1'>;
-
-function getCurlMessage(auntyId: AuntyId, curlType?: string): string {
-  const reads = AUNTY_CURL_READS[auntyId];
-  if (!curlType) return reads.default;
-  const prefix = curlType.charAt(0);
-  return reads[prefix] || reads.default;
-}
 
 export default function ValidationOneScreen() {
   const insets = useSafeAreaInsets();
@@ -54,7 +48,7 @@ export default function ValidationOneScreen() {
   const auntyId: AuntyId = state.data.chosenAuntyId || 'denise';
   const ac = auntyColors[auntyId];
   const curlType = state.data.hairProfile.curlType;
-  const message = getCurlMessage(auntyId, curlType);
+  const lines = getCurlRead(auntyId, curlType, state.data.name);
 
   const [showSpeech, setShowSpeech] = useState(false);
   const [canTap, setCanTap] = useState(false);
@@ -136,13 +130,11 @@ export default function ValidationOneScreen() {
         {/* Speech */}
         <View style={styles.lines}>
           {showSpeech && (
-            <SpeechBubble
-              lines={[message]}
-              holdMs={2400}
-              fadeMs={420}
-              shimmer
+            <AuntyDialogue
+              lines={lines}
+              holdMs={1400}
               quoteMarkColor={ac.accent}
-              textStyle={[styles.line, { color: colors.ink }]}
+              textStyle={dialogueText}
               onLineLanded={handleLineLanded}
               onComplete={handleSpeechComplete}
             />

@@ -22,12 +22,11 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { SpeechBubble } from '../../components/SpeechBubble';
+import { AuntyDialogue } from '../../components/AuntyDialogue';
 import { TapToContinue } from '../../components/TapToContinue';
 import { useOnboarding } from '../../context/OnboardingContext';
 import {
-  AUNTY_GOAL_READS,
-  AUNTY_PROFILE_CLOSERS,
+  getGoalRead,
   POROSITY_LABELS,
   GOAL_LABELS,
 } from '../../constants/validationCopy';
@@ -38,6 +37,7 @@ import {
   fonts,
   fontSize,
   spacing,
+  dialogueText,
 } from '../../constants/theme';
 import type { OnboardingStackParamList } from '../../types';
 
@@ -69,11 +69,7 @@ export default function ValidationTwoScreen() {
   const porosity = state.data.hairProfile.porosity;
   const primaryGoal = state.data.hairProfile.primaryGoal;
 
-  const goalReads = AUNTY_GOAL_READS[auntyId];
-  const lineOne = primaryGoal
-    ? (goalReads[primaryGoal] || goalReads.default)
-    : goalReads.default;
-  const lineTwo = AUNTY_PROFILE_CLOSERS[auntyId];
+  const speechLines = getGoalRead(auntyId, primaryGoal, state.data.name);
 
   const [showSpeech, setShowSpeech] = useState(false);
   const [canTap, setCanTap] = useState(false);
@@ -173,13 +169,11 @@ export default function ValidationTwoScreen() {
         {/* Speech */}
         <View style={styles.lines}>
           {showSpeech && (
-            <SpeechBubble
-              lines={[lineOne, lineTwo]}
-              holdMs={1800}
-              fadeMs={420}
-              shimmer
+            <AuntyDialogue
+              lines={speechLines}
+              holdMs={1400}
               quoteMarkColor={ac.accent}
-              textStyle={[styles.line, { color: colors.ink }]}
+              textStyle={dialogueText}
               onLineLanded={handleLineLanded}
               onComplete={handleSpeechComplete}
             />

@@ -25,12 +25,11 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { AuntyAvatar } from '../../components/AuntyAvatar';
-import { SpeechBubble } from '../../components/SpeechBubble';
+import { AuntyDialogue } from '../../components/AuntyDialogue';
 import { TapToContinue } from '../../components/TapToContinue';
 import { useOnboarding } from '../../context/OnboardingContext';
 import {
-  AUNTY_EMPATHY_LINES,
-  AUNTY_RESOLUTION_LINES,
+  getStruggleRead,
   STRUGGLE_LABELS,
 } from '../../constants/validationCopy';
 import type { AuntyId } from '../../constants/aunties';
@@ -40,6 +39,7 @@ import {
   fonts,
   fontSize,
   spacing,
+  dialogueText,
 } from '../../constants/theme';
 import type { OnboardingStackParamList } from '../../types';
 
@@ -101,8 +101,7 @@ export default function ValidationThreeScreen() {
   const struggles = state.data.hairProfile.failedAttempts || [];
   const labels = struggles.map((id) => STRUGGLE_LABELS[id] || id);
 
-  const empathyLine = AUNTY_EMPATHY_LINES[auntyId](struggles.length);
-  const resolutionLine = AUNTY_RESOLUTION_LINES[auntyId];
+  const speechLines = getStruggleRead(auntyId, struggles.length, state.data.name);
 
   const [phase, setPhase] = useState<Phase>('entering');
   const [canTap, setCanTap] = useState(false);
@@ -218,12 +217,11 @@ export default function ValidationThreeScreen() {
         {/* Speech */}
         <View style={styles.lines}>
           {phase === 'speaking' && (
-            <SpeechBubble
-              lines={[empathyLine, resolutionLine]}
-              fadeMs={420}
-              shimmer={false}
+            <AuntyDialogue
+              lines={speechLines}
+              holdMs={1400}
               quoteMarkColor={ac.accent}
-              textStyle={[styles.line, { color: colors.ink }]}
+              textStyle={dialogueText}
               onLineLanded={handleLineLanded}
               onComplete={handleSpeechComplete}
             />

@@ -14,6 +14,7 @@ import { ConsultationShell } from '../../components/ConsultationShell';
 import { OptionCard } from '../../components/OptionCard';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
+import { getStepCopy } from '../../constants/auntyVoice';
 import type { OnboardingStackParamList, Porosity } from '../../types';
 import {
   colors,
@@ -120,6 +121,7 @@ export default function PorosityTestScreen() {
   const auntyId = state.data.chosenAuntyId || 'denise';
   const aunty = AUNTIES[auntyId];
   const ac = auntyColors[auntyId];
+  const copy = getStepCopy('porosity', auntyId, state.data.name);
 
   const [selected, setSelected] = useState<Porosity | undefined>(
     state.data.hairProfile.porosity
@@ -169,7 +171,7 @@ export default function PorosityTestScreen() {
   return (
     <ConsultationShell
       auntyId={auntyId}
-      question="Time to test your hair. Drop a strand in a glass of water. What happened?"
+      question={copy.question}
       step={3}
       totalSteps={7}
       ctaLabel="Next"

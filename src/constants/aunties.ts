@@ -18,6 +18,8 @@ export interface Aunty {
   quote: string;
   quotes: string[]; // rotating wisdom lines
   tips: string[]; // daily tips in character voice
+  /** Signature terms of endearment she calls you, lightly seasoned/readable. First is primary. */
+  endearments: string[];
   greeting: string;
   ingredient: string;
   win: string;
@@ -52,6 +54,7 @@ export const AUNTIES: Record<string, Aunty> = {
       'Steam is your secret weapon. Use it this week.',
       'Drink water. Your hair is thirsty because YOU are thirsty.',
     ],
+    endearments: ['my dear', 'nne'],
     greeting: 'Come sit, let Aunty see this hair.',
     ingredient: 'Shea butter, hot oil treatments, steam therapy',
     win: 'Ah ah! Now we dey talk o! Dis is what I been waiting for.',
@@ -83,6 +86,7 @@ export const AUNTIES: Record<string, Aunty> = {
       'Your hair grows whether you watch or not. Just keep feeding it.',
       'Protective style this week. Let your ends rest.',
     ],
+    endearments: ['love', 'mi dear'],
     greeting: 'Wah gwaan, love? Mek we check dem roots.',
     ingredient: 'Jamaican black castor oil, scalp massage, peppermint',
     win: 'Yuh see it? Root strong, everything else follow.',
@@ -114,6 +118,7 @@ export const AUNTIES: Record<string, Aunty> = {
       'Detangle from ends to roots. Always. No exceptions.',
       'Protective style check: is it too tight? Your edges matter more than the look.',
     ],
+    endearments: ['baby', 'sugar'],
     greeting: 'Hey sugar. Let me see what we working with.',
     ingredient: 'LOC method, satin bonnets, twist-outs, protective styling',
     win: 'Now THAT is what I\'m talking about. Look at that growth, baby.',
@@ -145,6 +150,7 @@ export const AUNTIES: Record<string, Aunty> = {
       'Clip each section as you work. Organization prevents tangles.',
       'Rinse with cool water at the end. It seals the cuticle. Always.',
     ],
+    endearments: ['chérie', 'ma chérie'],
     greeting: 'Bonjour, ma chérie. Show me your technique.',
     ingredient: 'Karité butter, thread stretching, precision sectioning',
     win: 'Magnifique! Your technique, it is becoming art.',
@@ -176,6 +182,7 @@ export const AUNTIES: Record<string, Aunty> = {
       'Refresh spray: water + leave-in + good vibes. Shake and spray.',
       'Take a selfie of your curls today. Future you will love looking back.',
     ],
+    endearments: ['mi amor', 'mija'],
     greeting: 'Hola mi amor! Let\'s make those curls pop!',
     ingredient: 'Flaxseed gel, finger coiling, diffusing technique',
     win: 'Ay mami, LOOK at those curls! That\'s what I\'m talking about!',
@@ -207,7 +214,8 @@ export const AUNTIES: Record<string, Aunty> = {
       'Rest day means rest. Do not touch, twist, or fuss. Let it be.',
       'Henna strengthens without chemicals. Consider it for your next treatment.',
     ],
-    greeting: 'Senayt is here. Let us build something strong.',
+    endearments: ['yene', 'yene konjo'],
+    greeting: 'Selam, yene. Come, sit — let us build something strong.',
     ingredient: 'Fenugreek protein treatments, castor oil, henna',
     win: 'Feel that strength? That is your hair remembering what it is.',
     fail: 'Your hair is tired, not broken. We will restore it, step by step.',
@@ -238,7 +246,8 @@ export const AUNTIES: Record<string, Aunty> = {
       'Scalp massage with warm oil. Close your eyes. Breathe. This is medicine.',
       'Your hair reflects your stress. If it is acting up, check in with yourself first.',
     ],
-    greeting: 'As-salaam, habibi. Come, let us find balance.',
+    endearments: ['habibti', 'habibi'],
+    greeting: 'As-salaam, habibti. Come, let us find balance.',
     ingredient: 'Argan oil, ghassoul clay, rose water, henna',
     win: 'See how calm your hair is now? When we are balanced, everything flows.',
     fail: 'Do not worry. Healing is not linear. We adjust the remedy.',

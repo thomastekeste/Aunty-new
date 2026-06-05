@@ -16,6 +16,7 @@ import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { SalonFrame } from '../../components/SalonFrame';
 import { PressableScale } from '../../components/PressableScale';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { getStepCopy } from '../../constants/auntyVoice';
 import { lookupWaterHardness, HARDNESS_COPY, type WaterHardness } from '../../utils/waterHardness';
 import type { OnboardingStackParamList } from '../../types';
 import {
@@ -58,6 +59,8 @@ export default function LocationScreen() {
   // What we'll actually show / save: a manual choice wins, else the estimate.
   const effective: WaterHardness | undefined = override ?? detected?.hardness;
 
+  const copy = getStepCopy('location', HOST_AUNTY, state.data.name);
+
   const handleContinue = () => {
     const trimmed = city.trim();
     if (trimmed) setCity(trimmed);
@@ -68,8 +71,8 @@ export default function LocationScreen() {
   return (
     <SalonFrame
       auntyId={HOST_AUNTY}
-      question="Your water shapes your hair more than you know."
-      speakerVerb="wants to know"
+      question={copy.question}
+      speakerVerb={copy.verb}
       step={1}
       totalSteps={7}
       ctaLabel="Continue"

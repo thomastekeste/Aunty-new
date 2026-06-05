@@ -14,6 +14,7 @@ import { SalonFrame } from '../../components/SalonFrame';
 import { EditorialCard } from '../../components/EditorialCard';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
+import { getStepCopy } from '../../constants/auntyVoice';
 import type { OnboardingStackParamList } from '../../types';
 import {
   colors,
@@ -48,6 +49,7 @@ export default function StrugglesScreen() {
   const { state, updateHairProfile } = useOnboarding();
   const auntyId = state.data.chosenAuntyId || 'denise';
   const aunty = AUNTIES[auntyId];
+  const copy = getStepCopy('struggles', auntyId, state.data.name);
   const [selected, setSelected] = useState<Set<string>>(
     new Set(state.data.hairProfile.failedAttempts ?? [])
   );
@@ -73,8 +75,8 @@ export default function StrugglesScreen() {
   return (
     <SalonFrame
       auntyId={auntyId}
-      question="Tell me where it hurts."
-      speakerVerb="is listening"
+      question={copy.question}
+      speakerVerb={copy.verb}
       step={6}
       totalSteps={7}
       ctaLabel={selected.size > 0 ? `Continue · ${selected.size}` : 'Pick at least one'}

@@ -16,6 +16,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SalonFrame } from '../../components/SalonFrame';
 import { EditorialCard } from '../../components/EditorialCard';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { getStepCopy } from '../../constants/auntyVoice';
 import type { OnboardingStackParamList, PrimaryGoal } from '../../types';
 import { spacing } from '../../constants/theme';
 
@@ -44,6 +45,7 @@ export default function PrimaryGoalScreen() {
   const navigation = useNavigation<Nav>();
   const { state, updateHairProfile } = useOnboarding();
   const auntyId = state.data.chosenAuntyId || 'denise';
+  const copy = getStepCopy('goal', auntyId, state.data.name);
 
   // Hydrate from existing state: primary first, then secondaries (in order).
   const initialPicks: PrimaryGoal[] = [
@@ -86,8 +88,8 @@ export default function PrimaryGoalScreen() {
   return (
     <SalonFrame
       auntyId={auntyId}
-      question="What would change everything?"
-      speakerVerb="is curious"
+      question={copy.question}
+      speakerVerb={copy.verb}
       step={4}
       totalSteps={7}
       ctaLabel={ctaLabel}

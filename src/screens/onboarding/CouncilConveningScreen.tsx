@@ -63,19 +63,19 @@ function getStatusForAunty(auntyId: AuntyId, name: string, profile: any): string
 
   switch (auntyId) {
     case 'ngozi':
-      return `Ngozi is reading the science of your ${ct}…`;
+      return `Ngozi is reading your ${ct}, ${name}…`;
     case 'marcia':
-      return `Marcia is checking ${por} porosity…`;
+      return `Marcia is checking your ${por} porosity…`;
     case 'denise':
-      return 'Denise is mapping your wash day…';
+      return `Denise is mapping your wash day…`;
     case 'fatou':
       return 'Fatou is refining the technique…';
     case 'carmen':
-      return `Carmen is selecting for ${goal}…`;
+      return `Carmen is choosing for ${goal}…`;
     case 'amara':
       return 'Senayt is laying the foundation…';
     case 'salma':
-      return `${name}, Salma is finalizing your plan…`;
+      return `Almost there, ${name} — Salma is finalizing your plan…`;
     default:
       return `${name}, the council is convening…`;
   }

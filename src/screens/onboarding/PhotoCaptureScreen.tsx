@@ -19,6 +19,7 @@ import { AuntyAvatar } from '../../components/AuntyAvatar';
 import { CeremonialButton } from '../../components/CeremonialButton';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { AUNTIES } from '../../constants/aunties';
+import { inlineYou } from '../../constants/auntyVoice';
 import {
   colors,
   auntyColors,
@@ -131,7 +132,7 @@ export default function PhotoCaptureScreen() {
         <Animated.View entering={FadeIn.duration(500)} style={styles.auntyHeader}>
           <AuntyAvatar auntyId={auntyId} size={56} showRing glowing />
           <Text style={[styles.auntyName, { color: ac.accent }]}>{aunty.name}</Text>
-          <Text style={styles.auntyMessage}>Let me see that hair, baby.</Text>
+          <Text style={styles.auntyMessage}>{`Let me see that hair, ${inlineYou(auntyId, state.data.name)}.`}</Text>
         </Animated.View>
 
         {/* Title */}
