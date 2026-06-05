@@ -12,11 +12,11 @@
  *      lifts.
  *   4. "Now go make your aunty proud." — and the whole council floods in.
  *
- * Tap anywhere to skip to the end. (Export name kept for import compatibility.)
+ * Plays in full — not skippable. (Export name kept for import compatibility.)
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import Svg, {
   Defs,
   RadialGradient,
@@ -310,7 +310,6 @@ export function HandwrittenBlessing({ name, chosenAuntyId, onComplete }: Props) 
   const ac = auntyColors[chosenAuntyId];
   const others = COUNCIL_ORDER.filter((id) => id !== chosenAuntyId);
 
-  const [skip, setSkip] = useState(false);
   const [phase, setPhase] = useState(0); // 0 broken → 1 needs someone → 2 aunty/mend → 3 council
   const finishedRef = useRef(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -372,19 +371,6 @@ export function HandwrittenBlessing({ name, chosenAuntyId, onComplete }: Props) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSkip = useCallback(() => {
-    if (finishedRef.current) return;
-    timers.current.forEach(clearTimeout);
-    timers.current = [];
-    setSkip(true);
-    setPhase(3);
-    warm.value = withTiming(1, { duration: 250 });
-    mend.value = withTiming(1, { duration: 280 });
-    lift.value = withTiming(1, { duration: 250 });
-    gleam.value = 0;
-    finish();
-  }, [finish, warm, mend, lift, gleam]);
-
   const veilStyle = useAnimatedStyle(() => ({ opacity: interpolate(warm.value, [0, 1], [0.5, 0]) }));
   const haloStyle = useAnimatedStyle(() => ({ opacity: warm.value }));
   const rayStyle = useAnimatedStyle(() => ({
@@ -405,10 +391,10 @@ export function HandwrittenBlessing({ name, chosenAuntyId, onComplete }: Props) 
     transform: [{ scale: interpolate(sparkle.value, [0, 1], [0.6, 1.3]) }],
   }));
 
-  const enter = <T,>(anim: T): T | undefined => (skip ? undefined : anim);
+  const enter = <T,>(anim: T): T => anim;
 
   return (
-    <Pressable style={styles.fill} onPress={handleSkip} accessibilityRole="button" accessibilityLabel="Continue">
+    <View style={styles.fill}>
       {/* cool veil that lifts as the aunty arrives */}
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.veil, veilStyle]} />
 
@@ -487,7 +473,7 @@ export function HandwrittenBlessing({ name, chosenAuntyId, onComplete }: Props) 
           </Animated.View>
         )}
       </View>
-    </Pressable>
+    </View>
   );
 }
 

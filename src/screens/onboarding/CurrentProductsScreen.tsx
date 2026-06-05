@@ -70,6 +70,7 @@ export default function CurrentProductsScreen() {
       step={5}
       totalSteps={7}
       ctaLabel="Continue"
+      ctaDisabled={selected.length === 0}
       onCtaPress={handleContinue}
     >
       <Animated.View

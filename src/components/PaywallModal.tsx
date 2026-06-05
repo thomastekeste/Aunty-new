@@ -3,7 +3,7 @@
  *
  * Gold/creme editorial design. Feature carousel showing every tab.
  * Real pricing from RevenueCat offerings.
- * Monthly and yearly options. Handles purchase, restore, and close.
+ * Monthly, 3-month, yearly, and lifetime options. Handles purchase, restore, and close.
  */
 
 import React, { useCallback, useState } from 'react';
@@ -21,7 +21,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import Purchases from 'react-native-purchases';
+import Purchases, { PurchasesPackage } from 'react-native-purchases';
 import { useSubscription } from '../context/SubscriptionContext';
 import {
   colors,
@@ -41,8 +41,20 @@ const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get('window');
 interface Props {
   visible: boolean;
   onClose: () => void;
-  onSubscribe?: (plan: 'monthly' | 'yearly') => void;
+  onSubscribe?: (plan: 'monthly' | 'yearly' | 'threeMonth' | 'lifetime') => void;
   onRestore?: () => void;
+}
+
+type PlanKey = 'monthly' | 'yearly' | 'threeMonth' | 'lifetime';
+
+interface PlanOption {
+  key: PlanKey;
+  pkg: PurchasesPackage | null | undefined;
+  price: string;
+  period: string;
+  label: string;
+  sub: string;
+  badge?: string;
 }
 
 const VALUE_SECTIONS = [
@@ -66,51 +78,88 @@ const VALUE_SECTIONS = [
 
 export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore }: Props) {
   const { currentOffering, purchasePackage, restorePurchases } = useSubscription();
-  const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey>('yearly');
 
   // Get packages from RevenueCat offering
   const yearlyPkg = currentOffering?.annual;
   const monthlyPkg = currentOffering?.monthly;
+  const threeMonthPkg = currentOffering?.threeMonth;
+  const lifetimePkg = currentOffering?.lifetime;
 
-  // Check for intro offer / trial on yearly
-  const yearlyProduct = yearlyPkg?.product as any;
-  const yearlyIntro = yearlyProduct?.introPrice;
-  const yearlyHasIntroOffer = !!yearlyIntro && yearlyIntro.price === 0;
-  const trialDays = yearlyIntro?.periodNumberOfUnits ?? 7;
+  // Display prices (real from RC or fallback to our set ladder)
+  const yearlyPrice = yearlyPkg?.product?.priceString || '$29.99';
+  const monthlyPrice = monthlyPkg?.product?.priceString || '$4.99';
+  const threeMonthPrice = threeMonthPkg?.product?.priceString || '$11.99';
+  const lifetimePrice = lifetimePkg?.product?.priceString || '$79.99';
 
-  // Display prices (real from RC or fallback)
-  const yearlyPrice = yearlyPkg?.product?.priceString || '$59.99/year';
-  const monthlyPrice = monthlyPkg?.product?.priceString || '$9.99/month';
+  // All plans, always visible. Order = how they're shown (best value first).
+  const plans: PlanOption[] = [
+    {
+      key: 'yearly',
+      pkg: yearlyPkg,
+      price: yearlyPrice,
+      period: '/year',
+      label: 'Yearly',
+      sub: 'Billed once a year',
+      badge: 'BEST VALUE',
+    },
+    {
+      key: 'threeMonth',
+      pkg: threeMonthPkg,
+      price: threeMonthPrice,
+      period: '/3 mo',
+      label: '3 Months',
+      sub: 'Billed every 3 months',
+      badge: 'SAVE 20%',
+    },
+    {
+      key: 'monthly',
+      pkg: monthlyPkg,
+      price: monthlyPrice,
+      period: '/mo',
+      label: 'Monthly',
+      sub: 'Cancel anytime',
+    },
+    {
+      key: 'lifetime',
+      pkg: lifetimePkg,
+      price: lifetimePrice,
+      period: 'once',
+      label: 'Lifetime',
+      sub: 'Pay once · yours forever',
+      badge: 'BEST DEAL',
+    },
+  ];
 
-  const trialLabel = yearlyHasIntroOffer
-    ? `Start ${trialDays}-Day Free Trial`
-    : 'Subscribe Yearly';
+  const selectedPlanObj = plans.find((p) => p.key === selectedPlan) ?? plans[0];
 
-  const handleYearly = useCallback(async () => {
+  const ctaLabel = selectedPlan === 'lifetime' ? 'Unlock Lifetime Access' : 'Subscribe';
+
+  // Generic purchase: buy the package if present; otherwise just signal (dev / no-RC).
+  const buy = useCallback(
+    async (pkg: PurchasesPackage | null | undefined, plan: PlanKey) => {
+      if (pkg) {
+        const success = await purchasePackage(pkg);
+        if (success) {
+          onSubscribe?.(plan);
+          onClose();
+        }
+      } else {
+        onSubscribe?.(plan);
+      }
+    },
+    [purchasePackage, onSubscribe, onClose],
+  );
+
+  const handleSubscribe = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    if (yearlyPkg) {
-      const success = await purchasePackage(yearlyPkg);
-      if (success) {
-        onSubscribe?.('yearly');
-        onClose();
-      }
-    } else {
-      onSubscribe?.('yearly');
-    }
-  }, [yearlyPkg, purchasePackage, onSubscribe, onClose]);
+    return buy(selectedPlanObj.pkg, selectedPlanObj.key);
+  }, [buy, selectedPlanObj]);
 
-  const handleMonthly = useCallback(async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (monthlyPkg) {
-      const success = await purchasePackage(monthlyPkg);
-      if (success) {
-        onSubscribe?.('monthly');
-        onClose();
-      }
-    } else {
-      onSubscribe?.('monthly');
-    }
-  }, [monthlyPkg, purchasePackage, onSubscribe, onClose]);
+  const selectPlan = useCallback((key: PlanKey) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedPlan(key);
+  }, []);
 
   const handlePromoCode = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -176,47 +225,55 @@ export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore }: 
               </Text>
             </View>
 
-            {/* Pricing */}
+            {/* Pricing — all plans visible, tap to select */}
             <View style={styles.pricing}>
-              {/* Primary CTA — yearly with trial */}
-              <Pressable onPress={handleYearly} style={styles.yearlyBtn}>
-                <LinearGradient colors={[...gradients.gold]} style={styles.yearlyGradient}>
-                  <View style={styles.bestValue}>
-                    <Text style={styles.bestValueText}>
-                      {yearlyHasIntroOffer ? `${trialDays} DAYS FREE` : 'BEST VALUE'}
-                    </Text>
-                  </View>
-                  <Text style={styles.yearlyCtaLabel}>{trialLabel}</Text>
-                  <Text style={styles.yearlyPrice}>
-                    {yearlyHasIntroOffer ? `Then ${yearlyPrice}` : yearlyPrice}
-                  </Text>
-                  <Text style={styles.yearlySub}>Less than one bad product purchase</Text>
+              {plans.map((p) => {
+                const isSel = selectedPlan === p.key;
+                return (
+                  <Pressable
+                    key={p.key}
+                    onPress={() => selectPlan(p.key)}
+                    style={[styles.planCard, isSel && styles.planCardSelected]}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: isSel }}
+                    accessibilityLabel={`${p.label}, ${p.price} ${p.period}`}
+                  >
+                    <View style={[styles.planRadio, isSel && styles.planRadioOn]}>
+                      {isSel && <View style={styles.planRadioDot} />}
+                    </View>
+                    <View style={styles.planInfo}>
+                      <View style={styles.planTopRow}>
+                        <Text style={[styles.planLabel, isSel && styles.planLabelSel]}>{p.label}</Text>
+                        {p.badge && (
+                          <View style={[styles.planBadge, isSel && styles.planBadgeSel]}>
+                            <Text style={[styles.planBadgeText, isSel && styles.planBadgeTextSel]}>{p.badge}</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.planSub}>{p.sub}</Text>
+                    </View>
+                    <View style={styles.planPriceWrap}>
+                      <Text style={[styles.planPrice, isSel && styles.planLabelSel]}>{p.price}</Text>
+                      <Text style={styles.planPeriod}>{p.period}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+
+              {/* Single CTA — acts on the selected plan */}
+              <Pressable onPress={handleSubscribe} style={styles.ctaBtn}>
+                <LinearGradient colors={[...gradients.gold]} style={styles.ctaGradient}>
+                  <Text style={styles.ctaLabel}>{ctaLabel}</Text>
                 </LinearGradient>
               </Pressable>
-
-              {/* More options toggle */}
-              <Pressable
-                style={styles.moreOptionsBtn}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setShowMoreOptions((v) => !v);
-                }}
-              >
-                <Text style={styles.moreOptionsText}>
-                  {showMoreOptions ? 'Hide options ↑' : 'More options ↓'}
-                </Text>
-              </Pressable>
-
-              {showMoreOptions && (
-                <Pressable onPress={handleMonthly} style={styles.monthlyBtn}>
-                  <Text style={styles.monthlyPrice}>{monthlyPrice}</Text>
-                  <Text style={styles.monthlySub}>Month-to-month · Cancel anytime</Text>
-                </Pressable>
-              )}
             </View>
 
             {/* Guarantee */}
-            <Text style={styles.guarantee}>7-day free trial. Cancel before it ends and pay nothing.</Text>
+            <Text style={styles.guarantee}>
+              {selectedPlan === 'lifetime'
+                ? 'One payment. No subscription, no renewals — yours for good.'
+                : 'Cancel anytime in your Apple account settings.'}
+            </Text>
 
             {/* Restore + Promo code */}
             <View style={styles.restoreRow}>
@@ -231,9 +288,7 @@ export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore }: 
 
             {/* Auto-renew disclosure — always shown (Apple Guideline 3.1.2) */}
             <Text style={styles.legalText}>
-              {yearlyHasIntroOffer
-                ? `Your free trial starts on activation. The subscription then auto-renews at ${yearlyPrice} unless cancelled at least 24 hours before the trial ends.`
-                : `Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period. Payment is charged to your Apple ID and managed in your account settings.`}
+              Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period. Payment is charged to your Apple ID and managed in your account settings. The Lifetime option is a one-time purchase and does not renew.
             </Text>
 
             {/* Terms + Privacy links (Apple Guideline 3.1.2) */}
@@ -278,21 +333,53 @@ const styles = StyleSheet.create({
   proof: { paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, alignItems: 'center' },
   proofText: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.dark.text, textAlign: 'center', fontStyle: 'italic', lineHeight: fontSize.md * 1.6 },
 
-  pricing: { paddingHorizontal: spacing.lg, gap: spacing.md },
-  yearlyBtn: { borderRadius: radius.lg, overflow: 'hidden', ...shadows.gold },
-  yearlyGradient: { paddingVertical: spacing.lg, alignItems: 'center', borderRadius: radius.lg },
-  bestValue: { backgroundColor: 'rgba(45,27,14,0.2)', paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, marginBottom: spacing.sm },
-  bestValueText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.ink, letterSpacing: letterSpacing.wider },
-  yearlyCtaLabel: { fontFamily: fonts.display, fontSize: fontSize.xl, color: colors.ink, marginBottom: 2 },
-  yearlyPrice: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkLight, marginTop: 2 },
-  yearlySub: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkLight, marginTop: spacing.xs, textAlign: 'center' },
+  pricing: { paddingHorizontal: spacing.lg, gap: spacing.sm },
 
-  moreOptionsBtn: { alignItems: 'center', paddingVertical: spacing.sm },
-  moreOptionsText: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.dark.textMuted },
+  // Plan card (tap to select)
+  planCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderWidth: 1.5,
+    borderColor: colors.dark.border,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+  },
+  planCardSelected: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+    backgroundColor: 'rgba(212,160,74,0.10)',
+  },
+  planRadio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: colors.dark.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planRadioOn: { borderColor: colors.primary },
+  planRadioDot: { width: 11, height: 11, borderRadius: 6, backgroundColor: colors.primary },
+  planInfo: { flex: 1 },
+  planTopRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  planLabel: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.md, color: colors.dark.text },
+  planLabelSel: { color: colors.dark.text },
+  planBadge: { backgroundColor: 'rgba(212,160,74,0.22)', paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radius.full },
+  planBadgeSel: { backgroundColor: colors.primary },
+  planBadgeText: { fontFamily: fonts.bodySemiBold, fontSize: 10, color: colors.primary, letterSpacing: letterSpacing.wider },
+  planBadgeTextSel: { color: colors.ink },
+  planSub: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.dark.textMuted, marginTop: 2 },
+  planPriceWrap: { alignItems: 'flex-end' },
+  planPrice: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.lg, color: colors.dark.text },
+  planPeriod: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.dark.textMuted },
 
-  monthlyBtn: { borderWidth: 1.5, borderColor: colors.dark.border, borderRadius: radius.lg, paddingVertical: spacing.md, alignItems: 'center' },
-  monthlyPrice: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.lg, color: colors.dark.text },
-  monthlySub: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.dark.textMuted, marginTop: 2 },
+  // Single CTA button
+  ctaBtn: { borderRadius: radius.lg, overflow: 'hidden', marginTop: spacing.sm, ...shadows.gold },
+  ctaGradient: { paddingVertical: spacing.lg, alignItems: 'center', borderRadius: radius.lg },
+  ctaLabel: { fontFamily: fonts.display, fontSize: fontSize.xl, color: colors.ink },
 
   guarantee: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.primary, textAlign: 'center', paddingVertical: spacing.lg, paddingHorizontal: spacing.xl },
 

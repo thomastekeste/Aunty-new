@@ -73,6 +73,7 @@ export default function LocationScreen() {
       step={1}
       totalSteps={7}
       ctaLabel="Continue"
+      ctaDisabled={!effective}
       onCtaPress={handleContinue}
       keyboardAware
     >
