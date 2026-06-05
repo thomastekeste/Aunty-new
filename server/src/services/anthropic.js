@@ -444,6 +444,130 @@ RULES:
   return result;
 }
 
+// ─── Council + Routine (single call) ────────────────────────────
+
+// Onboarding speed path: produce BOTH the council verdict and the week-1
+// routine in ONE model call instead of two sequential ones. Each separate
+// call generates ~2048 tokens and runs back-to-back; merging them removes a
+// full round trip and lets the model reason once about the same profile.
+// Output is intentionally a touch more concise than the two-call versions —
+// the onboarding ceremony favors speed, and richer content can regenerate
+// in-app later. Cached by profile, like the individual generators.
+export async function generateCouncilAndRoutine(hairProfile, userName, photoAnalysis = null) {
+  const cacheProfile = {
+    curlType: hairProfile.curlType,
+    porosity: hairProfile.porosity,
+    primaryGoal: hairProfile.primaryGoal,
+    density: hairProfile.density,
+    scalpConcerns: hairProfile.scalpConcerns,
+    washFrequency: hairProfile.washFrequency,
+    heatUse: hairProfile.heatUse,
+    timeAvailable: hairProfile.timeAvailable,
+  };
+  const key = cacheKey('council-routine', cacheProfile);
+  const cached = cacheGet(key);
+  if (cached) { console.log('[anthropic] council+routine cache hit'); return cached; }
+
+  const auntyDescriptions = COUNCIL_ORDER.map((id) => {
+    const a = AUNTIES[id];
+    return `### ${a.name} — "${a.title}" (${a.region})
+- Specialty: ${a.specialty} | Focus: ${a.focus}
+- Voice: ${a.dialect} | Personality: ${a.personality}
+- Signature ingredients/methods: ${a.ingredient}`;
+  }).join('\n');
+
+  const hostAssignments = Object.entries(RITUAL_HOSTS)
+    .map(([type, id]) => {
+      const a = AUNTIES[id];
+      return `- "${type}" days are hosted by ${a.name} (speaks in ${a.dialect}).`;
+    })
+    .join('\n');
+
+  const safe = sanitizeProfileForPrompt(hairProfile);
+  const safeName = sanitizeForPrompt(userName, 50);
+
+  const profileSummary = `- Name: ${safeName}
+- Curl type: ${safe.curlType}
+- Porosity: ${safe.porosity}
+- Elasticity: ${safe.elasticity}
+- Density: ${safe.density}
+- Primary goal: ${safe.primaryGoal}
+- Secondary goals: ${(hairProfile.secondaryGoals || []).map(g => sanitizeForPrompt(g, 30)).join(', ') || 'none'}
+- Wash frequency: ${safe.washFrequency}
+- Heat use: ${safe.heatUse}
+- Relaxer history: ${hairProfile.relaxerHistory ? 'yes' : 'no'}
+- Color treated: ${hairProfile.colorTreated ? 'yes' : 'no'}
+- Protective styling: ${hairProfile.protectiveStyling ? 'yes' : 'no'}
+- Scalp concerns: ${safe.scalpConcerns.join(', ') || 'none'}
+- Time available: ${sanitizeForPrompt(hairProfile.timeAvailable, 20)}
+- Failed attempts / frustrations: ${safe.failedAttempts.join(', ') || 'none'}`;
+
+  const systemPrompt = `You are the Aunty Curl Council — seven Black and Brown women elders from the African diaspora, each an expert in natural hair care. They consult on a new member's hair, then hand her a week-1 ritual.
+
+Each aunty is a DISTINCT PERSON with her own cultural voice, dialect, and expertise:
+${auntyDescriptions}
+
+RULES:
+- Each aunty speaks in her authentic dialect/voice and focuses on her specialty.
+- Messages are warm, personal, opinionated — like real aunties who CARE. Keep each to 1-2 sentences (this is the quick consult).
+- Key findings are specific, actionable insights about THIS member's hair.
+- The routine is tailored to her curl type, porosity, goals, and time. Steps are specific but concise.
+- Return ONLY valid JSON, no markdown code fences.`;
+
+  const userPrompt = `## The New Member's Hair Profile
+${profileSummary}${photoAnalysisBlock(photoAnalysis)}
+
+## Day-type hosts (hostAunty must match)
+${hostAssignments}
+
+Return a JSON object with this EXACT structure:
+{
+  "auntyMessages": {
+    "ngozi": "1-2 sentences in Nigerian pidgin about moisture",
+    "marcia": "1-2 sentences in Jamaican patois about scalp/roots",
+    "denise": "1-2 sentences in AAVE about protection/retention",
+    "fatou": "1-2 sentences in French-accented English about technique",
+    "carmen": "1-2 sentences in Spanglish about curl definition/joy",
+    "amara": "1-2 sentences in East African English about protein/strength",
+    "salma": "1-2 sentences in Darija-accented English about holistic balance"
+  },
+  "consensus": "2-3 sentence collective verdict, as if Denise (the elder) delivers it.",
+  "hairProfileSummary": "1-2 sentence plain-English summary of her hair type and condition.",
+  "keyFindings": ["Finding 1", "Finding 2", "Finding 3"],
+  "routine": {
+    "id": "ritual-week-1",
+    "weekNumber": 1,
+    "theme": "Foundation Week",
+    "isActive": true,
+    "days": [
+      {
+        "dayOfWeek": 0,
+        "type": "wash",
+        "label": "Wash Day",
+        "hostAunty": "ngozi",
+        "purpose": "Deep cleanse and moisture reset",
+        "estimatedTime": "45 min",
+        "steps": [
+          { "name": "Pre-poo", "description": "Apply coconut oil to dry hair, focus on ends", "duration": "10 min", "product": "Coconut oil" }
+        ]
+      }
+    ]
+  }
+}
+
+ROUTINE RULES:
+- Include 7 days (dayOfWeek 0-6, Sunday to Saturday).
+- Each day type is one of: wash, style, refresh, rest, scalp, protein, protect.
+- hostAunty must match the host mapping above.
+- Typically 1 wash day, 1-2 style days, 1-2 refresh days, 1-2 rest days, optionally a scalp or protein day per her needs.
+- Rest days still get simple steps (e.g. bonnet, minimal manipulation).
+- Keep steps specific but brief — 2-4 steps per day.`;
+
+  const result = await callClaudeJSON(systemPrompt, userPrompt, 4096);
+  cacheSet(key, result);
+  return result;
+}
+
 // ─── Photo Analysis ─────────────────────────────────────────────
 
 export async function analyzePhoto(imageBase64, hairProfile) {

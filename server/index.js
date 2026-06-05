@@ -320,6 +320,38 @@ app.post('/api/routine/generate', aiLimiter, optionalAuth, dailyCap, async (req,
   }
 });
 
+// ─── Council + Routine (single call, onboarding speed path) ─────
+
+app.post('/api/council/generate-full', aiLimiter, optionalAuth, dailyCap, async (req, res) => {
+  try {
+    const { hairProfile } = req.body;
+
+    if (!hairProfile) {
+      return res.status(400).json({ error: 'hairProfile is required' });
+    }
+
+    const user = req.user ? await db.getUser(req.user.id) : null;
+    const name = user?.name || req.body.name || null;
+
+    const full = await ai.generateCouncilAndRoutine(hairProfile, name, req.body.photoAnalysis || null);
+
+    // Split the merged result back into the two shapes the app expects.
+    const { routine, ...councilResponse } = full;
+
+    // Save only when signed in (pre-auth onboarding re-saves via intake).
+    if (req.user && routine) {
+      try { await db.saveRoutine(req.user.id, routine, councilResponse); } catch (dbErr) {
+        console.warn('Routine DB save skipped:', dbErr.message);
+      }
+    }
+
+    res.json({ councilResponse, routine });
+  } catch (err) {
+    console.error('Council+routine generation error:', err.message || err);
+    res.status(500).json({ error: 'Failed to generate council and routine' });
+  }
+});
+
 // ─── Check-in Submission ────────────────────────────────────────
 
 app.post('/api/checkin/submit', aiLimiter, authMiddleware, dailyCap, async (req, res) => {

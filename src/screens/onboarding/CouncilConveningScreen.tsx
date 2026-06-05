@@ -430,22 +430,23 @@ export default function CouncilConveningScreen() {
         ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
       };
 
-      const councilRes = await fetch(`${API_URL}/api/council/generate`, {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify({ name, hairProfile, photoAnalysis }),
-      });
-      if (!councilRes.ok) throw new Error(`Council API error: ${councilRes.status}`);
-      const councilData: CouncilResponse = await councilRes.json();
+      // Single merged call: council verdict + week-1 routine in one round trip.
+      // Capped so a slow backend can't stall onboarding — on timeout we fall
+      // through to the instant starter plan below and the screen always moves.
+      const fullRes = await Promise.race([
+        fetch(`${API_URL}/api/council/generate-full`, {
+          method: 'POST',
+          headers: authHeaders,
+          body: JSON.stringify({ name, hairProfile, photoAnalysis }),
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('council-timeout')), 28000),
+        ),
+      ]);
+      if (!fullRes.ok) throw new Error(`Council API error: ${fullRes.status}`);
+      const { councilResponse: councilData, routine: routineData } =
+        (await fullRes.json()) as { councilResponse: CouncilResponse; routine: WeeklyRitual };
       setCouncilResponse(councilData);
-
-      const routineRes = await fetch(`${API_URL}/api/routine/generate`, {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify({ name, hairProfile, councilResponse: councilData, photoAnalysis }),
-      });
-      if (!routineRes.ok) throw new Error(`Routine API error: ${routineRes.status}`);
-      const routineData: WeeklyRitual = await routineRes.json();
       setRoutine(routineData);
 
       apiDone.current = true;
