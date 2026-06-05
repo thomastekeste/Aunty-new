@@ -61,11 +61,28 @@ export function AuntyDialogue({
   const [lineIndex, setLineIndex] = useState(0);
   const [shown, setShown] = useState('');
 
+  // Key the typing off the CONTENT, not the array identity — parents often
+  // recompute `lines` on every render (new reference, same text), and we must
+  // not restart/repeat the typer just because the screen re-rendered.
+  const linesKey = lines.join('\u0001');
+  const linesRef = useRef(lines);
+  linesRef.current = lines;
+
+  // Once we've typed the whole thing, stay done until the content changes.
+  const completedRef = useRef(false);
+
   // Latest callbacks without re-triggering the typing effect.
   const onLineLandedRef = useRef(onLineLanded);
   const onCompleteRef = useRef(onComplete);
   onLineLandedRef.current = onLineLanded;
   onCompleteRef.current = onComplete;
+
+  // New dialogue content -> start over from the first line.
+  useEffect(() => {
+    completedRef.current = false;
+    setLineIndex(0);
+    setShown('');
+  }, [linesKey]);
 
   // Blinking caret.
   const caret = useSharedValue(1);
@@ -82,8 +99,10 @@ export function AuntyDialogue({
   const caretStyle = useAnimatedStyle(() => ({ opacity: caret.value }));
 
   useEffect(() => {
-    if (lineIndex >= lines.length) return;
-    const full = lines[lineIndex] ?? '';
+    const arr = linesRef.current;
+    if (completedRef.current) return;
+    if (lineIndex >= arr.length) return;
+    const full = arr[lineIndex] ?? '';
     let pos = 0;
     let timer: ReturnType<typeof setTimeout>;
     let cancelled = false;
@@ -94,10 +113,12 @@ export function AuntyDialogue({
       if (cancelled) return;
       if (pos >= full.length) {
         onLineLandedRef.current?.(lineIndex);
-        const isLast = lineIndex === lines.length - 1;
+        const isLast = lineIndex === arr.length - 1;
         if (isLast) {
           timer = setTimeout(() => {
-            if (!cancelled) onCompleteRef.current?.();
+            if (cancelled) return;
+            completedRef.current = true;
+            onCompleteRef.current?.();
           }, holdMs);
         } else {
           timer = setTimeout(() => {
@@ -118,9 +139,10 @@ export function AuntyDialogue({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [lineIndex, lines, charMs, holdMs, startDelayMs]);
+    // Keyed on linesKey (content), not the `lines` array reference.
+  }, [lineIndex, linesKey, charMs, holdMs, startDelayMs]);
 
-  const isTyping = shown.length < (lines[lineIndex]?.length ?? 0);
+  const isTyping = !completedRef.current && shown.length < (lines[lineIndex]?.length ?? 0);
 
   return (
     <View style={containerStyle}>
