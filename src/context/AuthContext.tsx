@@ -14,10 +14,24 @@ import React, {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import Purchases from 'react-native-purchases';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { LEGAL_URLS } from '../constants/legal';
 import type { User } from '../types';
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
+
+/** Tell RevenueCat which user is logged in so customer records are identifiable. */
+async function syncRevenueCatUser(supabaseId: string | null) {
+  try {
+    if (supabaseId) {
+      await Purchases.logIn(supabaseId);
+    } else {
+      await Purchases.logOut();
+    }
+  } catch {
+    // RevenueCat not available in Expo Go / dev — ignore silently
+  }
+}
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -125,10 +139,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(mapped);
           setSession(data.session);
           cacheUser(mapped);
+          syncRevenueCatUser(data.session.user.id);
         } else {
           setUser(null);
           setSession(null);
           cacheUser(null);
+          syncRevenueCatUser(null);
         }
         setIsLoading(false);
       }
@@ -146,10 +162,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(mapped);
             setSession(newSession);
             cacheUser(mapped);
+            syncRevenueCatUser(newSession.user.id);
           } else {
             setUser(null);
             setSession(null);
             cacheUser(null);
+            syncRevenueCatUser(null);
           }
           setIsLoading(false);
         },
