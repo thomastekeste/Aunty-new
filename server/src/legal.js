@@ -260,6 +260,34 @@ const resetPasswordHtml = page(
 </script>`,
 );
 
+const supportHtml = page(
+  'Support',
+  `
+  <p class="eyebrow">${BRAND}</p>
+  <h1>Get Help</h1>
+  <p class="updated">We're here for you, love.</p>
+
+  <p>Having trouble with the app, a billing question, or need your account deleted? Reach out and we'll get back to you within 1–2 business days.</p>
+
+  <h2>Email support</h2>
+  <p><a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a></p>
+
+  <h2>Common questions</h2>
+  <ul>
+    <li><strong>How do I cancel my subscription?</strong> — Open your iPhone Settings → Apple ID → Subscriptions → Aunty Curl, then tap Cancel.</li>
+    <li><strong>How do I restore a purchase?</strong> — Open the app → Settings → Restore Purchases.</li>
+    <li><strong>How do I delete my account and data?</strong> — Open the app → Settings → Account → Delete Account. This permanently removes all your data.</li>
+    <li><strong>My routine isn't showing up.</strong> — Try closing and reopening the app. If the issue persists, email us.</li>
+  </ul>
+
+  <h2>Privacy &amp; legal</h2>
+  <p>
+    <a href="/privacy">Privacy Policy</a> &nbsp;·&nbsp;
+    <a href="/terms">Terms of Use</a>
+  </p>
+  `,
+);
+
 export function registerLegalRoutes(app) {
   const sendHtml = (res, html) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -268,6 +296,7 @@ export function registerLegalRoutes(app) {
   };
   app.get('/privacy', (_req, res) => sendHtml(res, privacyHtml));
   app.get('/terms', (_req, res) => sendHtml(res, termsHtml));
+  app.get('/support', (_req, res) => sendHtml(res, supportHtml));
   app.get('/reset-password', (_req, res) => {
     // The reset form needs Supabase JS from a CDN, so relax frame/script headers for this route.
     res.removeHeader('X-Frame-Options');
