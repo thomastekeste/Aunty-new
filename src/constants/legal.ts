@@ -16,6 +16,7 @@ const LEGAL_API_BASE =
 export const LEGAL_URLS = {
   privacy: `${LEGAL_API_BASE}/privacy`,
   terms: `${LEGAL_API_BASE}/terms`,
+  support: 'https://auntycurlcouncil.com/support',
   resetPassword: 'https://aunty-curl-api-production.up.railway.app/reset-password',
 };
 
