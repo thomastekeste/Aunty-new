@@ -16,6 +16,8 @@ import { TabBar } from '../components/TabBar';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useAuth } from '../context/AuthContext';
+import { useSubscription } from '../context/SubscriptionContext';
+import { PaywallModal } from '../components/PaywallModal';
 import { colors } from '../constants/theme';
 
 // Auth screens
@@ -218,9 +220,10 @@ const RootStack = createNativeStackNavigator<RootStackParamList & { Auth: undefi
 export function RootNavigator() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { state } = useOnboarding();
+  const { isSubscribed, isLoading: subLoading } = useSubscription();
 
-  // Block until both auth and onboarding storage are ready
-  if (authLoading || !state.isRestored) {
+  // Block until auth, onboarding storage, and subscription status are all ready
+  if (authLoading || !state.isRestored || subLoading) {
     return (
       <View style={loadingStyles.container}>
         <ActivityIndicator color={colors.primary} size="large" />
@@ -242,6 +245,15 @@ export function RootNavigator() {
           <RootStack.Screen name="Auth" component={AuthNavigator} />
         )}
       </RootStack.Navigator>
+
+      {/* Hard paywall — shown over everything if onboarding is done but not subscribed */}
+      {state.isComplete && isAuthenticated && !isSubscribed && (
+        <PaywallModal
+          visible
+          dismissible={false}
+          onClose={() => {}}
+        />
+      )}
     </NavigationContainer>
   );
 }

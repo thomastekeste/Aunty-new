@@ -43,6 +43,8 @@ interface Props {
   onClose: () => void;
   onSubscribe?: (plan: 'monthly' | 'yearly' | 'threeMonth' | 'lifetime') => void;
   onRestore?: () => void;
+  /** When false the ✕ button is hidden — use for mandatory paywalls. Default true. */
+  dismissible?: boolean;
 }
 
 type PlanKey = 'monthly' | 'yearly' | 'threeMonth' | 'lifetime';
@@ -76,7 +78,7 @@ const VALUE_SECTIONS = [
   },
 ];
 
-export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore }: Props) {
+export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore, dismissible = true }: Props) {
   const { currentOffering, purchasePackage, restorePurchases } = useSubscription();
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>('yearly');
 
@@ -186,9 +188,11 @@ export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore }: 
     <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.card}>
-          <Pressable onPress={onClose} style={styles.close} hitSlop={12}>
-            <Text style={styles.closeText}>{'✕'}</Text>
-          </Pressable>
+          {dismissible && (
+            <Pressable onPress={onClose} style={styles.close} hitSlop={12}>
+              <Text style={styles.closeText}>{'✕'}</Text>
+            </Pressable>
+          )}
 
           <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
             {/* Gold gradient hook */}

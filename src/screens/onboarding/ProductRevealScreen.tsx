@@ -144,21 +144,13 @@ export default function ProductRevealScreen() {
               variant="primary"
               size="lg"
             />
-            <Pressable
-              onPress={() => navigation.navigate('SendOff')}
-              style={styles.skipBtn}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel="Maybe later — continue without unlocking"
-            >
-              <Text style={styles.skipTextMuted}>Maybe later</Text>
-            </Pressable>
           </Animated.View>
         </ScrollView>
 
         <PaywallModal
           visible={showPaywall}
-          onClose={() => { setShowPaywall(false); navigation.navigate('SendOff'); }}
+          dismissible={false}
+          onClose={() => {}}
           onSubscribe={handleUnlock}
         />
       </View>
