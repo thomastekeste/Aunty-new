@@ -9,21 +9,26 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
+  Text,
   FlatList,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
+  Pressable,
+  ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { LinearGradient } from 'expo-linear-gradient';
 
-import { colors, auntyColors, spacing } from '../../constants/theme';
+import { colors, auntyColors, spacing, fonts, fontSize, radius, shadows, letterSpacing } from '../../constants/theme';
 import { AUNTIES, type AuntyId } from '../../constants/aunties';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { useAuth } from '../../context/AuthContext';
+import { useSubscription } from '../../context/SubscriptionContext';
 import type { AppStackParamList } from '../../types';
 
 import { ChatHeader } from '../../components/chat/ChatHeader';
@@ -32,6 +37,8 @@ import { MessageBubble } from '../../components/chat/MessageBubble';
 import { TypingIndicator } from '../../components/chat/TypingIndicator';
 import { QuickSuggestions } from '../../components/chat/QuickSuggestions';
 import { ChatInput } from '../../components/chat/ChatInput';
+import { AuntyAvatar } from '../../components/AuntyAvatar';
+import { PaywallModal } from '../../components/PaywallModal';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? 'http://localhost:3001' : '');
 
@@ -107,6 +114,7 @@ export default function CouncilScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { state } = useOnboarding();
   const { session } = useAuth();
+  const { isSubscribed, isLoading: subLoading } = useSubscription();
 
   const auntyId: AuntyId = state.data.chosenAuntyId || 'denise';
   const aunty = AUNTIES[auntyId];
@@ -121,6 +129,7 @@ export default function CouncilScreen() {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const isSendingRef = useRef(false);
 
@@ -241,6 +250,88 @@ export default function CouncilScreen() {
   const lastSenderIsAunty = !lastMessage || lastMessage.sender === 'aunty';
   const showWelcome = messages.length === 0;
 
+  // ─── Subscription gate ──────────────────────────────────────────
+  if (!subLoading && !isSubscribed) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.canvas }]}>
+        <ChatHeader
+          auntyId={auntyId}
+          aunty={aunty}
+          accentColor={ac.accent}
+          gradient={ac.gradient}
+          messageCount={0}
+          onNewChat={() => {}}
+          onChangeAunty={() => navigation.navigate('ChangeAunty')}
+          onGoHome={() => (navigation as any).navigate('Tabs', { screen: 'Home' })}
+          topInset={insets.top}
+        />
+
+        <ScrollView
+          contentContainerStyle={[gateStyles.scroll, { paddingBottom: insets.bottom + spacing.xxl }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={gateStyles.avatarRow}>
+            <AuntyAvatar auntyId={auntyId} size={80} showRing />
+          </View>
+
+          <Text style={gateStyles.headline}>
+            {aunty.name} is waiting{'\n'}for you.
+          </Text>
+          <Text style={gateStyles.sub}>
+            Ask her anything about your hair — she knows your curl type, your goals, and your routine. Subscribe to start the conversation.
+          </Text>
+
+          <View style={[gateStyles.card, shadows.sm]}>
+            {[
+              { emoji: '💬', text: 'Unlimited chat with your aunty' },
+              { emoji: '🧴', text: 'Your full personalised product prescription' },
+              { emoji: '📋', text: 'Weekly ritual plan, step by step' },
+              { emoji: '📈', text: 'Progress tracking & check-ins' },
+            ].map(({ emoji, text }) => (
+              <View key={text} style={gateStyles.featureRow}>
+                <Text style={gateStyles.featureEmoji}>{emoji}</Text>
+                <Text style={gateStyles.featureText}>{text}</Text>
+              </View>
+            ))}
+          </View>
+
+          <LinearGradient
+            colors={ac.gradient as any}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[gateStyles.ctaBtn, shadows.md]}
+          >
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setShowPaywall(true);
+              }}
+              style={gateStyles.ctaInner}
+              accessibilityRole="button"
+              accessibilityLabel="Subscribe to chat with your aunty"
+            >
+              <Text style={gateStyles.ctaText}>Unlock — Chat with {aunty.name}</Text>
+            </Pressable>
+          </LinearGradient>
+
+          <Pressable
+            onPress={() => (navigation as any).navigate('Tabs', { screen: 'Home' })}
+            style={gateStyles.backLink}
+            accessibilityRole="button"
+          >
+            <Text style={gateStyles.backLinkText}>Back to home</Text>
+          </Pressable>
+        </ScrollView>
+
+        <PaywallModal
+          visible={showPaywall}
+          onClose={() => setShowPaywall(false)}
+          onSubscribe={() => setShowPaywall(false)}
+        />
+      </View>
+    );
+  }
+
   // ─── Render message ─────────────────────────────────────────────
   const renderMessage = useCallback(({ item, index }: { item: Message; index: number }) => {
     const { isFirstInGroup, isLastInGroup } = getGroupInfo(messages, index);
@@ -336,5 +427,86 @@ const styles = StyleSheet.create({
   messageList: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+  },
+});
+
+const gateStyles = StyleSheet.create({
+  scroll: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    alignItems: 'center',
+  },
+  avatarRow: {
+    marginBottom: spacing.lg,
+  },
+  headline: {
+    fontFamily: fonts.display,
+    fontSize: fontSize.xxl,
+    color: colors.ink,
+    textAlign: 'center',
+    letterSpacing: letterSpacing.tighter,
+    lineHeight: fontSize.xxl * 1.15,
+    marginBottom: spacing.md,
+  },
+  sub: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.base,
+    color: colors.muted,
+    textAlign: 'center',
+    lineHeight: fontSize.base * 1.6,
+    marginBottom: spacing.xl,
+    maxWidth: 300,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    width: '100%',
+    marginBottom: spacing.xl,
+    gap: spacing.md,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  featureEmoji: {
+    fontSize: fontSize.lg,
+    width: 28,
+    textAlign: 'center',
+  },
+  featureText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.base,
+    color: colors.ink,
+    flex: 1,
+  },
+  ctaBtn: {
+    borderRadius: radius.full,
+    width: '100%',
+    marginBottom: spacing.lg,
+    overflow: 'hidden',
+  },
+  ctaInner: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.base,
+    color: colors.canvas,
+    letterSpacing: letterSpacing.wide,
+  },
+  backLink: {
+    paddingVertical: spacing.md,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  backLinkText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.muted,
+    textAlign: 'center',
   },
 });
