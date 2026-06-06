@@ -18,7 +18,6 @@
       "buildNumber": "1",
       "usesAppleSignIn": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Aunty Curl uses your camera to analyze your hair texture and track progress.",
         "NSPhotoLibraryUsageDescription": "Aunty Curl accesses your photos to analyze your hair and track your journey.",
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -34,6 +33,13 @@
       "expo-font",
       "expo-image",
       "expo-sharing",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Aunty Curl uses your camera to analyze your hair texture and track progress.",
+          "microphonePermission": false
+        }
+      ],
       [
         "expo-location",
         {

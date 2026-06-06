@@ -29,17 +29,33 @@ async function apiCall<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const headers = await getAuthHeaders();
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: { ...headers, ...options.headers },
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20_000);
 
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(body.error || `API error: ${response.status}`);
+  try {
+    const response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: { ...headers, ...options.headers },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || `API error: ${response.status}`);
+    }
+
+    return response.json();
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error('Request timed out. Please check your connection and try again.');
+    }
+    if (err.message === 'Network request failed') {
+      throw new Error('No internet connection. Please check your network and try again.');
+    }
+    throw err;
   }
-
-  return response.json();
 }
 
 // ─── Onboarding ─────────────────────────────────────────────────
