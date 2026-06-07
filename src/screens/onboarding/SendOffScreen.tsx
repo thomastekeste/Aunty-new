@@ -6,8 +6,16 @@
  * CTA rises over the warm cream ground.
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  Platform,
+  TextInput,
+  KeyboardAvoidingView,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useNavigation } from '@react-navigation/native';
@@ -54,7 +62,7 @@ export default function SendOffScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { state, complete } = useOnboarding();
-  const { isAuthenticated, signInWithApple } = useAuth();
+  const { isAuthenticated, signInWithApple, signIn, signUp } = useAuth();
   const name = state.data.name || 'Queen';
   const auntyId: AuntyId = state.data.chosenAuntyId || 'denise';
 
@@ -63,6 +71,12 @@ export default function SendOffScreen() {
   const [busy, setBusy] = useState(false);
   const [authError, setAuthError] = useState('');
   const [appleAvailable, setAppleAvailable] = useState(false);
+
+  // Email/password fallback
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const passwordRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (Platform.OS !== 'ios') return;
@@ -112,8 +126,52 @@ export default function SendOffScreen() {
     finishOnboarding();
   }, [busy, isAuthenticated, signInWithApple, finishOnboarding]);
 
+  // Email/password sign-in: try sign-in first; if the user doesn't exist yet, sign up.
+  const handleEmailContinue = useCallback(async () => {
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
+    if (!trimmedEmail || !trimmedPassword) {
+      setAuthError('Please enter your email and password.');
+      return;
+    }
+    if (busy) return;
+    setAuthError('');
+    setBusy(true);
+
+    // First try signing in (handles returning users + pre-created reviewer account)
+    const signInResult = await signIn(trimmedEmail, trimmedPassword);
+    if (!signInResult.error) {
+      setBusy(false);
+      finishOnboarding();
+      return;
+    }
+
+    // If sign-in says no user, create a new account instead
+    const noUser =
+      signInResult.error.toLowerCase().includes('invalid login') ||
+      signInResult.error.toLowerCase().includes('user not found') ||
+      signInResult.error.toLowerCase().includes('no user');
+    if (noUser) {
+      const displayName = name !== 'Queen' ? name : trimmedEmail.split('@')[0];
+      const signUpResult = await signUp(trimmedEmail, trimmedPassword, displayName);
+      setBusy(false);
+      if (signUpResult.error) {
+        setAuthError(signUpResult.error);
+        return;
+      }
+      finishOnboarding();
+      return;
+    }
+
+    setBusy(false);
+    setAuthError(signInResult.error);
+  }, [email, password, busy, signIn, signUp, name, finishOnboarding]);
+
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <HandwrittenBlessing key={runId} name={name} chosenAuntyId={auntyId} onComplete={handleComplete} />
 
       {__DEV__ && (
@@ -123,11 +181,11 @@ export default function SendOffScreen() {
         >
           {navigation.canGoBack() && (
             <Pressable onPress={() => navigation.goBack()} hitSlop={10} style={styles.devPill}>
-              <Text style={styles.devPillText}>{'\u2039'} Back</Text>
+              <Text style={styles.devPillText}>{'‹'} Back</Text>
             </Pressable>
           )}
           <Pressable onPress={handleReplay} hitSlop={10} style={styles.devPill}>
-            <Text style={styles.devPillText}>{'\u21BB'} Replay</Text>
+            <Text style={styles.devPillText}>{'↻'} Replay</Text>
           </Pressable>
         </View>
       )}
@@ -140,7 +198,49 @@ export default function SendOffScreen() {
           <Animated.View entering={FadeInDown.duration(500)} style={styles.btnWrap}>
             {isAuthenticated ? (
               <CeremonialButton label="Let's go" onPress={handleBegin} size="lg" loading={busy} />
+            ) : showEmailForm ? (
+              /* ── Email / password form ── */
+              <>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email"
+                  placeholderTextColor={colors.muted}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  returnKeyType="next"
+                  value={email}
+                  onChangeText={setEmail}
+                  onSubmitEditing={() => passwordRef.current?.focus()}
+                />
+                <TextInput
+                  ref={passwordRef}
+                  style={[styles.input, styles.inputSpaced]}
+                  placeholder="Password"
+                  placeholderTextColor={colors.muted}
+                  secureTextEntry
+                  returnKeyType="done"
+                  value={password}
+                  onChangeText={setPassword}
+                  onSubmitEditing={handleEmailContinue}
+                />
+                <CeremonialButton
+                  label="Continue with email"
+                  onPress={handleEmailContinue}
+                  size="lg"
+                  loading={busy}
+                />
+                <Pressable
+                  onPress={() => { setShowEmailForm(false); setAuthError(''); }}
+                  hitSlop={10}
+                  style={styles.backLink}
+                >
+                  <Text style={styles.backLinkText}>← Back</Text>
+                </Pressable>
+                {authError ? <Text style={styles.errText}>{authError}</Text> : null}
+              </>
             ) : (
+              /* ── Default: Apple + email toggle ── */
               <>
                 <Text style={styles.saveHint}>Save your plan to continue</Text>
                 {appleAvailable ? (
@@ -154,13 +254,20 @@ export default function SendOffScreen() {
                 ) : (
                   <CeremonialButton label="Let's go" onPress={handleBegin} size="lg" loading={busy} />
                 )}
+                <Pressable
+                  onPress={() => { setShowEmailForm(true); setAuthError(''); }}
+                  hitSlop={10}
+                  style={styles.emailToggle}
+                >
+                  <Text style={styles.emailToggleText}>Use email instead</Text>
+                </Pressable>
                 {authError ? <Text style={styles.errText}>{authError}</Text> : null}
               </>
             )}
           </Animated.View>
         </View>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -208,6 +315,44 @@ const styles = StyleSheet.create({
   appleBtn: {
     width: '100%',
     height: 52,
+  },
+  emailToggle: {
+    marginTop: spacing.md,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  emailToggleText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.muted,
+    textDecorationLine: 'underline',
+  },
+  // Email form
+  input: {
+    width: '100%',
+    height: 52,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    fontFamily: fonts.body,
+    fontSize: fontSize.md,
+    color: colors.ink,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  inputSpaced: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  backLink: {
+    marginTop: spacing.md,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  backLinkText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.muted,
   },
   errText: {
     fontFamily: fonts.body,
