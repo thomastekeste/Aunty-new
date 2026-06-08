@@ -41,9 +41,23 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Aunty Curl accesses your photos to analyze your hair and track your journey.",
+          "cameraPermission": "Aunty Curl uses your camera to analyze your hair texture and track progress."
+        }
+      ],
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "Aunty Curl uses your approximate location to show humidity-aware hair tips on your home screen."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#1A0F08"
         }
       ],
       "@sentry/react-native",

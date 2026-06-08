@@ -18,6 +18,7 @@ import {
   Alert,
   Linking,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -88,18 +89,20 @@ export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore, di
   const threeMonthPkg = currentOffering?.threeMonth;
   const lifetimePkg = currentOffering?.lifetime;
 
-  // Display prices (real from RC or fallback to our set ladder)
-  const yearlyPrice = yearlyPkg?.product?.priceString || '$29.99';
-  const monthlyPrice = monthlyPkg?.product?.priceString || '$4.99';
-  const threeMonthPrice = threeMonthPkg?.product?.priceString || '$11.99';
-  const lifetimePrice = lifetimePkg?.product?.priceString || '$79.99';
+  // Display real prices from RevenueCat — never show hardcoded fallbacks
+  const yearlyPrice = yearlyPkg?.product?.priceString;
+  const monthlyPrice = monthlyPkg?.product?.priceString;
+  const threeMonthPrice = threeMonthPkg?.product?.priceString;
+  const lifetimePrice = lifetimePkg?.product?.priceString;
+
+  const offeringsLoaded = !!(yearlyPrice || monthlyPrice);
 
   // All plans, always visible. Order = how they're shown (best value first).
   const plans: PlanOption[] = [
     {
       key: 'yearly',
       pkg: yearlyPkg,
-      price: yearlyPrice,
+      price: yearlyPrice ?? '',
       period: '/year',
       label: 'Yearly',
       sub: 'Billed once a year',
@@ -108,7 +111,7 @@ export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore, di
     {
       key: 'threeMonth',
       pkg: threeMonthPkg,
-      price: threeMonthPrice,
+      price: threeMonthPrice ?? '',
       period: '/3 mo',
       label: '3 Months',
       sub: 'Billed every 3 months',
@@ -117,7 +120,7 @@ export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore, di
     {
       key: 'monthly',
       pkg: monthlyPkg,
-      price: monthlyPrice,
+      price: monthlyPrice ?? '',
       period: '/mo',
       label: 'Monthly',
       sub: 'Cancel anytime',
@@ -125,7 +128,7 @@ export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore, di
     {
       key: 'lifetime',
       pkg: lifetimePkg,
-      price: lifetimePrice,
+      price: lifetimePrice ?? '',
       period: 'once',
       label: 'Lifetime',
       sub: 'Pay once · yours forever',
@@ -230,6 +233,12 @@ export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore, di
             </View>
 
             {/* Pricing — all plans visible, tap to select */}
+            {!offeringsLoaded ? (
+              <View style={[styles.pricing, { alignItems: 'center', paddingVertical: 40 }]}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={[styles.planSub, { marginTop: 12 }]}>Loading plans…</Text>
+              </View>
+            ) : (
             <View style={styles.pricing}>
               {plans.map((p) => {
                 const isSel = selectedPlan === p.key;
@@ -271,6 +280,7 @@ export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore, di
                 </LinearGradient>
               </Pressable>
             </View>
+            )}
 
             {/* Guarantee */}
             <Text style={styles.guarantee}>

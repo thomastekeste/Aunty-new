@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import crypto from 'crypto';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import rateLimit from 'express-rate-limit';
@@ -429,9 +430,60 @@ app.get('/api/user/profile', authMiddleware, async (req, res) => {
 
 // ─── Account Deletion (Apple requirement) ──────────────────────
 
+async function generateAppleClientSecret() {
+  const now = Math.floor(Date.now() / 1000);
+  const header = Buffer.from(JSON.stringify({ alg: 'ES256', kid: config.appleKeyId })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({
+    iss: config.appleTeamId,
+    iat: now,
+    exp: now + 15777000,
+    aud: 'https://appleid.apple.com',
+    sub: config.appleClientId,
+  })).toString('base64url');
+  const signingInput = `${header}.${payload}`;
+  const key = crypto.createPrivateKey(config.applePrivateKey.replace(/\\n/g, '\n'));
+  const sign = crypto.createSign('SHA256');
+  sign.update(signingInput);
+  const sig = sign.sign(key);
+  // Convert DER signature to raw r||s for ES256
+  const rLen = sig[3];
+  let r = sig.slice(4, 4 + rLen);
+  let s = sig.slice(4 + rLen + 2, 4 + rLen + 2 + sig[4 + rLen + 1]);
+  if (r.length > 32) r = r.slice(r.length - 32);
+  if (s.length > 32) s = s.slice(s.length - 32);
+  if (r.length < 32) r = Buffer.concat([Buffer.alloc(32 - r.length), r]);
+  if (s.length < 32) s = Buffer.concat([Buffer.alloc(32 - s.length), s]);
+  const rawSig = Buffer.concat([r, s]).toString('base64url');
+  return `${signingInput}.${rawSig}`;
+}
+
 app.post('/api/user/delete', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
+
+    // Revoke Apple Sign In token if this user signed in with Apple (required by Apple Guideline 4.2.3).
+    try {
+      const { data: identities } = await db.supabase.auth.admin.getUserById(userId);
+      const appleIdentity = identities?.user?.identities?.find((i) => i.provider === 'apple');
+      if (appleIdentity && config.applePrivateKey && config.appleTeamId && config.appleKeyId) {
+        const jwt = await generateAppleClientSecret();
+        const tokenToRevoke = appleIdentity.identity_data?.refresh_token || appleIdentity.identity_data?.access_token;
+        if (tokenToRevoke) {
+          await fetch('https://appleid.apple.com/auth/revoke', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: config.appleClientId,
+              client_secret: jwt,
+              token: tokenToRevoke,
+              token_type_hint: 'refresh_token',
+            }),
+          });
+        }
+      }
+    } catch (appleErr) {
+      console.warn('Apple token revocation failed (non-fatal):', appleErr.message);
+    }
 
     // Delete the auth user FIRST. public.users references auth.users with
     // `on delete cascade`, which transitively removes hair_profiles, routines,

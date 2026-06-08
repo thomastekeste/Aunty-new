@@ -12,6 +12,10 @@ const config = {
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
   supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY,
   anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+  appleClientId: process.env.APPLE_CLIENT_ID || 'com.auntycurl.app',
+  appleTeamId: process.env.APPLE_TEAM_ID,
+  appleKeyId: process.env.APPLE_KEY_ID,
+  applePrivateKey: process.env.APPLE_PRIVATE_KEY,
   port: parseInt(process.env.PORT, 10) || 3001,
 };
 

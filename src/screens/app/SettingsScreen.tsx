@@ -227,12 +227,13 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            await signOut();
             resetOnboarding();
           },
         },
       ]
     );
-  }, [resetOnboarding]);
+  }, [signOut, resetOnboarding]);
 
   const handleDeleteAccount = useCallback(() => {
     Alert.alert(
