@@ -16,6 +16,7 @@ const config = {
   appleTeamId: process.env.APPLE_TEAM_ID,
   appleKeyId: process.env.APPLE_KEY_ID,
   applePrivateKey: process.env.APPLE_PRIVATE_KEY,
+  revenueCatSecretKey: process.env.REVENUECAT_SECRET_KEY,
   port: parseInt(process.env.PORT, 10) || 3001,
 };
 

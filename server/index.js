@@ -53,20 +53,84 @@ const aiLimiter = rateLimit({
   message: { error: 'Too many AI requests. Try again later.' },
 });
 
-// ─── Daily Spending Cap ────────────────────────────────────────
-// Hard cap: max 200 AI calls per day across ALL users.
-// At ~1K tokens/call × $0.10/M tokens → max ~$0.02/day.
+// ─── Daily AI Caps ──────────────────────────────────────────────
+// Per-user daily caps (keyed by user id, or IP for anonymous calls) so one
+// user can't exhaust the budget for everyone. Subscribers verified via the
+// RevenueCat REST API get a generous cap; free users get enough to finish
+// onboarding. A global circuit breaker still bounds total daily spend.
+const DAILY_CAP_FREE = 15;
+const DAILY_CAP_SUBSCRIBED = 150;
+// Without a RevenueCat key we can't tell subscribers apart — use one
+// moderate per-user cap instead of punishing paying users.
+const DAILY_CAP_UNVERIFIED = 50;
+const DAILY_GLOBAL_BREAKER = 5000;
+
 let dailyAiCalls = 0;
 let dailyResetDate = new Date().toDateString();
+let dailyCallsByUser = new Map();
 
-function dailyCap(_req, res, next) {
+function rolloverIfNeeded() {
   const today = new Date().toDateString();
-  if (today !== dailyResetDate) { dailyAiCalls = 0; dailyResetDate = today; }
-  if (dailyAiCalls >= 200) {
-    return res.status(429).json({ error: 'Daily AI limit reached. Try again tomorrow.' });
+  if (today !== dailyResetDate) {
+    dailyResetDate = today;
+    dailyAiCalls = 0;
+    dailyCallsByUser = new Map();
   }
-  dailyAiCalls++;
-  next();
+}
+
+// Entitlement lookups are cached for 10 minutes to keep chat snappy.
+const entitlementCache = new Map();
+
+async function isSubscriber(userId) {
+  if (!userId || !config.revenueCatSecretKey) return false;
+  const cached = entitlementCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) return cached.isPro;
+
+  let isPro = false;
+  try {
+    const resp = await fetch(
+      `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(userId)}`,
+      { headers: { Authorization: `Bearer ${config.revenueCatSecretKey}` } },
+    );
+    if (resp.ok) {
+      const data = await resp.json();
+      const ent = data?.subscriber?.entitlements?.['Aunty Pro'];
+      isPro = !!ent && (!ent.expires_date || new Date(ent.expires_date) > new Date());
+    }
+  } catch (err) {
+    console.warn('RevenueCat entitlement check failed:', err.message);
+  }
+
+  if (entitlementCache.size > 10000) entitlementCache.clear();
+  entitlementCache.set(userId, { isPro, expiresAt: Date.now() + 10 * 60 * 1000 });
+  return isPro;
+}
+
+async function dailyCap(req, res, next) {
+  try {
+    rolloverIfNeeded();
+    if (dailyAiCalls >= DAILY_GLOBAL_BREAKER) {
+      return res.status(429).json({ error: 'Daily AI limit reached. Try again tomorrow.' });
+    }
+
+    const key = req.user?.id || req.ip;
+    const used = dailyCallsByUser.get(key) || 0;
+    const cap = !config.revenueCatSecretKey
+      ? DAILY_CAP_UNVERIFIED
+      : (await isSubscriber(req.user?.id)) ? DAILY_CAP_SUBSCRIBED : DAILY_CAP_FREE;
+
+    if (used >= cap) {
+      return res.status(429).json({ error: 'Daily AI limit reached. Try again tomorrow.' });
+    }
+
+    dailyCallsByUser.set(key, used + 1);
+    dailyAiCalls++;
+    next();
+  } catch (err) {
+    // Cap accounting must never take the API down.
+    console.error('dailyCap error:', err);
+    next();
+  }
 }
 
 // ─── Middleware ──────────────────────────────────────────────────
@@ -100,7 +164,8 @@ app.get('/health', (_req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     aiCallsToday: dailyAiCalls,
-    aiDailyLimit: 200,
+    aiGlobalBreaker: DAILY_GLOBAL_BREAKER,
+    entitlementChecks: !!config.revenueCatSecretKey,
     dbAvailable: !!db.supabase,
   });
 });

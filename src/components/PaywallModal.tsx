@@ -6,7 +6,7 @@
  * Monthly, 3-month, yearly, and lifetime options. Handles purchase, restore, and close.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -95,10 +95,8 @@ export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore, di
   const threeMonthPrice = threeMonthPkg?.product?.priceString;
   const lifetimePrice = lifetimePkg?.product?.priceString;
 
-  const offeringsLoaded = !!(yearlyPrice || monthlyPrice);
-
-  // All plans, always visible. Order = how they're shown (best value first).
-  const plans: PlanOption[] = [
+  // Full plan ladder. Order = how they're shown (best value first).
+  const allPlans: PlanOption[] = [
     {
       key: 'yearly',
       pkg: yearlyPkg,
@@ -136,27 +134,54 @@ export function SubscriptionModal({ visible, onClose, onSubscribe, onRestore, di
     },
   ];
 
+  // Only plans that actually exist in the RevenueCat offering are shown —
+  // a plan without a package can't be purchased, so it must never render.
+  // In Expo Go (no RevenueCat), show the full ladder so flows stay testable.
+  const plans: PlanOption[] = __DEV__ && !currentOffering
+    ? allPlans
+    : allPlans.filter((p) => !!p.pkg);
+
+  const offeringsLoaded = plans.length > 0;
+
+  // Snap the selection to an available plan once offerings load.
+  useEffect(() => {
+    if (offeringsLoaded && !plans.some((p) => p.key === selectedPlan)) {
+      setSelectedPlan(plans[0].key);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offeringsLoaded, currentOffering]);
+
   const selectedPlanObj = plans.find((p) => p.key === selectedPlan) ?? plans[0];
 
   const ctaLabel = selectedPlan === 'lifetime' ? 'Unlock Lifetime Access' : 'Subscribe';
 
-  // Generic purchase: buy the package if present; otherwise just signal (dev / no-RC).
+  // Purchase the selected package. Access is granted only on a verified
+  // purchase — the sole exception is dev builds without RevenueCat (Expo Go).
   const buy = useCallback(
     async (pkg: PurchasesPackage | null | undefined, plan: PlanKey) => {
-      if (pkg) {
-        const success = await purchasePackage(pkg);
-        if (success) {
+      if (!pkg) {
+        if (__DEV__) {
           onSubscribe?.(plan);
           onClose();
+          return;
         }
-      } else {
+        Alert.alert(
+          'Plan Unavailable',
+          'This plan isn’t available right now. Please choose another plan or try again later.',
+        );
+        return;
+      }
+      const success = await purchasePackage(pkg);
+      if (success) {
         onSubscribe?.(plan);
+        onClose();
       }
     },
     [purchasePackage, onSubscribe, onClose],
   );
 
   const handleSubscribe = useCallback(() => {
+    if (!selectedPlanObj) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     return buy(selectedPlanObj.pkg, selectedPlanObj.key);
   }, [buy, selectedPlanObj]);
