@@ -227,13 +227,16 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            // Sign out but KEEP onboarding completion + local profile, so the
+            // user returns to the "Welcome Back" sign-in screen rather than
+            // being forced through the entire consultation again. (A full wipe
+            // only happens on Delete Account.)
             await signOut();
-            resetOnboarding();
           },
         },
       ]
     );
-  }, [signOut, resetOnboarding]);
+  }, [signOut]);
 
   const handleDeleteAccount = useCallback(() => {
     Alert.alert(

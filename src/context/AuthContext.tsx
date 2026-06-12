@@ -200,12 +200,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       });
       if (error) return { error: error.message };
-      if (data.user) {
-        const mapped = mapSupabaseUser(data.user);
-        setUser(mapped);
-        cacheUser(mapped);
+
+      // Email-enumeration protection: when the address already exists, Supabase
+      // returns a fake user with an empty identities array and no session — and
+      // NO error. Treat that as "already registered" instead of a silent,
+      // sessionless "login" that strands the user without a token.
+      if (data.user && (data.user.identities?.length ?? 0) === 0 && !data.session) {
+        return { error: 'An account with this email already exists. Please sign in instead.' };
       }
-      if (data.session) setSession(data.session);
+
+      // Only treat sign-up as success when we actually have a session. Without
+      // one (e.g. email confirmation required) there is no token, so don't mark
+      // the user authenticated.
+      if (!data.session) {
+        return { error: 'Please confirm your email, then sign in to continue.' };
+      }
+
+      const mapped = mapSupabaseUser(data.session.user);
+      setUser(mapped);
+      cacheUser(mapped);
+      setSession(data.session);
       return {};
     },
     [],
@@ -219,12 +233,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) return { error: error.message };
-      if (data.user) {
-        const mapped = mapSupabaseUser(data.user);
-        setUser(mapped);
-        cacheUser(mapped);
+      if (!data.session) {
+        // Defensive: a passwordless success with no session means no token.
+        return { error: 'Sign-in failed. Please try again.' };
       }
-      if (data.session) setSession(data.session);
+      const mapped = mapSupabaseUser(data.session.user);
+      setUser(mapped);
+      cacheUser(mapped);
+      setSession(data.session);
       return {};
     },
     [],
@@ -252,6 +268,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           token: credential.identityToken,
         });
         if (error) return { error: error.message };
+        if (!data.session) {
+          return { error: 'Apple sign-in didn’t establish a session. Please try again.' };
+        }
 
         // Apple only sends the full name on the FIRST authorization — capture it.
         const name = [credential.fullName?.givenName, credential.fullName?.familyName]
@@ -259,20 +278,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .join(' ')
           .trim();
 
-        if (data.user) {
-          if (name && !data.user.user_metadata?.name) {
-            try {
-              await supabase.auth.updateUser({ data: { name } });
-            } catch {
-              // Non-fatal — name can still be set during onboarding.
-            }
+        if (name && !data.session.user.user_metadata?.name) {
+          try {
+            await supabase.auth.updateUser({ data: { name } });
+          } catch {
+            // Non-fatal — name can still be set during onboarding.
           }
-          const mapped = mapSupabaseUser(data.user);
-          if (name && !mapped.name) mapped.name = name;
-          setUser(mapped);
-          cacheUser(mapped);
         }
-        if (data.session) setSession(data.session);
+        const mapped = mapSupabaseUser(data.session.user);
+        if (name && !mapped.name) mapped.name = name;
+        setUser(mapped);
+        cacheUser(mapped);
+        setSession(data.session);
         return {};
       } catch (e: any) {
         // User tapped "Cancel" on the Apple sheet — not an error.
@@ -320,11 +337,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (__DEV__) setUser(DEV_USER);
   }, []);
 
+  // Authenticated means we hold a real session token. The one exception is
+  // dev mode (Expo Go or no Supabase backend), where there is no session but a
+  // DEV_USER is set so the app is usable without a backend.
+  const isAuthenticated = !!session || ((__DEV__ || !supabase) && !!user);
+
   const value: AuthContextValue = {
     user,
     session,
     isLoading,
-    isAuthenticated: !!user, // In dev mode, user is always set
+    isAuthenticated,
     signUp,
     signIn,
     signInWithApple,

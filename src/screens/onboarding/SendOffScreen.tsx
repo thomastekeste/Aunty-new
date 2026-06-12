@@ -146,25 +146,24 @@ export default function SendOffScreen() {
       return;
     }
 
-    // If sign-in says no user, create a new account instead
-    const noUser =
-      signInResult.error.toLowerCase().includes('invalid login') ||
-      signInResult.error.toLowerCase().includes('user not found') ||
-      signInResult.error.toLowerCase().includes('no user');
-    if (noUser) {
-      const displayName = name !== 'Queen' ? name : trimmedEmail.split('@')[0];
-      const signUpResult = await signUp(trimmedEmail, trimmedPassword, displayName);
-      setBusy(false);
-      if (signUpResult.error) {
-        setAuthError(signUpResult.error);
-        return;
-      }
-      finishOnboarding();
+    // Sign-in failed. In the value-first flow most people here are brand new,
+    // so attempt to create the account. signUp now returns a clear "already
+    // exists" error when the email is taken — which means the sign-in failure
+    // was a wrong password, not a missing account. We surface that instead of
+    // silently entering the app with no session.
+    const displayName = name !== 'Queen' ? name : trimmedEmail.split('@')[0];
+    const signUpResult = await signUp(trimmedEmail, trimmedPassword, displayName);
+    setBusy(false);
+    if (signUpResult.error) {
+      const alreadyExists = signUpResult.error.toLowerCase().includes('already');
+      setAuthError(
+        alreadyExists
+          ? 'That email is already registered. Please check your password and try again.'
+          : signUpResult.error,
+      );
       return;
     }
-
-    setBusy(false);
-    setAuthError(signInResult.error);
+    finishOnboarding();
   }, [email, password, busy, signIn, signUp, name, finishOnboarding]);
 
   return (
